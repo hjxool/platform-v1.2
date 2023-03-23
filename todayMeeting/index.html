@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <link rel="stylesheet" href="../module/element-ui.css">
+  <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+  <div id="index" v-cloak v-loading="html.loading">
+    <div class="left col_layout">
+      <img src="./img/bg.png" class="bg_img">
+
+      <div class="box1 row_layout flex_shrink">
+        <i class="el-icon-caret-left button" @click="change_month(-1)"></i>
+        <span>{{calendar.title_year}}</span>
+        <span>{{calendar.title_month}}月</span>
+        <i class="el-icon-caret-right button" @click="change_month(1)"></i>
+      </div>
+
+      <div class="box2">
+        <span v-for="week in calendar.weeks">{{week}}</span>
+      </div>
+
+      <div class="box3">
+        <div v-for="day in calendar.days" :class="['box3_1','center','button',calendar.select_day===day?'bg':'']"
+          @click="select_day(day)">
+          {{day}}</div>
+      </div>
+    </div>
+
+    <div class="body col_layout">
+      <div class="head row_layout">
+        <div v-for="op in body.options" :class="['center','box1',body.cur_op==op.value?'':'bg','button']"
+          @click="select_status(op.value)">
+          {{op.label}}
+        </div>
+      </div>
+
+      <div v-show="body.list.length" class="list col_layout">
+        <div v-for="meeting in body.list" class="row_layout margin1">
+          <div class="box1 col_layout flex_shrink">
+            <span>{{meeting.start_time}}</span>
+            <div class="line"></div>
+            <span>{{meeting.end_time}}</span>
+          </div>
+
+          <div
+            :class="['box2','row_layout',!meeting.status?'box2_border0':meeting.status==1?'box2_border1':'box2_border2']">
+            <div class="box2_1">
+              <div class="box2_1_1 row_layout">
+                <el-tag :type="!meeting.status?'success':meeting.status==1?'':'info'"
+                  effect="dark">{{!meeting.status?'未开始':meeting.status==1?'进行中':'已结束'}}</el-tag>
+                <span class="text">{{meeting.theme}}</span>
+              </div>
+
+              <div class="row_layout">
+                <img src="./img/icon1.png" class="icon1">
+                <span class="text2">主持人：{{meeting.createUserNickName}}</span>
+                <div class="line"></div>
+                <img src="./img/icon2.png" class="icon1">
+                <span class="text2">{{meeting.roomName}}</span>
+              </div>
+            </div>
+
+            <div class="flex_shrink button" @click="turn_to(meeting.id)">
+              <img src="./img/icon3.png" class="bg_img">
+            </div>
+          </div>
+
+          <div v-show="cancel_meeting_show(meeting)" class="box3 button" @click="cancel_meeting(meeting.id)">取消会议</div>
+          <div v-show="!cancel_meeting_show(meeting)" style="width:6.9rem;"></div>
+        </div>
+      </div>
+      <el-empty v-show="!body.list.length" style="flex-grow:1;" description="无会议"></el-empty>
+
+      <el-pagination class="footer" @current-change="get_data" :page-size="html.size" background
+        layout="total,prev,pager,next" :total="total_size"></el-pagination>
+    </div>
+  </div>
+
+  <script src="../../运维人员部署请修改我.js"></script>
+  <script src="../module/vue.js"></script>
+  <script src="../module/element-ui.js"></script>
+  <script src="../module/axios.min.js"></script>
+  <script src="../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

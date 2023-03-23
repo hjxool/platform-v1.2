@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>音响系统</title>
+  <link rel="icon" href="./img/logo.ico">
+  <link rel="stylesheet" href="../../module/element-ui.css">
+  <link rel="stylesheet" href="./index.css">
+  <link rel="stylesheet" href="./vue_template.css">
+</head>
+
+<body>
+  <div id="temp" v-cloak>
+    <!-- 头部 -->
+    <div class="header">
+      <!-- <img src="./img/返回按钮.png" class="button" style="margin: 0 12px 0 24px;width: 45px;height: 45px;"
+        @click="return_home"> -->
+      <img src="./img/logo.png" style="width: 200px;height: 26px;margin: 0 15px;">
+      <div style="width: 2px;height: 22px;margin: 0 15px;background: #035AB0;"></div>
+      <span style="font-size: 30px;color: #F5F5F5;margin: 0 35px;">智慧音频终端</span>
+      <span style="font-size: 14px;color: #F5F5F5;padding-top: 10px;">{{device_name}}</span>
+      <!-- 头部背景 -->
+      <img src="./img/抬头背景.png" class="bgimg">
+    </div>
+    <!-- 头部下 -->
+    <div class="header_bottom"></div>
+    <!-- 音箱容器 -->
+    <div class="content">
+      <div class="sound_item_box">
+        <!-- 功能选项 -->
+        <div class="sound_item_option_box">
+          <div class="sound_item_option center button" v-for="i,index in sound_item_options"
+            @click="switch_option(index)" :style="option_style(index)">
+            <img :src="option_focus==index? i.light_icon : i.dark_icon" class="sound_item_option_icon">
+            <span class="sound_item_option_text" :style="{opacity:option_focus==index?'1':'0.5'}">{{i.name}}</span>
+          </div>
+        </div>
+        <!-- 功放界面 -->
+        <div v-show="option_focus==0" class="amplify_box">
+          <!-- 选项 -->
+          <div class="option_box">
+            <div class="button center" style="width: 140px;height: 60px;" v-for="option,index in history.history_option"
+              @click="history_switch(index)">
+              <img :src="history.history_data_option==index?'./img/button2light.png':'./img/button2.png'" class="bgimg">
+              <span :style="history_option_style(index)">{{option}}</span>
+            </div>
+          </div>
+          <!-- 历史图显示 -->
+          <div class="history_box">
+            <div class="channel_history" v-for="i,index in channel_num">
+              <!-- 四角边框(注：只有当选择器匹配的元素在父级下的对应位置才生效) -->
+              <div class="border_surbase" v-for="i in 4"></div>
+              <!-- 标题 -->
+              <div style="display: flex;align-items: center;">
+                <img src="./img/小圆圈.png" style="width: 18px;height: 18px;margin-left: 20px;">
+                <span style="font-size: 16px;color: #A5E2FF;margin-left: 14px;">通道{{i}}</span>
+                <img src="./img/装饰条.png" style="width: 170px;height: 20px;margin: 0 30px 0 auto;">
+              </div>
+              <!-- 图表位置 -->
+              <div class="history_echart" v-show="!history.data_null"></div>
+              <div class="center" style="color: white;font-size: 20px;" v-show="history.data_null">暂无数据</div>
+            </div>
+          </div>
+        </div>
+        <!-- DSP界面 -->
+        <div v-if="option_focus==1" class="DSP_box" v-loading="!data_ready">
+          <!-- 输入 -->
+          <div class="dsp_input_box flex_shrink">
+            <span class="dsp_input_title center">输入一</span>
+            <div class="center">
+              <div class="dsp_input_control">
+                <level-component :level_max="'+12'" :level_min="'-48'" :display_value="dsp_option.input.level">
+                </level-component>
+                <single-slider :channel="dsp_option.input" :in_title="'增益'" :out_title="'压限'" :in_or_out="0"
+                  :slider_max="'+12'" :slider_min="'-80'" :device_id="id" :token="token" :order_key="'in1_gain'">
+                </single-slider>
+              </div>
+              <img class="button" style="width: 130px;height:44px;"
+                :src="dsp_option.input.mute==1?'./img/静音暗.png':'./img/静音亮.png'"
+                @click="dsp_button('in1_mute',dsp_option.input.mute)">
+            </div>
+          </div>
+          <!-- 输出 -->
+          <div class="dsp_output_box flex_shrink">
+            <div class="dsp_output" v-for="out,index in dsp_option.output">
+              <div class="dsp_output_top">
+                <div class="dsp_output_text">输出{{index+1}}</div>
+                <div class="dsp_output_top_control">
+                  <div class="dsp_output_top_control1">
+                    <level-component :level_max="'+12'" :level_min="'-48'" :display_value="out.level">
+                    </level-component>
+                    <single-slider :channel="out" :in_title="'增益'" :out_title="'压限'" :in_or_out="0" :slider_max="'+12'"
+                      :slider_min="'-80'" :device_id="id" :token="token" :order_key="`out${index+1}_gain`">
+                    </single-slider>
+                    <single-slider :channel="out" :in_title="'增益'" :out_title="'压限'" :in_or_out="1" :slider_max="'+20'"
+                      :slider_min="'-40'" :device_id="id" :token="token" :order_key="`out${index+1}_th`">
+                    </single-slider>
+                    <!-- 小遮罩 -->
+                    <div class="box_shadow" v-show="out.limit_enable==1"></div>
+                  </div>
+                  <div class="dsp_output_top_control2">
+                    <img class="dsp_output_button button"
+                      :src="out.limit_enable==1?'./img/动态压限开关亮.png':'./img/动态压限开关暗.png'"
+                      @click="dsp_button(`out${index+1}_th_dyn`,out.limit_enable,index)">
+                    <img class="dsp_output_button button" :src="out.mute==1?'./img/静音暗.png':'./img/静音亮.png'"
+                      @click="dsp_button(`out${index+1}_mute`,out.mute,index)">
+                  </div>
+                </div>
+              </div>
+
+              <div class="dsp_output_bottom">
+                <single-slider v-for="geq,index2 in out.geq_list" :channel="geq"
+                  :in_title="dsp_option.geq_title_list[index2]" :out_title="'压限'" :in_or_out="0" :slider_max="'+20'"
+                  :slider_min="'-20'" :device_id="id" :token="token" :order_key="`out${index+1}_geq${index2+1}`">
+                </single-slider>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- 系统功能 -->
+        <div v-if="option_focus==2" class="sys_box" v-loading="!data_ready">
+          <!-- 通道状态 -->
+          <div class="channel_box flex_shrink">
+            <div class="center">
+              <span style="color: #88CDFF;font-size: 18px;margin: 10px;">电源电压</span>
+              <div class="text_param">{{sys_option.power_value}}V</div>
+            </div>
+            <div v-for="status,index in sys_option.status" class="channel">
+              <div class="title center">通道{{index+1}}</div>
+              <div class="status">
+                <span style="color: #88CDFF;font-size: 18px;">DSP</span>
+                <div style="display: flex;align-items: center;">
+                  <img :src="status.dsp_sta==1?'./img/状态正常.png':'./img/状态异常.png'"
+                    style="width: 15px;height: 18px;margin-right: 6px;">
+                  <span
+                    :style="{fontSize:'18px',color:status.dsp_sta==1?'#00C377':'#B6165A'}">{{status.dsp_sta==1?'正常':'异常'}}</span>
+                </div>
+              </div>
+              <div class="status">
+                <span style="color: #88CDFF;font-size: 18px;">功放</span>
+                <div style="display: flex;align-items: center;">
+                  <img :src="status.amp_sta==1?'./img/状态正常.png':'./img/状态异常.png'"
+                    style="width: 15px;height: 18px;margin-right: 6px;">
+                  <span
+                    :style="{fontSize:'18px',color:status.amp_sta==1?'#00C377':'#B6165A'}">{{status.amp_sta==1?'正常':'异常'}}</span>
+                </div>
+              </div>
+              <div class="status">
+                <span style="color: #88CDFF;font-size: 18px;">扬声器</span>
+                <div style="display: flex;align-items: center;">
+                  <img :src="status.spk_sta==1?'./img/状态正常.png':'./img/状态异常.png'"
+                    style="width: 15px;height: 18px;margin-right: 6px;">
+                  <span
+                    :style="{fontSize:'18px',color:status.spk_sta==1?'#00C377':'#B6165A'}">{{status.spk_sta==1?'正常':'异常'}}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- 定时功能 -->
+          <div class="set_time_box flex_shrink">
+            <div style="display: flex;">
+              <!-- <div class="button" :style="check_button_style()" @click="set_time">功能定时自检开关</div> -->
+              <div class="button get_status_button" @click="get_status">获取通道状态</div>
+            </div>
+            <!-- <div class="set_time" style="height: 74px;margin:10px 0;">
+              <div class="select_all_box" @click="sys_option.select_time=0">
+                <div class="dot_box">
+                  <div v-show="sys_option.select_time==0" class="dot"></div>
+                </div>
+                <span style="font-size: 18px;color: #88CDFF;">每天</span>
+              </div>
+              <el-time-picker class="date_time" placeholder="选择时间（必填项）" v-model="sys_option.day_time"
+                :picker-options="{selectableRange: '00:01:00 - 23:40:59'}">
+              </el-time-picker>
+            </div>
+            <div class="set_time" style="height: 74px;margin:10px 0;">
+              <div class="select_all_box" @click="sys_option.select_time=1">
+                <div class="dot_box">
+                  <div v-show="sys_option.select_time==1" class="dot"></div>
+                </div>
+                <span style="font-size: 18px;color: #88CDFF;">每周</span>
+              </div>
+              <el-radio class="day_box" style="margin: 4px 8px 0 8px;" border size="medium"
+                v-for="week,index in sys_option.weeks" v-model="sys_option.select_week" :label="index+1">{{week}}
+              </el-radio>
+            </div>
+            <div class="set_time" style="height: 270px;overflow-y: auto;overflow-x: hidden;margin:10px 0;">
+              <div class="select_all_box" @click="sys_option.select_time=2">
+                <div class="dot_box">
+                  <div v-show="sys_option.select_time==2" class="dot"></div>
+                </div>
+                <span style="font-size: 18px;color: #88CDFF;">每月</span>
+              </div>
+              <div class="month_layout">
+                <el-radio class="day_box" border size="medium" v-for="month,index in 28"
+                  v-model="sys_option.select_month" :label="month">{{month}}</el-radio>
+              </div>
+            </div> -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../../运维人员部署请修改我.js"></script>
+  <script src="../../../js/stomp.min.js"></script>
+  <script src="./main.js"></script>
+  <script src="../../module/vue.js"></script>
+  <script src="../../module/echarts.min.js"></script>
+  <script src="../../module/element-ui.js"></script>
+  <script src="../../module/axios.min.js"></script>
+  <script src="../../module/common_function.js"></script>
+  <script src="./vue_template.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

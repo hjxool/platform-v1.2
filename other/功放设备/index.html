@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <link rel="stylesheet" href="../../module/element-ui.css">
+  <link rel="stylesheet" href="../../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index" v-cloak>
+    <img src="./img/bg.png" class="bg_img">
+
+    <div class="head1 row_layout flex_shrink">
+      <img src="./img/bg2.png" class="bg_img">
+      <img src="./img/icon.png" class="icon">
+      <span class="text1">ADK</span>
+      <span class="text2">{{device_name}}</span>
+    </div>
+
+    <div class="head2 flex_shrink">
+      <div class="box2 row_layout">
+        <el-select v-model="scene_select" style="margin-right: 14px;" size="mini" placeholder="选择场景">
+          <el-option v-for="item in 30" :label="`场景${item}`" :value="item-1"></el-option>
+        </el-select>
+        <div class="button1 button center" @click="send_order('scene')">
+          <img src="./img/button2.png" class="bg_img">
+          应用
+        </div>
+      </div>
+      <div class="box button center" @click="switch_page(0)">
+        <img src="./img/icon2.png" class="bg_img" v-show="html.page!=0">
+        <img src="./img/icon3.png" class="bg_img" v-show="html.page==0">
+        <span :style="{color:'#fff',opacity:html.page==0?'1':'0.5',fontSize:'1.12rem'}">状态</span>
+      </div>
+    </div>
+
+    <div class="body" v-loading="html.page_loading">
+      <!-- 状态栏 -->
+      <div class="box1">
+        <!-- 装饰 -->
+        <div class="icon row_layout flex_shrink">
+          <div class="left"></div>
+          <div class="icon2"></div>
+          <div class="right"></div>
+        </div>
+        <!-- 展示 -->
+        <div class="box1_1">
+          <div class="box1_2" v-for="item,index in status">
+            <span class="title">{{item.title}}</span>
+            <template v-if="index==0">
+              <div v-for="item2 in item.value" class="icon3 center">
+                <img src="./img/icon4.png" class="bg_img">
+                <span class="text">{{item2}}</span>
+              </div>
+            </template>
+            <template v-if="index==1">
+              <div v-for="item2 in item.value" class="text">{{item2}}V</div>
+            </template>
+            <template v-if="index==2">
+              <div v-for="item2 in item.value" class="text">{{item2}}°C</div>
+            </template>
+            <template v-if="index==3">
+              <div v-for="item2 in item.value" :class="[item2?'text2':'text3']">{{item2?'正常':'异常'}}</div>
+            </template>
+          </div>
+        </div>
+      </div>
+      <!-- 滑块 -->
+      <div class="box2">
+        <div class="box2_1" v-for="item in 2">
+          <img src="./img/icon8.png" class="icon1">
+          <div class="box2_2">
+            <div class="box2_3" v-for="item2,index in item==1?input:output">
+              <img src="./img/icon5.png" class="bg_img">
+
+              <span class="text1 center" :style="{color: item==1?'#02eeff':'#3C85FF'}">
+                {{item==1?`IN${index+1}`:`OUT${index+1}`}}
+              </span>
+              <div class="mute button center" @click="send_order((item==1?'mute_in':'mute_out')+index,item2)">
+                <img src="./img/icon6.png" class="bg_img" v-show="item2.mute==0">
+                <img src="./img/icon7.png" class="bg_img" v-show="item2.mute==1">
+                <span style="color: #fff;font-size: 1rem;">静音</span>
+              </div>
+              <!-- <div class="text2 center">{{item2.gain}}</div> -->
+              <input @input="debounce(verify_slider_input,1500,item2,(item==1?'gain_in':'gain_out')+index)"
+                @keydown.enter="verify_slider_input(item2,(item==1?'gain_in':'gain_out')+index)"
+                v-model="item2.gain_input" maxlength="5" class="text2">
+              <div class="slider"
+                @mousedown="slider_turn_to($event,item2,undefined,(item==1?'gain_in':'gain_out')+index)">
+                <img src="./img/icon9.png" class="icon2" draggable="false">
+                <img src="./img/icon10.png" class="gain" draggable="false">
+                <div class="cover" :style="gain_cover(item2.gain)"></div>
+                <img src="./img/icon11.png" class="icon4 button" :style="gain_button(item2.gain)"
+                  @mousedown.stop="slider_move(item2,(item==1?'gain_in':'gain_out')+index)" draggable="false">
+              </div>
+            </div>
+          </div>
+          <img src="./img/icon8.png" class="icon1">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../../运维人员部署请修改我.js"></script>
+  <script src="../../../js/stomp.min.js"></script>
+  <script src="../../module/vue.js"></script>
+  <script src="../../module/element-ui.js"></script>
+  <script src="../../module/axios.min.js"></script>
+  <script src="../../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

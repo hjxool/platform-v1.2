@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <link rel="stylesheet" href="../../css/eleme-dark.css">
+  <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index" v-cloak>
+    <div class="box1 row_layout">
+      <img src="./img/icon1.png" class="bg_img">
+
+      <div class="row_layout button" @click="get_statistic_list('场所数量')">
+        <img src="./img/icon2.png" class="icon">
+        <div class="box1_1">
+          <span class="text">{{place_num}}</span>
+          <span class="text2">场所数量</span>
+        </div>
+      </div>
+      <div class="icon2"></div>
+      <div class="row_layout button" @click="get_statistic_list('在线设备')">
+        <img src="./img/icon3.png" class="icon">
+        <div class="box1_1">
+          <span class="text">{{online_num}}</span>
+          <span class="text2">在线设备</span>
+        </div>
+      </div>
+      <div class="icon2"></div>
+      <div class="row_layout button" @click="get_statistic_list('离线设备')">
+        <img src="./img/icon4.png" class="icon">
+        <div class="box1_1">
+          <span class="text">{{offline_num}}</span>
+          <span class="text2">离线设备</span>
+        </div>
+      </div>
+      <div class="icon2"></div>
+      <div class="row_layout button" @click="get_statistic_list('告警设备')">
+        <img src="./img/icon5.png" class="icon">
+        <div class="box1_1">
+          <span class="text">{{alert_num}}</span>
+          <span class="text2">告警设备</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="box2 box_layout">
+      <div class="header row_layout flex_shrink">
+        <img src="./img/icon6.png" class="bg_img">
+        <span class="text">实时告警</span>
+      </div>
+      <div class="box2_1">
+        <transition-group name="alert">
+          <div class="box2_2 row_layout button" v-for="item,index in alert_list" :key="index"
+            @click="trun_to_other_page(item.type)">
+            <img src="./img/icon7.png" class="icon2">
+            <div class="box2_3">
+              <span class="text1 text_ellipsis" :title="item.content">{{item.content}}</span>
+              <!-- <span class="text2 text_ellipsis">{{item.time}}</span> -->
+            </div>
+          </div>
+        </transition-group>
+      </div>
+    </div>
+
+    <div class="box3 box_layout">
+      <div class="header row_layout flex_shrink">
+        <img src="./img/icon6.png" class="bg_img">
+        <span class="text">设备在线率</span>
+      </div>
+      <div class="body"></div>
+    </div>
+
+    <div class="box4 box_layout">
+      <div class="header row_layout flex_shrink">
+        <img src="./img/icon6.png" class="bg_img">
+        <span class="text">今日设备联检</span>
+      </div>
+      <div class="body"></div>
+    </div>
+
+    <div class="box5 box_layout">
+      <div class="header row_layout flex_shrink">
+        <img src="./img/icon6.png" class="bg_img">
+        <span class="text">产品统计</span>
+      </div>
+      <div class="body"></div>
+    </div>
+
+    <div class="box6 box_layout">
+      <div class="header row_layout flex_shrink">
+        <img src="./img/icon6.png" class="bg_img">
+        <span class="text">告警趋势</span>
+      </div>
+      <div class="body"></div>
+    </div>
+
+    <div class="box8 button center" @click="trun_to_other_page('跳转到设备监控')">
+      <img src="./img/icon8.png" class="bg_img" draggable="false">
+      <div class="row_layout">
+        <span class="text">远程管控</span>
+        <img src="./img/icon9.png" class="icon" draggable="false">
+      </div>
+    </div>
+
+    <!-- 弹窗 -->
+    <!-- 场所/在线设备/离线设备/告警设备弹窗 -->
+    <div class="popover" v-if="html.statistic_window">
+      <div class="statistic_window">
+        <div class="head">
+          <span class="text">{{html.statistic_title}}</span>
+          <el-button @click="html.statistic_window=false" type="danger" icon="el-icon-close" circle
+            size="mini"></el-button>
+        </div>
+        <div class="statistic_body">
+          <el-table :data="statistic_window_list" :max-height="html.table_h">
+            <el-table-column type="index" width="50"></el-table-column>
+            <template v-if="html.statistic_title!=='场所数量'">
+              <el-table-column v-if="html.statistic_title==='离线设备'" prop="offlineTime" label="离线时间"
+                width="180"></el-table-column>
+              <el-table-column prop="deviceName" label="设备名称"></el-table-column>
+              <el-table-column prop="placeName" label="场所"></el-table-column>
+              <el-table-column v-if="html.statistic_title!=='在线设备'" label="操作" width="80">
+                <template slot-scope="scope">
+                  <el-button @click="trun_to_other_page(scope.row)" type="text">详情</el-button>
+                </template>
+              </el-table-column>
+            </template>
+            <template v-if="html.statistic_title==='场所数量'">
+              <el-table-column prop="placeName" label="场所名称"></el-table-column>
+            </template>
+          </el-table>
+        </div>
+        <el-pagination v-if="html.statistic_title!=='场所数量'" class="paging" @current-change="get_statistic_list"
+          layout="prev, pager, next" :total="html.total" :page-size="html.page_size"></el-pagination>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../运维人员部署请修改我.js"></script>
+  <!-- <script src="../../js/Zhr_Basics.js"></script> -->
+  <!-- <script src="../../js/echarts.min.js"></script> -->
+  <script src="../module/vue.js"></script>
+  <script src="../module/element-ui.js"></script>
+  <script src="../module/axios.min.js"></script>
+  <script src="../module/echarts.min.js"></script>
+  <script src="../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

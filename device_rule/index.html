@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <link rel="stylesheet" href="../module/element-ui.css">
+  <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index" v-cloak v-loading="html.loading">
+    <!-- 规则表格 -->
+    <div style="padding:0 10px;overflow: auto;">
+      <el-table ref="rule_list" :data="rule_list" @selection-change="select_rules" border>
+        <el-table-column type="selection" width="50"></el-table-column>
+        <el-table-column prop="ruleName" label="规则名" width="120"></el-table-column>
+        <el-table-column prop="ruleScenes" label="场景"></el-table-column>
+        <el-table-column label="操作" width="150" fixed="right">
+          <template slot-scope="scope">
+            <el-button @click="edit_rule(scope.row.ruleId)" type="text" size="small">编辑</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+    <!-- 保存 -->
+    <div class="button_layout">
+      <el-button type="primary" round @click="save_rule">保存</el-button>
+    </div>
+
+    <!-- 节点表 -->
+    <div class="custom_center" v-if="html.rule_config">
+      <el-card style="width: 90%;height: 90%;overflow: auto;" shadow="hover">
+        <div class="rule_detail_layout">
+          <div class="button_layout">
+            <el-button type="danger" icon="el-icon-close" circle @click="close_page"></el-button>
+          </div>
+          <div style="padding:0 10px;overflow: auto;">
+            <el-table ref="node_list" :data="node_list" @selection-change="select_node" border
+              v-loading="html.loading_rule_detail">
+              <el-table-column type="selection" width="50"></el-table-column>
+              <el-table-column prop="type" label="配置类型" width="120"></el-table-column>
+              <el-table-column prop="nodeName" label="配置名称" width="120"></el-table-column>
+              <el-table-column label="默认值">
+                <template slot-scope="scope">
+                  <!-- <span v-for="item in scope.row.exp">
+                    <span>{{item.before}}</span>
+                    <span class="params_text" v-show="!item.show" @click="item.show=true">{{item.after}}</span>
+                    <div v-show="item.show">
+                      <el-input v-model="item.input" @blur="item.show=false" size="mini"></el-input>
+                    </div>
+                  </span> -->
+                  <span>{{scope.row.exp}}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="设备自定义值">
+                <template slot-scope="scope">
+                  <span>{{scope.row.custom_exp||'空'}}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="120" fixed="right">
+                <template slot-scope="scope">
+                  <el-button @click="edit_node(scope.row,scope.$index)" type="text" size="small">编辑</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+          <div class="button_layout">
+            <el-button type="primary" round @click="save_node">保存</el-button>
+          </div>
+        </div>
+      </el-card>
+    </div>
+
+    <!-- 属性触发条件表单 -->
+    <div class="custom_center" v-if="html.trigger_form">
+      <el-card style="width: 400px;max-height: 90%;overflow: auto;" shadow="hover">
+        <el-form label-width="100px">
+          <el-form-item>
+            <el-checkbox v-model="trigger_form.enable">当前设备启用</el-checkbox>
+          </el-form-item>
+          <el-form-item label="名称" size="medium">
+            <span>{{trigger_form.name}}</span>
+          </el-form-item>
+          <el-form-item label="条件表达式" size="medium">
+            <span>{{trigger_form.exp}}</span>
+          </el-form-item>
+          <el-form-item label="条件字段" size="medium">
+            <span v-for="item in trigger_form.fields">{{item}}</span>
+          </el-form-item>
+          <el-form-item label="参数" size="medium">
+            <el-input style="width: 200px;" v-for="item in trigger_form.params" v-model="item.value"
+              placeholder="请设置设备参数">
+          </el-form-item>
+          <el-form-item class="button_layout">
+            <el-button type="primary" @click="trigger_submit(0)">保存</el-button>
+            <el-button @click="html.trigger_form=false">取消</el-button>
+          </el-form-item>
+        </el-form>
+      </el-card>
+    </div>
+    <!-- 事件触发条件表单 -->
+    <div class="custom_center" v-if="html.event_trigger_form">
+      <el-card style="width: 400px;max-height: 90%;overflow: auto;" shadow="hover">
+        <el-form label-width="100px">
+          <el-form-item>
+            <el-checkbox v-model="event_trigger_form.enable">当前设备启用</el-checkbox>
+          </el-form-item>
+          <el-form-item label="名称" size="medium">
+            <span>{{event_trigger_form.name}}</span>
+          </el-form-item>
+          <el-form-item label="事件表达式" size="medium">
+            <span>{{event_trigger_form.exp}}</span>
+          </el-form-item>
+          <el-form-item label="事件字段" size="medium">
+            <span>{{event_trigger_form.field}}</span>
+          </el-form-item>
+          <el-form-item label="事件选择" size="medium">
+            <span>{{event_trigger_form.value}}</span>
+          </el-form-item>
+          <el-form-item class="button_layout">
+            <el-button type="primary" @click="trigger_submit(1)">保存</el-button>
+            <el-button @click="html.event_trigger_form=false">取消</el-button>
+          </el-form-item>
+        </el-form>
+      </el-card>
+    </div>
+    <!-- 事件表单 -->
+    <div class="custom_center" v-if="html.event_form">
+      <el-card style="width: 900px;max-height: 90%;overflow: auto;" shadow="hover">
+        <div class="two_col_layout">
+          <div class="col_layout">
+            <span class="title">编辑响应事件</span>
+            <el-form label-width="80px">
+              <el-form-item>
+                <el-checkbox v-model="event_form.enable">当前设备启用</el-checkbox>
+              </el-form-item>
+              <el-form-item label="名称" size="medium">
+                <span>{{event_form.name}}</span>
+              </el-form-item>
+              <el-form-item label="内容模板" size="medium">
+                <el-input style="width: 70%;" type="textarea" autosize v-model="event_form.template"
+                  placeholder="请输入告警内容模板"></el-input>
+                <el-button type="warning" size="mini" round
+                  @click="identify_symbol(event_form.template,'event',event_form.fields.length)">检测
+                </el-button>
+              </el-form-item>
+              <el-form-item label="变量路径" size="medium">
+                <div class="fields_layout">
+                  <el-input class="input flex_shrink" v-for="item in event_form.fields" v-model="item.value"
+                    placeholder="输入取值路径" type="textarea">
+                  </el-input>
+                </div>
+              </el-form-item>
+              <el-form-item class="button_layout">
+                <el-button type="primary" @click="event_submit">保存</el-button>
+                <el-button @click="html.event_form=false">取消</el-button>
+              </el-form-item>
+            </el-form>
+          </div>
+          <!-- 物模型树 -->
+          <div class="col_layout">
+            <span class="title">物模型属性列表</span>
+            <div style="overflow: auto;">
+              <el-table :data="protocol_tree" row-key="name" :tree-props="tree_conf" border>
+                <el-table-column prop="name" label="标识符"></el-table-column>
+                <el-table-column prop="type" width="80" label="类型"></el-table-column>
+                <el-table-column label="复制" width="40" fixed="right">
+                  <template slot-scope="scope">
+                    <i class="el-icon-document-copy" @click="copy_path(scope.row.path)"></i>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+            <!-- <el-tree :data="protocol_tree" :props="tree_conf">
+              <span class="tree_node_style" slot-scope="{ node, data }">
+                <span>{{data.name}}</span>
+                <span>类型：{{data.type}}</span>
+                <i class="el-icon-document-copy" @click.stop="copy_path(data.path)"></i>
+              </span>
+            </el-tree> -->
+          </div>
+        </div>
+      </el-card>
+    </div>
+  </div>
+
+  <script src="../../运维人员部署请修改我.js"></script>
+  <script src="../module/vue.js"></script>
+  <script src="../module/element-ui.js"></script>
+  <script src="../module/axios.min.js"></script>
+  <script src="../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

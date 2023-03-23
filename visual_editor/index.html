@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <link rel="stylesheet" href="../module/element-ui.css">
+  <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index" v-cloak v-loading="html.page_loading" @click="close_popup">
+    <div class="body" :style="resize(page)" v-for="page in component_list" v-show="page_id==page.id">
+      <template v-for="item,index in page.data">
+        <custom-slider v-if="item.type=='slider'" :obj="item" :radio="page.radio">
+        </custom-slider>
+        <custom-text v-if="item.type=='text'" :obj="item" :radio="page.radio">
+        </custom-text>
+        <custom-img v-if="item.type=='img'" :obj="item" :radio="page.radio">
+        </custom-img>
+        <custom-button v-if="item.type=='button'" :obj="item" :radio="page.radio" :current_page="page_id">
+        </custom-button>
+        <custom-switch v-if="item.type=='switch'" :obj="item" :radio="page.radio">
+        </custom-switch>
+        <custom-progress v-if="item.type=='progress'" :obj="item" :radio="page.radio">
+        </custom-progress>
+        <custom-selector v-if="item.type=='select'" :obj="item" :radio="page.radio" :group="index"></custom-selector>
+        <custom-popup v-if="item.type=='select'" :obj="item" :radio="page.radio" :group="index"></custom-popup>
+        <custom-button-switch v-if="item.type=='switch_button'" :obj="item" :radio="page.radio"></custom-button-switch>
+        <custom-matrix v-if="item.type=='matrix'" :obj="item" :radio="page.radio"></custom-matrix>
+      </template>
+    </div>
+  </div>
+
+  <script src="../../运维人员部署请修改我.js"></script>
+  <script src="../../js/stomp.min.js"></script>
+  <script src="../module/vue.js"></script>
+  <script src="../module/element-ui.js"></script>
+  <script src="../module/axios.min.js"></script>
+  <script src="../module/common_function.js"></script>
+  <script src="./components.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

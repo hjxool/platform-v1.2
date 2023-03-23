@@ -1,0 +1,124 @@
+[v-cloak] {
+	display: none !important;
+}
+* {
+	box-sizing: border-box;
+}
+body {
+	margin: 0;
+	padding: 0;
+}
+::-webkit-scrollbar {
+	height: 5px;
+	width: 4px;
+	background: rgba(255, 255, 255, 0.78);
+	border-radius: 3px;
+}
+::-webkit-scrollbar-thumb {
+	width: 150px;
+	height: 150px;
+	background: rgba(192, 192, 192, 0.7);
+	border-radius: 3px;
+}
+::-webkit-scrollbar-corner {
+	background-color: rgba(0, 0, 0, 0.4);
+}
+.bg_img {
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	z-index: -1;
+	left: 0;
+	top: 0;
+}
+.center {
+	display: flex;
+	align-items: center;
+	justify-content: space-evenly;
+	flex-wrap: wrap;
+	align-content: center;
+	position: relative;
+	z-index: 10;
+}
+.column_center {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+.flex_shrink {
+	flex-shrink: 0;
+}
+.button {
+	position: relative;
+	z-index: 10;
+	cursor: pointer;
+}
+.button:active {
+	transform: scale(0.9);
+}
+.text_ellipsis {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+/* 弹窗样式 */
+.popover {
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	background-color: rgba(0, 0, 0, 0.2);
+	display: grid;
+	justify-items: center;
+	align-items: start;
+	z-index: 990;
+}
+.popover .form_layout {
+	max-height: 90%;
+	overflow: auto;
+	margin-top: 40px;
+}
+.popover .form_layout .form_head {
+	display: flex;
+	align-items: center;
+	height: 40px;
+}
+.popover .form_layout .form_head .title {
+	font-weight: bold;
+	font-size: 18px;
+}
+.popover .form_layout .form_head .button {
+	width: 26px;
+	height: 26px;
+	background-color: #fdeaea;
+	border-radius: 50%;
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.popover .form_layout .form_head .button .icon {
+	font-size: 16px;
+	color: #f02424;
+	flex-shrink: 0;
+}
+.verify_text {
+	color: red;
+	font-size: 12px;
+	position: relative;
+	height: 12px;
+	top: -10px;
+}
+.check_box {
+	width: 16px;
+	height: 16px;
+	border: 1px solid;
+	position: relative;
+	margin-right: 20px;
+	cursor: pointer;
+}
+.check_box .icon {
+	position: absolute;
+	bottom: -2px;
+	right: -8px;
+	font-size: 24px;
+}

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <link rel="stylesheet" href="../../css/eleme-dark.css">
+  <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index" v-cloak v-loading="html.page_loading">
+    <div class="header row_layout">
+      <!-- <el-button class="button1" v-for="item,index in html.options" :type="html.select==index?'primary':''"
+        @click="switch_options(index)" v-show="index!=0">
+        {{item}}</el-button> -->
+      <div class="button1 button" @click="switch_options(1)">
+        <img src="./img/icon5.png" class="bg_img">
+      </div>
+      <div class="button2 button" v-show="html.select==1" @click="add_scene">
+        <img src="./img/icon7.png" class="bg_img">
+      </div>
+    </div>
+    <!-- 推荐 -->
+    <!-- <div class="page1" v-show="html.select==0">
+      <div class="type_text">已开启</div>
+      <div class="page1_box">
+        <div class="scene_box row_layout" v-for="item in 10">
+          <span class="text1">场景{{item}}</span>
+          <el-button class="button1" size="mini" round>执行</el-button>
+        </div>
+      </div>
+      <div class="type_text">未开启</div>
+      <div class="page1_box">
+        <div class="scene_box row_layout" v-for="item in 10">
+          <span class="text1">场景{{item}}</span>
+          <el-button class="button1" size="mini" round>执行</el-button>
+        </div>
+      </div>
+    </div> -->
+    <!-- 筛选条件 -->
+    <div class="row_layout">
+      <el-button style="margin-left: 20px;" v-for="item,index in html.scene_type"
+        :type="html.scene_type_select==index?'primary':''" @click="change_scene_type(index)">{{item}}</el-button>
+    </div>
+    <!-- 自定义 -->
+    <div class="page1" v-show="html.select==1">
+      <div class="page1_box">
+        <div class="row_layout" v-for="item in scene_list">
+          <div class="scene_box row_layout flex_shrink flex_grow">
+            <img v-show="!html.scene_type_select" src="./img/icon2.png" class="icon1">
+            <img v-show="html.scene_type_select" src="./img/icon1.png" class="icon1">
+            <span class="text1 text_ellipsis" :title="item.sceneName">{{item.sceneName}}</span>
+            <span class="text2 text_ellipsis" v-text="place_device_text(item)" :title="place_device_text(item)"></span>
+            <template v-if="html.scene_type_select">
+              <img v-show="item.status==1" @click="switch_scene(item)" src="./img/icon8.png" class="button4">
+              <img v-show="item.status==0" @click="switch_scene(item)" src="./img/icon9.png" class="button4">
+            </template>
+            <template v-if="!html.scene_type_select">
+              <div class="button3 button" @click="ex_scene(item)">
+                <img src="./img/icon6.png" class="bg_img">
+              </div>
+            </template>
+          </div>
+          <div class="button2 button" @click="edit_scene(item)">
+            <img src="./img/icon3.png" class="bg_img">
+          </div>
+          <div class="button2 button" @click="del_scene(item)">
+            <img src="./img/icon4.png" class="bg_img">
+          </div>
+        </div>
+      </div>
+    </div>
+    <el-pagination class="footer" @current-change="get_scene_list" :page-size="html.page_size"
+      layout="total,prev,pager,next" :total="total_size"></el-pagination>
+
+    <!-- 弹窗 -->
+    <!-- 新建/编辑场景 -->
+    <div class="popover" v-if="html.edit_scene_display">
+      <el-card class="form_layout" shadow="never" style="width: 500px;overflow: hidden;" v-loading="html.popup_loading">
+        <div class="form_head">
+          <span class="text">场景编辑</span>
+          <div class="button" @click="html.edit_scene_display=false">
+            <i class="el-icon-close icon"></i>
+          </div>
+        </div>
+        <el-form ref="scene_form" :model="edit_scene_form" :rules="edit_scene_rule" label-width="auto"
+          style="overflow: auto;max-height: 80vh;padding-right: 10px;">
+          <el-form-item label="场景名称" prop="name">
+            <el-input v-model="edit_scene_form.name" size="small" clearable></el-input>
+          </el-form-item>
+          <el-form-item label="执行方式" required>
+            <el-select v-model="edit_scene_form.method">
+              <el-option label="手动执行" :value="1"></el-option>
+              <el-option label="自动执行" :value="2"></el-option>
+              <el-option label="条件执行" :value="3"></el-option>
+            </el-select>
+          </el-form-item>
+          <!-- 自动 -->
+          <template v-if="edit_scene_form.method==2">
+            <el-form-item label="开始日期" prop="start_time">
+              <el-date-picker v-model="edit_scene_form.start_time" type="date" placeholder="选择日期"></el-date-picker>
+            </el-form-item>
+            <el-form-item label="结束日期" prop="end_time">
+              <el-date-picker v-model="edit_scene_form.end_time" type="date" placeholder="选择日期"></el-date-picker>
+            </el-form-item>
+            <el-form-item label="执行时间" prop="ex_time">
+              <el-time-picker v-model="edit_scene_form.ex_time"></el-time-picker>
+            </el-form-item>
+            <el-form-item label="执行周期" prop="cycle_time">
+              <div class="row_layout">
+                <el-select v-model="edit_scene_form.cycle_time" style="width: 150px;" class="flex_shrink" multiple
+                  collapse-tags clearable placeholder="每周执行">
+                  <el-option v-for="item in html.week" :label="item.label" :value="item.value">
+                  </el-option>
+                </el-select>
+                <el-button style="margin-left: 10px;" class="flex_shrink"
+                  @click="edit_scene_form.cycle_time=[1,2,3,4,5,6,7]" type="text">全选</el-button>
+                <el-button style="margin-left: 10px;" class="flex_shrink" @click="edit_scene_form.cycle_time=[]"
+                  type="text">全清</el-button>
+              </div>
+            </el-form-item>
+          </template>
+          <!-- 条件 -->
+          <template v-if="edit_scene_form.method==3">
+            <el-form-item label="条件类型" required>
+              <el-select v-model="edit_scene_form.condition">
+                <el-option label="场所活动开始前" :value="0"></el-option>
+                <el-option label="场所活动结束后" :value="1"></el-option>
+              </el-select>
+            </el-form-item>
+            <template v-if="edit_scene_form.condition==0||edit_scene_form.condition==1">
+              <el-form-item :label="edit_scene_form.condition?'结束后':'开始前'" required>
+                <div class="row_layout">
+                  <el-input-number size="small" v-model="edit_scene_form.pre_after_time" :step="1"
+                    step-strictly></el-input-number>
+                  <el-select v-model="edit_scene_form.time_unit" size="small" style="width:80px;margin-left:20px;">
+                    <el-option label="小时" :value="10"></el-option>
+                    <el-option label="分钟" :value="12"></el-option>
+                    <el-option label="秒" :value="13"></el-option>
+                    <el-option label="毫秒" :value="14"></el-option>
+                  </el-select>
+                </div>
+              </el-form-item>
+            </template>
+          </template>
+          <el-form-item label="智慧设备" required>
+            <div class="box1" v-if="edit_scene_form.device_list.length>0">
+              <div class="head row_layout">
+                <el-checkbox class="flex_shrink" :indeterminate="edit_scene_form.isIndeterminate"
+                  v-model="edit_scene_form.checkAll" @change="scene_form_check_all">全选
+                </el-checkbox>
+                <el-input class="search" @keyup.enter.native="get_place_device(edit_scene_form.search)"
+                  placeholder="模糊搜索" v-model="edit_scene_form.search" size="mini" clearable>
+                  <i slot="suffix" class="el-input__icon el-icon-search button"
+                    @click="get_place_device(edit_scene_form.search)"></i>
+                </el-input>
+              </div>
+              <div class="overflow1">
+                <div v-for="item in edit_scene_form.device_list">
+                  <div class="place_box row_layout" @click="click_place(item)">
+                    <el-checkbox :indeterminate="item.isIndeterminate" v-model="item.checkAll"
+                      @change="place_device_check_all($event,item)" style="margin-right:10px;"></el-checkbox>
+                    <i class="el-icon-caret-right icon" v-show="place_id!=item.id"></i>
+                    <i class="el-icon-caret-bottom icon" v-show="place_id==item.id"></i>
+                    <span class="text text_ellipsis" :title="item.placeName">{{item.placeName}}</span>
+                  </div>
+                  <el-collapse-transition>
+                    <div style="padding-left: 20px;" v-show="place_id==item.id">
+                      <div class="device_box row_layout" v-for="item2 in item.devices"
+                        @click="scene_form_check(item2,item)">
+                        <div class="check_box">
+                          <i class="el-icon-check icon" v-show="item2.check"></i>
+                        </div>
+                        <span class="text text_ellipsis" :title="item2.deviceName">{{item2.deviceName}}</span>
+                        <el-button size="mini" round @click.stop="set_config(item2)">配置</el-button>
+                      </div>
+                    </div>
+                  </el-collapse-transition>
+                </div>
+              </div>
+              <div class="verify_text" v-show="edit_scene_rule.devices_selected.show">
+                {{edit_scene_rule.devices_selected.message}}
+              </div>
+            </div>
+            <el-empty v-show="edit_scene_form.device_list.length==0" description="无设备" :image-size="200">
+            </el-empty>
+          </el-form-item>
+          <el-form-item class="sub_buttons">
+            <el-button @click="scene_sub" type="primary" style="margin-right: 20px;">保存</el-button>
+            <el-button @click="html.edit_scene_display=false">取消</el-button>
+          </el-form-item>
+        </el-form>
+      </el-card>
+    </div>
+    <!-- 配置弹窗 -->
+    <div class="popover" v-if="html.set_config_display">
+      <el-card class="form_layout" shadow="never" style="width: 600px;overflow: hidden;">
+        <div class="form_head">
+          <span class="text">服务编辑</span>
+          <div class="button" @click="html.set_config_display=false">
+            <i class="el-icon-close icon"></i>
+          </div>
+        </div>
+        <el-form ref="server_form" :model="edit_server_form" :rules="edit_server_rule" label-width="auto"
+          style="overflow: auto;max-height: 80vh;">
+          <el-form-item label="执行顺序" prop="order">
+            <el-input v-model="edit_server_form.order" size="small" clearable></el-input>
+          </el-form-item>
+          <el-form-item label="可选服务" required>
+            <div class="server_box1">
+              <el-checkbox class="box2" :indeterminate="edit_server_form.isIndeterminate"
+                v-model="edit_server_form.checkAll" @change="server_form_check_all">全选
+              </el-checkbox>
+              <div class="overflow1">
+                <div v-for="item in edit_server_form.list" class="row_layout" style="padding: 10px 0;">
+                  <div class="check_box" @click="server_form_check(item)">
+                    <i class="el-icon-check icon" v-show="item.check"></i>
+                  </div>
+                  <span class="text text_ellipsis" @click="server_form_check(item)"
+                    :title="item.name">{{item.name}}</span>
+                  <selector
+                    v-if="edit_server_form.product_id=='1574321115531005952'&&item.identifier=='Relay_Set_State_Service'"
+                    :input="item.input" @init_input="item.input=$event">
+                  </selector>
+                  <order_control_relay
+                    v-if="edit_server_form.product_id=='1574321115531005952'&&item.identifier=='Accord_Order_TO_Control_Relay_Service'"
+                    :input="item.input" @init_input="item.input=$event"></order_control_relay>
+                  <selector2 v-if="components_show(item.identifier)" :item="item">
+                  </selector2>
+                </div>
+              </div>
+              <div class="verify_text" v-show="edit_server_rule.list.show">
+                {{edit_server_rule.list.message}}
+              </div>
+            </div>
+          </el-form-item>
+          <el-form-item class="sub_buttons">
+            <el-button @click="server_config_sub" type="primary" style="margin-right: 20px;">确认</el-button>
+            <el-button @click="html.set_config_display=false">取消</el-button>
+          </el-form-item>
+        </el-form>
+      </el-card>
+    </div>
+  </div>
+
+  <script src="../../运维人员部署请修改我.js"></script>
+  <script src="../module/vue.js"></script>
+  <script src="../module/element-ui.js"></script>
+  <script src="../module/axios.min.js"></script>
+  <script src="./components.js"></script>
+  <script src="../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

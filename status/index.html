@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <link rel="stylesheet" href="../module/element-ui.css">
+  <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index" v-cloak v-loading="html.loading">
+    <!-- 空值时内容 -->
+    <el-empty style="height: 100%;" description="未设置属性" :image-size="300" v-show="html.empty"></el-empty>
+    <!-- 卡片布局 -->
+    <div class="detail" v-for="page in page_list" ref="detail"
+      :style="{gridTemplateRows:page.first_page?'100%':page.is_history?'70px 40px auto':'70px auto'}">
+      <div class="detail_header" v-show="!page.first_page">
+        <el-page-header @back="back" :content="!page.is_history?'详情页面':'历史数据'"></el-page-header>
+      </div>
+      <!-- 卡片样式 -->
+      <div class="detail_layout" v-if="!page.is_history">
+        <el-card v-for="card,index in page.child_array" class="card_size">
+          <div class="card_layout">
+            <!-- 标题及按钮 -->
+            <div class="title">
+              <span class="title_text" :title="card.name">{{card.name}}</span>
+              <!-- 设置标识符 只有最里层的才显示按钮 -->
+              <div v-show="card.data_type==='number'">
+                <i class="el-icon-s-operation button" @click="get_history(card)" title="详情"></i>
+              </div>
+            </div>
+            <!-- 信息 -->
+            <div class="content button" v-if="card.data_type==='object'" @click="next_page(card.child)">
+              <span class="content_text" v-for="child,name_index in card.child" v-show="name_index<=3"
+                style="max-width: 90%;" :titlt="child.name">
+                {{name_index<=2?child.name:'...'}} </span>
+            </div>
+            <div class="content button" v-if="card.data_type==='object_array'" @click="next_page(card.child)">
+              <span class="content_text" v-for="child,name_index in card.child" v-show="name_index==0"
+                style="max-width: 90%;">
+                {{child.name}}
+              </span>
+            </div>
+            <div :class="['floor_content',card.data_type==='number'?'button':'']"
+              v-if="card.data_type!=='object'&&card.data_type!=='object_array'" @click="get_history(card)">
+              <span class="content_text" style="max-width: 60%;" :title="card.value">{{card.value}}</span>
+              <span class="content_text">{{card.unit}}{{card.unit==''?'':' / '}}{{card.unit_name}}</span>
+            </div>
+          </div>
+        </el-card>
+      </div>
+      <!-- 历史数据 -->
+      <el-date-picker v-model="html.history_time" v-if="page.is_history" @change="select_time" type="week"
+        format="yyyy 第 WW 周" placeholder="选择周"></el-date-picker>
+      <div id="history" v-if="page.is_history"></div>
+    </div>
+  </div>
+
+  <script src="../../运维人员部署请修改我.js"></script>
+  <script src="../module/echarts.min.js"></script>
+  <script src="../module/vue.js"></script>
+  <script src="../module/element-ui.js"></script>
+  <script src="../module/axios.min.js"></script>
+  <script src="../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

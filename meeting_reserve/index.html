@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <link rel="stylesheet" href="../module/element-ui.css">
+  <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index" v-cloak @mouseup="area_end" v-loading="html.loading">
+    <!-- 功能按钮等 -->
+    <div class="header">
+      <el-input class="search flex_shrink" placeholder="会议室名称" v-model="html.search_meeting"
+        @keydown.enter="req_room_list(html.search_meeting)">
+        <i slot="suffix" class="el-input__icon el-icon-search button" @click="req_room_list(html.search_meeting)"></i>
+      </el-input>
+      <div class="calendar_box flex_shrink">
+        <span class="text">{{html.year}}年{{html.month}}月{{html.day}}({{html.week}})</span>
+        <img @click="select_day" src="./img/icon3.png" class="icon button" draggable="false">
+        <el-date-picker id="calendar" v-model="html.date" type="date" @change="display_time(html.date)">
+        </el-date-picker>
+      </div>
+    </div>
+    <!-- 提示区 -->
+    <div class="table_type">
+      <span class="meeting_name">会议室名称</span>
+      <span class="text">时间</span>
+      <div class="tips">
+        <span class="tip">空闲</span>
+        <span class="tip">已预定</span>
+        <span class="tip">当前时间分割线</span>
+      </div>
+    </div>
+    <!-- 看板 -->
+    <div class="table_box" @mouseover="close_meeting_info_box">
+      <!-- 时间轴 -->
+      <div class="time_line_box">
+        <!-- 占位 -->
+        <div class="icon"></div>
+        <div v-for="i in 17" class="time_line center">{{6+i-1}}:30</div>
+      </div>
+      <!-- 会议室列表 -->
+      <div class="meeting_boxs" @mousemove="mouse_focus_show($event)" @scroll="link_scroll">
+        <div class="current_time" v-show="html.boundary_display"></div>
+        <!-- fixed浮在时间块上 无法冒泡触发mouse事件 -->
+        <div class="mouse_position" v-show="mouse.enter" :style="mouse_position()" @mousedown="mouse_down"
+          @wheel="focus_wheel($event)">
+          <!-- 鼠标焦点样式 -->
+          <div class="focus" v-show="mouse.focus" :style="{top:mouse.focus_top}"></div>
+        </div>
+        <div v-for="item,index in place_list" class="place">
+          <div class="place_name">
+            <div class="info">
+              <div class="box1">
+                <span class="name text_ellipsis" :title="item.roomName">{{item.roomName}}</span>
+                <el-tag type="warning" size="mini" v-if="item.approve==1">需审批</el-tag>
+                <el-tag size="mini" v-if="item.approve==0">无需审批</el-tag>
+              </div>
+              <span class="type">{{item.type==0?'视频':item.type==1?'综合':'无纸化'}}</span>
+              <div class="box2">
+                <img src="./img/icon1.png" class="icon" draggable="false">
+                <span class="type"> {{item.num}}</span>
+              </div>
+            </div>
+            <!-- <div class="center">
+              <img v-if="item.photoUrl!=null" :src="item.photoUrl" class="icon2">
+              <i v-if="item.photoUrl==null" class="el-icon-picture-outline"></i>
+            </div> -->
+          </div>
+          <!-- @mousedown="area_start(index,index2)" @mouseover="area_enter(index,index2)" @mouseenter="query_meeting_info($event,index,index2)" -->
+          <div v-for="i,index2 in html.time_num" class="time_box" @mouseenter="area_enter(index,index2,$event)">
+            <!-- 有会议的样式 -->
+            <img v-if="html.block_list[index][index2] == 2" src="./img/icon5.png" class="bg_img pass" draggable="false">
+            <!-- 过期的样式 -->
+            <img v-if="html.block_list[index][index2] == 1" src="./img/icon4.png" class="bg_img over_time"
+              draggable="false">
+            <!-- 框选的样式 -->
+            <div v-show="html.block_list2[index][index2] == 3"
+              :class="['area_box',col_index_start==index2?'color_start':'',col_index_end==index2?'color_end':'']">
+            </div>
+            <!-- 鼠标焦点样式 -->
+            <!-- <div class="focus" v-show="focus_show(index,index2)"></div> -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 遮罩及新建会议弹窗 -->
+    <div class="popover" v-if="html.new_meeting">
+      <el-card class="form_box" shadow="never" v-loading="html.form_loading" :body-style="form_style()">
+        <div class="form_head">
+          <span class="text">预约会议</span>
+          <el-button @click="close_new" type="danger" icon="el-icon-close" circle size="mini"></el-button>
+        </div>
+        <div class="form_body">
+          <el-form :model="new_meeting_form" :rules="new_rule" ref="new_meeting" label-width="80px">
+            <el-form-item label="会议名称" prop="name">
+              <el-input v-model="new_meeting_form.name"></el-input>
+            </el-form-item>
+
+            <el-form-item label="预约时间" required>
+              <div style="display: flex;">
+                <el-form-item prop="date" class="margin" style="width: 140px;">
+                  <el-date-picker v-model="new_meeting_form.date" type="date" :picker-options="date_options()"
+                    @change="change_reserve_type" style="width: 140px;">
+                  </el-date-picker>
+                </el-form-item>
+                <el-form-item prop="time_start" class="margin" style="width: 100px;">
+                  <el-time-select v-model="new_meeting_form.time_start" @change="change_reserve_type"
+                    style="width: 100px;"
+                    :picker-options="{start: '06:00',step: '00:15',end: '23:00',maxTime:new_meeting_form.time_end}"
+                    placeholder="选择起始时间">
+                  </el-time-select>
+                </el-form-item>
+                <span class="margin">&#10140</span>
+                <el-form-item prop="time_end" class="margin" style="width: 100px;">
+                  <el-time-select v-model="new_meeting_form.time_end" @change="change_reserve_type"
+                    style="width: 100px;"
+                    :picker-options="{start: '06:00',step: '00:15',end: '23:00',minTime: new_meeting_form.time_start}"
+                    placeholder="选择结束时间">
+                  </el-time-select>
+                </el-form-item>
+              </div>
+            </el-form-item>
+
+            <el-form-item label="预约方式">
+              <el-select :disabled="new_meeting_form.is_rebook" v-model="new_meeting_form.method">
+                <el-option v-for="item,index in html.reserve_type" :label="item" :value="index">
+                </el-option>
+              </el-select>
+            </el-form-item>
+            <el-form-item v-if="new_meeting_form.method==5" label="自定义星期" prop="cus_week">
+              <el-select v-model="new_meeting_form.cus_week" multiple>
+                <el-option v-for="item,index in html.week_options" :label="item" :value="index+1">
+                </el-option>
+              </el-select>
+            </el-form-item>
+
+            <el-form-item v-show="new_meeting_form.method" label="预约截止日期">
+              <el-date-picker v-model="new_meeting_form.cycle_deadline" :picker-options="cycle_options()" type="date"
+                placeholder="选择日期">
+              </el-date-picker>
+            </el-form-item>
+
+            <el-form-item label="参会人员">
+              <div style="display:flex;flex-direction:column;">
+                <!-- 必须参与人 -->
+                <div style="display:flex;align-items: start;">
+                  <div class="person_box">
+                    <!-- 人员显示列表 -->
+                    <div class="box1">
+                      <div class="person button flex_shrink" @click="add_person_display">
+                        <i class="el-icon-plus icon1"></i>
+                        <span class="name">批量添加</span>
+                      </div>
+                      <div class="person flex_shrink" v-for="item,index in new_meeting_form.search_person">
+                        <span class="name text_ellipsis" :title="item.name">{{item.name}}</span>
+                        <i v-show="index" class="el-icon-close" @click="del_person(index)"></i>
+                      </div>
+                      <div v-show="new_meeting_form.search_person.length==1" class="placeholder">参会人员</div>
+                    </div>
+                    <!-- 人数统计 -->
+                    <div class="box2">{{new_meeting_form.search_person.length}}人</div>
+                  </div>
+                  <!-- <el-tooltip effect="dark" :content="new_meeting_form.guest_show?'收起':'添加来宾人员'" placement="top">
+                    <div class="add_button center flex_shrink"
+                      @click="new_meeting_form.guest_show=!new_meeting_form.guest_show">
+                      <i v-show="!new_meeting_form.guest_show" class="el-icon-arrow-down" style="font-size:14px;"></i>
+                      <i v-show="new_meeting_form.guest_show" class="el-icon-arrow-up" style="font-size:14px;"></i>
+                    </div>
+                  </el-tooltip> -->
+                </div>
+                <!-- 来宾人员 -->
+                <!-- <div v-show="new_meeting_form.guest_show" style="display:flex;align-items:start;margin-top:10px;">
+                  <input type="file" style="display:none;" id="upload" @change="upload_visitor">
+                  <div class="person_box">
+                    <div class="box1">
+                      <div class="person button flex_shrink" @click="upload_click">
+                        <i class="el-icon-plus icon1"></i>
+                        <span class="name">批量添加</span>
+                      </div>
+                      <div class="person flex_shrink" v-for="item,index in new_meeting_form.guestList">
+                        <span class="name text_ellipsis" :title="item.guestName">{{item.guestName}}</span>
+                        <i @click="del_guest(index)" class="el-icon-close button"></i>
+                      </div>
+                      <div v-show="new_meeting_form.guestList.length==0" class="placeholder">来宾人员</div>
+                    </div>
+                    <div class="box2">{{new_meeting_form.guestList.length}}人</div>
+                  </div>
+                  <el-button @click="download" size="mini" type="text" class="flex_shrink"
+                    style="margin:8px 10px 0 10px;">Excel模板</el-button>
+                </div> -->
+              </div>
+            </el-form-item>
+
+            <el-form-item label="来宾人员">
+              <div style="display:flex;align-items:start;">
+                <input type="file" style="display:none;" id="upload" @change="upload_visitor">
+                <div class="person_box">
+                  <div class="box1">
+                    <div class="person button flex_shrink" @click="upload_click">
+                      <i class="el-icon-plus icon1"></i>
+                      <span class="name">批量添加</span>
+                    </div>
+                    <div class="person flex_shrink" v-for="item,index in new_meeting_form.guestList">
+                      <span class="name text_ellipsis" :title="item.guestName">{{item.guestName}}</span>
+                      <i @click="del_guest(index)" class="el-icon-close button"></i>
+                    </div>
+                    <div v-show="new_meeting_form.guestList.length==0" class="placeholder">来宾人员</div>
+                  </div>
+                  <div class="box2">{{new_meeting_form.guestList.length}}人</div>
+                </div>
+                <el-button @click="download" size="mini" type="text" class="flex_shrink"
+                  style="margin:8px 10px 0 10px;">Excel模板</el-button>
+              </div>
+            </el-form-item>
+
+            <el-form-item label="是否回复">
+              <el-select v-model="new_meeting_form.reply">
+                <el-option v-for="item,index in html.bool_options" :label="item" :value="index">
+                </el-option>
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="是否通知">
+              <div style="display: flex;align-items: center;">
+                <el-select v-model="new_meeting_form.sendMessage" style="margin-right: 20px;" @change="change_info">
+                  <el-option v-for="item,index in html.bool_options" :label="item" :value="index">
+                  </el-option>
+                </el-select>
+                <el-button @click="add_alert_time" v-show="new_meeting_form.sendMessage==1" type="text"
+                  size="small">添加提醒
+                </el-button>
+              </div>
+            </el-form-item>
+            <el-form-item label="&#128276;" v-show="new_meeting_form.meetingReminds.length>0">
+              <div class="alert_box">
+                <div v-for="item,r in new_meeting_form.meetingReminds" class="box1">
+                  <el-select v-show="item.index!==7" class="box3" v-model="item.index" @change="init_time(item)"
+                    placeholder="请选择提醒时间">
+                    <el-option v-for="item2,v in new_meeting_form.reminds" :label="item2" :value="v"></el-option>
+                  </el-select>
+                  <!-- 选最后一项自定义时间时 需要触发时间选择器 -->
+                  <el-date-picker v-show="item.index===7" class="box3" v-model="item.alert_time"
+                    @change="custom_alert_time(item)" type="datetime"></el-date-picker>
+                  <!-- <el-select v-model="item.type" class="box2">
+                    <el-option v-for="item2,index in html.info_type" :label="item2" :value="index"
+                      :disabled="index!=0&&index!=2">
+                    </el-option>
+                  </el-select> -->
+                  <i class="el-icon-close icon button" @click="del_alert_time(r)"></i>
+                </div>
+              </div>
+            </el-form-item>
+
+            <el-form-item label="是否签到">
+              <el-select v-model="new_meeting_form.signIn">
+                <el-option v-for="item,index in html.bool_options" :label="item" :value="index">
+                </el-option>
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="会议纪要">
+              <el-select v-model="new_meeting_form.summary">
+                <el-option v-for="item,index in html.bool_options" :label="item" :value="index">
+                </el-option>
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="备注">
+              <el-input type="textarea" autosize v-model="new_meeting_form.description"></el-input>
+            </el-form-item>
+
+            <el-form-item label="附件">
+              <el-upload :action="file.url" :headers="upload_header()" :file-list="file.list" :before-remove="file_del"
+                :on-success="upload_result" style="width: 50%;">
+                <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
+              </el-upload>
+            </el-form-item>
+          </el-form>
+        </div>
+        <el-button @click="new_submit(new_meeting_form)" type="primary" style="align-self:end;">确定</el-button>
+      </el-card>
+    </div>
+    <!-- 添加参会人 -->
+    <div class="popover" v-if="html.add_person_display">
+      <div class="add_person_window" v-loading="html.add_person_loading">
+        <div class="head">
+          <span style="font-weight:bold;">添加参会人</span>
+          <el-button @click="html.add_person_display=false" type="danger" icon="el-icon-close" circle
+            size="mini"></el-button>
+        </div>
+        <div class="body">
+          <div class="left">
+            <el-input v-model="add_person_form.search" @change="get_person_data(1)" size="small" clearable>
+              <i @click="get_person_data(1)" slot="suffix" class="el-input__icon el-icon-search button"></i>
+            </el-input>
+            <div class="options" v-show="add_person_form.option_select==0">
+              <div class="box flex_shrink button" v-for="index in 2" @click="get_person_data(index)">
+                <div class="bg center">
+                  <i v-show="index==1" class="el-icon-user"></i>
+                  <i v-show="index==2" class="el-icon-office-building"></i>
+                </div>
+                <span style="font-size:14px;">{{index==1?'按人员选':'按架构选'}}</span>
+              </div>
+            </div>
+            <div class="list_box" v-show="add_person_form.option_select!==0">
+              <div v-show="add_person_form.stru_path.length==1" class="box1 flex_shrink">
+                <i class="el-icon-arrow-left icon button" @click="add_person_form.option_select=0"></i>
+                <span class="icon text">{{add_person_form.option_select==1?'按人员选':'按架构选'}}</span>
+              </div>
+              <div class="box2 flex_shrink" v-if="add_person_form.option_select==2">
+                <div class="text2" v-for="item,index in add_person_form.stru_path">
+                  <span @click="path_back(item,index)" class="text button">{{item.name}}</span>
+                  <i v-show="index!=add_person_form.stru_path.length-1" class="el-icon-arrow-right"></i>
+                </div>
+              </div>
+              <div class="scroll">
+                <div class="person" v-for="item,index in add_person_form.total_list"
+                  :style="{cursor:item.id==user.id?'not-allowed':'',marginTop:add_person_form.stru_index+1==index?'6px':''}">
+                  <div v-show="!item.check" class="icon1 flex_shrink" @click="select_person(item)"></div>
+                  <div v-show="item.check" class="icon2 flex_shrink center" @click="select_person(item)"
+                    :style="{background:item.id==user.id?'#ECEDEE':''}">
+                    <i class="el-icon-check icon3"></i>
+                  </div>
+                  <div class="name text_ellipsis" @click="select_person(item)" :title="item.name">{{item.name}}</div>
+                  <el-button v-show="item.type=='stru'" :disabled="item.check" @click.stop="get_person_data(2,item)"
+                    class="button" style="margin:0 10px;" type="text">下级</el-button>
+                  <div
+                    v-if="item.type=='stru'&&add_person_form.stru_index==index&&index+1<add_person_form.total_list.length"
+                    class="line_between"></div>
+                </div>
+              </div>
+              <el-pagination v-if="add_person_form.option_select==1" class="paging"
+                @current-change="get_person_data(1,$event)" layout="total, prev, pager, next"
+                :total="add_person_form.total_person" :page-size="add_person_form.page_size"></el-pagination>
+            </div>
+          </div>
+          <!-- 展示列表 -->
+          <div class="right">
+            <span style="margin-bottom:10px;">已选择（ {{add_person_form.select_list.length}}/10000 ）</span>
+            <div class="scroll">
+              <div class="person flex_shrink" v-for="item,index in add_person_form.select_list">
+                <span class="name text_ellipsis" :title="item.name">{{item.name}}</span>
+                <!-- 第一个人员不能删除 -->
+                <i v-show="index" class="el-icon-close" @click="del_select(index)"></i>
+              </div>
+            </div>
+            <div class="submit">
+              <el-button @click="html.add_person_display=false" style="margin-right:20px;" size="small">取消</el-button>
+              <el-button @click="add_person_sub" type="primary" size="small">确定</el-button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 会议信息 -->
+    <el-card class="meeting_info_box" v-show="html.meeting_info_show" shadow="always">
+      <div class="single_info" v-for="item,index in html.meeting_infos">
+        <span class="title">{{item}}</span>
+        <span class="text text_ellipsis" :title="meeting_info.name" v-if="index==0">{{meeting_info.name}}</span>
+        <span class="text" v-if="index==1">{{meeting_info.start_time}}</span>
+        <span class="text" v-if="index==2">{{meeting_info.end_time}}</span>
+        <span class="text" v-if="index==3">{{meeting_info.type}}</span>
+      </div>
+    </el-card>
+  </div>
+
+  <script src="../../运维人员部署请修改我.js"></script>
+  <script src="../module/vue.js"></script>
+  <script src="../module/element-ui.js"></script>
+  <script src="../module/xlsx.core.min.js"></script>
+  <script src="../module/axios.min.js"></script>
+  <script src="../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

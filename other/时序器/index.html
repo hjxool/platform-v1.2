@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <link rel="stylesheet" href="../../module/element-ui.css">
+  <link rel="stylesheet" href="../../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index" v-cloak>
+    <img src="./img/bg.png" class="bg_img">
+
+    <div class="head1 row_layout flex_shrink">
+      <img src="./img/bg2.png" class="bg_img">
+      <img src="./img/icon.png" class="icon">
+      <span class="text1">AKE</span>
+      <span class="text2">{{device_name}}</span>
+    </div>
+
+    <div class="head2 flex_shrink">
+      <div class="box button center" @click="switch_page(0)">
+        <img src="./img/icon2.png" class="bg_img" v-show="html.page!=0">
+        <img src="./img/icon3.png" class="bg_img" v-show="html.page==0">
+        <span :style="{color:'#fff',opacity:html.page==0?'1':'0.5',fontSize:'1.12rem'}">调试</span>
+      </div>
+    </div>
+
+    <div class="body">
+      <!-- 状态栏 -->
+      <div class="box1">
+        <!-- 装饰 -->
+        <div class="icon center flex_shrink">
+          <img src="./img/icon15.png" class="bg_img">
+          AKE12
+        </div>
+        <!-- 开关 -->
+        <div class="box1_1">
+          <div class="box1_2 flex_shrink" v-for="item,index in channel">
+            <div class="row_layout">
+              <img src="./img/icon10.png" class="icon2" v-if="item.v==0">
+              <img src="./img/icon12.png" class="icon2" v-if="item.v==1">
+              <img src="./img/icon11.png" class="icon2" v-if="item.v==2">
+              <img src="./img/icon7.png" class="icon2" v-if="item.a==0">
+              <img src="./img/icon9.png" class="icon2" v-if="item.a==1">
+              <img src="./img/icon8.png" class="icon2" v-if="item.a==2">
+            </div>
+            <div class="box1_3" @click="send_order(`ch${index+1}`,item)">
+              <img src="./img/icon13.png" class="bg_img">
+              <span class="text1">on</span>
+              <div class="switch">
+                <img src="./img/icon14.png" class="bg_img" draggable="false">
+                <div class="animation cover" :style="{animationName:item.status==1?'unfold':'fold'}"></div>
+                <div class="button animation" :style="{animationName:item.status==1?'on':'off'}"></div>
+              </div>
+              <span class="text1">off</span>
+            </div>
+            <span class="text2">{{item.delay}}S</span>
+          </div>
+        </div>
+        <!-- 总开关 -->
+        <div class="box1_4 button center" @click="send_order('sequence')">
+          <img src="./img/icon6.png" class="bg_img">
+          <span class="text">时序开关</span>
+          <span class="text" :style="{color:timing_switch?'#00FF7F':'#FF4500'}">{{timing_switch?'ON':'OFF'}}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../../运维人员部署请修改我.js"></script>
+  <script src="../../../js/stomp.min.js"></script>
+  <script src="../../module/vue.js"></script>
+  <script src="../../module/element-ui.js"></script>
+  <script src="../../module/axios.min.js"></script>
+  <script src="../../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

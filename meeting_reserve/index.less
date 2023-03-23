@@ -1,0 +1,586 @@
+* {
+	user-select: none;
+}
+#index {
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	display: grid;
+	grid-template-rows: 70px 60px auto;
+	background: #fff;
+	padding: 12px;
+	border-radius: 8px;
+}
+.header {
+	display: flex;
+	align-items: center;
+	padding: 0 20px;
+	.search {
+		width: 200px;
+	}
+	.calendar_box {
+		margin: 0 20px;
+		position: relative;
+		display: flex;
+		align-items: center;
+		.text {
+			font-size: 20px;
+			font-weight: bold;
+			margin-right: 20px;
+		}
+		.icon {
+			width: 30px;
+			height: 30px;
+		}
+		.el-date-editor {
+			// 将第三方样式隐藏
+			width: 0;
+			height: 0;
+			position: absolute;
+			right: 40px;
+			top: 20px;
+			.el-input__inner {
+				padding: 0;
+				border: none;
+			}
+			.el-input__icon {
+				font-size: 0;
+				width: 0;
+				height: 0;
+			}
+		}
+	}
+}
+.table_type {
+	display: grid;
+	grid-template-columns: 240px 120px auto;
+	margin-bottom: 6px;
+	.meeting_name {
+		display: flex;
+		align-items: center;
+		padding-left: 20px;
+		font-size: 18px;
+		background: #e9f3f7;
+		border-radius: 10px;
+	}
+	.text {
+		margin-left: 5px;
+		background: #e9f3f7;
+		border-radius: 10px;
+		font-size: 18px;
+		display: flex;
+		align-items: center;
+		padding-left: 20px;
+	}
+	.tips {
+		display: flex;
+		align-items: center;
+		justify-self: end;
+		background: #e9f3f7;
+		border-radius: 10px;
+		padding: 0 10px;
+		.tip {
+			font-size: 16px;
+			display: flex;
+			align-items: center;
+			margin: 0 10px;
+			&::before {
+				content: '';
+				display: inline-block;
+				width: 20px;
+				height: 20px;
+				margin-right: 5px;
+			}
+			&:nth-child(1)::before {
+				background-color: #fff;
+				border: 1px solid;
+			}
+			&:nth-child(2)::before {
+				background-color: #28bb70;
+			}
+			&:nth-child(3)::before {
+				width: 40px;
+				height: 8px;
+				background-color: #fde4df;
+				border: 1px dashed #f4a55f;
+				border-radius: 6px;
+			}
+		}
+	}
+}
+.table_box {
+	display: grid;
+	grid-template-rows: 40px auto;
+	// overflow-x: auto;
+	// overflow-y: hidden;
+	overflow: hidden;
+	position: relative;
+	.time_line_box {
+		display: grid;
+		grid-template-columns: 240px repeat(17, 1fr);
+		grid-auto-flow: column;
+		grid-auto-columns: 120px;
+		background-color: #dcf3fc;
+		overflow: auto;
+		scrollbar-width: none; // firefox
+		&::-webkit-scrollbar {
+			// Chrome Safari
+			display: none;
+		}
+		> .icon {
+			position: sticky;
+			left: 0;
+			z-index: 20;
+			background: #dcf3fc;
+		}
+		.time_line {
+			font-size: 16px;
+			min-width: 120px;
+		}
+	}
+	.meeting_boxs {
+		display: grid;
+		grid-auto-rows: 100px;
+		// overflow-y: auto;
+		// overflow-x: hidden;
+		overflow: auto;
+		position: relative;
+		align-self: start;
+		max-height: 100%;
+		.place {
+			display: grid;
+			grid-template-columns: 240px repeat(68, 1fr);
+			grid-auto-flow: column;
+			grid-auto-columns: 30px;
+			border: 1px solid #e6e6e6;
+			border-top: 1px solid #e6e6e6;
+			position: relative;
+			margin-top: 10px;
+			.place_name {
+				display: grid;
+				// grid-template-columns: auto 90px;
+				position: sticky;
+				left: 0;
+				background: #fff;
+				z-index: 20;
+				.info {
+					display: flex;
+					flex-direction: column;
+					justify-content: space-around;
+					// align-items: start;
+					overflow: hidden;
+					padding-left: 20px;
+					.box1 {
+						display: flex;
+						align-items: center;
+						max-width: 100%;
+						.name {
+							font-size: 18px;
+							margin-right: auto;
+						}
+					}
+					.type {
+						color: #868686;
+						font-size: 14px;
+					}
+					.box2 {
+						display: flex;
+						align-items: center;
+						.icon {
+							width: 20px;
+							height: 20px;
+							margin-right: 8px;
+						}
+					}
+				}
+				.icon2 {
+					width: 90%;
+					height: 40px;
+					object-fit: contain;
+				}
+			}
+			.time_box {
+				border-left: 1px solid #e6e6e6;
+				display: grid;
+				min-width: 30px;
+				position: relative;
+				.color_start {
+					border-top-left-radius: 20px;
+					border-bottom-left-radius: 20px;
+				}
+				.color_end {
+					border-top-right-radius: 20px;
+					border-bottom-right-radius: 20px;
+				}
+				.pass {
+					z-index: 0;
+				}
+				.over_time {
+					z-index: 0;
+				}
+				.area_box {
+					// border: 1px solid #106fff;
+					background-color: #106fff;
+					position: absolute;
+					width: 100%;
+					height: 100%;
+				}
+				.focus {
+					width: 100%;
+					height: 100%;
+					background: #95d8fe;
+				}
+			}
+		}
+		.current_time {
+			width: 6px;
+			border: 1px dashed #f4a55f;
+			background-color: #fde4df;
+			border-radius: 6px;
+			position: absolute;
+			z-index: 5;
+			// position: fixed;
+		}
+		.mouse_position {
+			position: fixed;
+			background-color: #e1f3fb;
+			z-index: 4;
+			opacity: 0.5;
+			.focus {
+				width: 100%;
+				height: 90px;
+				background: #95d8fe;
+				position: relative;
+			}
+		}
+	}
+}
+.popover {
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	background-color: rgba(0, 0, 0, 0.2);
+	display: grid;
+	// align-content: center;
+	justify-content: center;
+	z-index: 990;
+	.form_box {
+		width: 31.25%;
+		min-width: 600px;
+		margin-top: 40px;
+		.form_head {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			height: 40px;
+			.text {
+				font-weight: bold;
+				font-size: 18px;
+			}
+		}
+		.form_body {
+			flex-grow: 1;
+			overflow: auto;
+			padding-right: 10px;
+			margin: 20px 0;
+		}
+		.alert_box {
+			// display: flex;
+			// flex-direction: column;
+			.box1 {
+				position: relative;
+				display: flex;
+				align-items: center;
+				// flex-shrink: 0;
+				margin-bottom: 10px;
+				&:last-child {
+					margin-bottom: 0;
+				}
+				.text1 {
+					width: 150px;
+					height: 40px;
+					border-radius: 6px;
+					font-size: 14px;
+					border: 1px solid #c0c4cc;
+					margin-right: 10px;
+				}
+				.box2 {
+					width: 150px;
+					margin-right: 10px;
+				}
+				.icon {
+					font-size: 16px;
+				}
+				> .box3 {
+					width: 200px;
+					margin-right: 20px;
+				}
+			}
+		}
+		.margin {
+			margin-right: 10px;
+		}
+		.person_box {
+			flex-grow: 1;
+			border: 1px solid #eaebed;
+			border-radius: 6px;
+			&:hover {
+				border-color: #c0c4cc;
+			}
+			display: grid;
+			grid-template-columns: auto 40px;
+			> .box1 {
+				display: flex;
+				flex-wrap: wrap;
+				overflow-x: hidden;
+				> .person {
+					background-color: #f2f2f7;
+					padding: 6px 10px;
+					width: 100px;
+					margin: 6px 0 6px 8px;
+					display: flex;
+					align-items: center;
+					overflow: hidden;
+					border-radius: 6px;
+					> .icon1 {
+						font-weight: bold;
+						font-size: 12px;
+						margin-right: 6px;
+					}
+					> .name {
+						flex-grow: 1;
+						font-size: 14px;
+						margin-right: auto;
+						line-height: initial; //element的行高会影响内部未设置行高的字体元素
+					}
+				}
+				> .placeholder {
+					color: #c0c4cc;
+					margin-left: 10px;
+					align-self: center;
+				}
+			}
+			> .box2 {
+				padding-left: 8px;
+				padding-top: 10px;
+				color: #c0c4cc;
+				font-size: 14px;
+				line-height: initial;
+				align-self: start;
+				justify-self: start;
+			}
+		}
+		.add_button {
+			width: 26px;
+			height: 26px;
+			margin: 8px 10px 0 10px;
+			cursor: pointer;
+			&:hover {
+				background-color: #e7e9ea;
+			}
+		}
+	}
+	.add_person_window {
+		align-self: center;
+		width: 40%;
+		min-width: 600px;
+		height: 60vh;
+		overflow: hidden; //总容器限制溢出 子容器滚动
+		min-height: 500px;
+		border-radius: 10px;
+		display: flex;
+		flex-direction: column;
+		background-color: #fff;
+		> .head {
+			padding: 10px 20px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+		}
+		> .body {
+			flex-grow: 1;
+			overflow: hidden;
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			> .left {
+				display: flex;
+				flex-direction: column;
+				overflow: hidden;
+				padding: 10px;
+				border-right: 1px solid #e2e4e5;
+				> .options {
+					margin: 20px 10px;
+					display: flex;
+					> .box {
+						display: flex;
+						flex-direction: column;
+						align-items: center;
+						margin-right: 36px;
+						> .bg {
+							width: 40px;
+							height: 40px;
+							border-radius: 10px;
+							background-color: #eaebed;
+							margin-bottom: 12px;
+						}
+					}
+				}
+				> .list_box {
+					flex-grow: 1;
+					overflow: hidden;
+					display: flex;
+					flex-direction: column;
+					> .box1 {
+						display: flex;
+						align-items: center;
+						margin: 10px 0;
+						> .icon {
+							font-size: 14px;
+							font-weight: bold;
+						}
+						> .text {
+							margin: 0 auto;
+						}
+					}
+					> .box2 {
+						display: flex;
+						align-items: center;
+						flex-wrap: wrap;
+						align-content: start;
+						margin: 10px 0;
+						> .text2 {
+							display: flex;
+							align-items: center;
+							> .text {
+								border-radius: 6px;
+								padding: 5px;
+								&:hover {
+									background: #f2f2f7;
+								}
+							}
+						}
+					}
+					> .scroll {
+						flex-grow: 1;
+						padding-right: 10px;
+						overflow: auto;
+						> .person {
+							padding: 6px 8px;
+							display: flex;
+							align-items: center;
+							// overflow: hidden;
+							cursor: pointer;
+							position: relative;
+							&:hover {
+								background-color: #eff0f1;
+							}
+							> .icon1 {
+								width: 20px;
+								height: 20px;
+								border: 1px solid;
+								border-radius: 6px;
+							}
+							> .icon2 {
+								width: 20px;
+								height: 20px;
+								background: #007fff;
+								border-radius: 6px;
+								> .icon3 {
+									font-size: 12px;
+									color: #fff;
+								}
+							}
+							> .name {
+								margin-left: 12px;
+								margin-right: auto;
+							}
+							> .line_between {
+								position: absolute;
+								top: 100%;
+								left: 0;
+								width: 100%;
+								height: 6px;
+								background-color: #eeeeee;
+								border-radius: 4px;
+							}
+						}
+					}
+				}
+			}
+			> .right {
+				padding: 10px;
+				overflow: hidden;
+				display: flex;
+				flex-direction: column;
+				> .scroll {
+					flex-grow: 1;
+					padding-right: 10px;
+					overflow: auto;
+					display: flex;
+					flex-wrap: wrap;
+					align-content: start;
+					> .person {
+						background-color: #f2f2f7;
+						padding: 6px 10px;
+						width: 100px;
+						margin: 6px 0 6px 8px;
+						display: flex;
+						align-items: center;
+						overflow: hidden;
+						border-radius: 6px;
+						> .name {
+							flex-grow: 1;
+							font-size: 14px;
+							margin-right: auto;
+						}
+					}
+				}
+				> .submit {
+					padding-top: 10px;
+					align-self: end;
+				}
+			}
+		}
+	}
+}
+.meeting_info_box {
+	width: 300px;
+	position: absolute;
+	z-index: 999;
+	.single_info {
+		padding: 10px 0;
+		display: flex;
+
+		.title {
+			width: 85px;
+			font-size: 16px;
+			font-weight: bold;
+		}
+		.text {
+			font-size: 16px;
+		}
+	}
+}
+.paging {
+	align-self: center;
+	padding: 20px 0;
+}
+
+::-webkit-scrollbar {
+	/*滚动条整体样式*/
+	width: 5px; /*高宽分别对应横竖滚动条的尺寸*/
+	height: 10px;
+}
+::-webkit-scrollbar-thumb {
+	/*滚动条里面小方块*/
+	border-radius: 5px;
+	background: #82a3f7;
+}
+::-webkit-scrollbar-track {
+	/*滚动条里面轨道*/
+	border-radius: 5px;
+	background: #404755;
+}
+.el-scrollbar__wrap {
+	overflow: hidden;
+}

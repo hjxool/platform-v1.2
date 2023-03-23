@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>物模型</title>
+  <link rel="stylesheet" href="../module/element-ui.css">
+  <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index" v-cloak v-loading="static_params.first_load">
+    <div class="index" v-if="!static_params.first_load"
+      :style="{gridTemplateRows:history_list[history_selected].profile.published==='0'?'80px auto 70px':'80px auto'}">
+      <!-- 按钮选项栏 -->
+      <div class="nav_layout">
+        <el-button type="primary" round @click="add_protocol" :disabled="history_list.length == 0">添加自定义功能</el-button>
+        <div class="history_layout">
+          <span style="margin-right: 20px;">历史版本</span>
+          <el-select style="width:200px;" v-model="history_selected" placeholder="无历史版本"
+            @change="model_select(history_selected)" :disabled="history_list.length == 0">
+            <el-option v-for="ver,index in history_list" :key="index" :label="ver.profile.version" :value="index">
+            </el-option>
+          </el-select>
+        </div>
+        <el-button @click="new_ver_model" :disabled="history_list.length == 0">新增版本</el-button>
+        <el-button type="primary" round @click="set_product_model" :disabled="history_list.length == 0">启用当前物模型
+        </el-button>
+        <el-button @click="static_params.model_json_display=true" :disabled="history_list.length == 0">物模型 TSL
+        </el-button>
+        <div class="current_model">
+          <span>当前启用物模型版本：</span>
+          <span style="padding-left: 20px;">{{static_params.current_version}}</span>
+        </div>
+      </div>
+      <!-- 表格栏 -->
+      <div style="padding:0 10px;overflow: auto;">
+        <el-table :data="protocol_list" border>
+          <el-table-column prop="type" label="功能类型" width="150"></el-table-column>
+          <el-table-column prop="name" label="功能名称"></el-table-column>
+          <el-table-column prop="identifier" label="标识符"></el-table-column>
+          <el-table-column prop="dataType_text" label="数据定义"></el-table-column>
+          <el-table-column label="操作" width="100" fixed="right">
+            <template slot-scope="scope">
+              <el-button v-if="history_list[history_selected].profile.published==='0'" @click="edit_protocol(scope.row)"
+                type="text" size="small">编辑</el-button>
+              <el-button v-if="history_list[history_selected].profile.published==='0'"
+                @click="delete_protocol(scope.row)" type="text" size="small">删除</el-button>
+              <el-button v-if="history_list[history_selected].profile.published==='1'"
+                @click="check_protocol(scope.row)" type="text" size="small">查看</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <!-- 透明包裹层 设定固定大小 滚动显示 页面居中 -->
+      <div class="custom_center" v-for="card,index in form_list" ref="custom_center">
+        <!-- 编辑及新建卡片 -->
+        <el-card style="overflow: auto;max-height: 90%;width: 480px;" shadow="hover" v-loading="static_params.loading">
+          <el-form label-width="80px">
+            <!-- label-position="top" :rules="static_params.form_rules" :model="card" -->
+            <!-- 选择属性、事件、服务 -->
+            <el-form-item v-if="static_params.add_edit=='add'&&index==0">
+              <el-radio-group v-model="card.type" size="small" @change="clean_form(card)">
+                <el-radio-button label="属性">属性</el-radio-button>
+                <el-radio-button label="事件">事件</el-radio-button>
+                <el-radio-button label="服务">服务</el-radio-button>
+              </el-radio-group>
+            </el-form-item>
+            <!-- 属性设置 -->
+            <template v-if="card.type=='属性'">
+              <el-form-item label="属性名称" size="medium">
+                <el-input v-if="index!=0" class="form_input" v-model="card.name"
+                  :disabled="static_params.add_edit=='check'" @blur="form_verify(card.name,'name')"
+                  placeholder="请输入属性名称"></el-input>
+                <!-- 仅有第一层设置属性需要推荐 -->
+                <el-autocomplete v-if="index==0" class="form_input" v-model="card.name"
+                  :disabled="static_params.add_edit=='check'" @blur="form_verify(card.name,'name')"
+                  :fetch-suggestions="property_search" placeholder="请输入属性名称"
+                  @select="init_default_property($event,card)" popper-class="autocomplete">
+                  <template slot-scope="{item}">
+                    <div class="default_text text_ellipsis" :title="item.name">{{item.name}}
+                    </div>
+                    <span class="default_text">标识符:{{item.identifier}}</span>
+                  </template>
+                </el-autocomplete>
+                <el-tag type="warning" size="mini" effect="plain">必填</el-tag>
+                <div class="verify_text" v-show="rules.name.show">{{rules.name.message}}</div>
+              </el-form-item>
+              <el-form-item label="属性标识" size="medium">
+                <el-input class="form_input" v-model="card.identifier" placeholder="请输入您的标识符"
+                  :disabled="static_params.add_edit=='check'" @blur="form_verify(card.identifier,'identifier')">
+                </el-input>
+                <el-tag type="warning" size="mini" effect="plain">必填</el-tag>
+                <div class="verify_text" v-show="rules.identifier.show">{{rules.identifier.message}}</div>
+              </el-form-item>
+              <el-form-item label="数据类型" size="medium">
+                <el-select class="form_input" v-model="card.dataType" placeholder="请选择数据类型"
+                  @change="format_type_data(card)" :disabled="static_params.add_edit=='check'">
+                  <el-option v-for="item in static_params.type_options" :key="item.value" :label="item.name"
+                    :value="item.value"></el-option>
+                </el-select>
+                <el-tag type="warning" size="mini" effect="plain">必填</el-tag>
+              </el-form-item>
+              <template v-if="card.dataType=='int'||card.dataType=='float'||card.dataType=='double'">
+                <el-form-item label="取值范围" size="medium">
+                  <div style="display: flex;width: 100%;">
+                    <el-input-number v-model="card.min" :precision="precision_sort(card)" :step="step_sort(card)"
+                      :disabled="static_params.add_edit=='check'" size="mini">
+                    </el-input-number>
+                    ~
+                    <el-input-number v-model="card.max" :precision="precision_sort(card)" :step="step_sort(card)"
+                      :disabled="static_params.add_edit=='check'" size="mini">
+                    </el-input-number>
+                  </div>
+                </el-form-item>
+                <el-form-item label="步长" size="medium">
+                  <el-input-number v-model="card.step" :precision="precision_sort(card)" :step="step_sort(card)"
+                    :disabled="static_params.add_edit=='check'" size="medium" controls-position="right">
+                  </el-input-number>
+                  <div class="verify_text" v-show="rules.step.show">{{rules.step.message}}</div>
+                </el-form-item>
+                <el-form-item label="单位" size="medium">
+                  <div style="display: flex;">
+                    <el-select style="width: 120px;margin-right: 4px;" v-model="card.unit" @change="ban_unit_button"
+                      filterable placeholder="请选择单位" :disabled="static_params.add_edit=='check'">
+                      <el-option-group v-for="group in static_params.unit_options" :key="group.label"
+                        :label="group.label">
+                        <el-option v-for="item in group.options" :key="item.value" :label="item.value"
+                          :value="item.value">
+                        </el-option>
+                      </el-option-group>
+                    </el-select>
+                    <el-button @click="add_unit" :disabled="static_params.add_edit=='check'" size="mini">新增
+                    </el-button>
+                    <el-button @click="edit_unit"
+                      :disabled="static_params.add_edit=='check'||static_params.unit_button_ban" size="mini">更新
+                    </el-button>
+                    <el-button @click="del_unit"
+                      :disabled="static_params.add_edit=='check'||static_params.unit_button_ban" size="mini"
+                      type="danger">删除</el-button>
+                  </div>
+                </el-form-item>
+              </template>
+              <template v-if="card.dataType=='text'">
+                <el-form-item label="数据长度" size="medium">
+                  <el-input class="form_input" v-model="card.textLength"
+                    @blur="form_verify(card.textLength,'textLength')" placeholder="请输入数据长度"
+                    :disabled="static_params.add_edit=='check'">
+                  </el-input>
+                  <el-tag type="warning" size="mini" effect="plain">必填</el-tag>
+                  <div class="verify_text" v-show="rules.textLength.show">{{rules.textLength.message}}</div>
+                </el-form-item>
+              </template>
+              <template v-if="card.dataType=='struct'">
+                <el-form-item label="JSON对象" size="medium">
+                  <div class="struct_array_layout" v-for="item,struct_index in card.struct_array">
+                    <span style="font-size: 12px;color: #555;">参数名称： {{item.name}}</span>
+                    <div>
+                      <span class="struct_array_button" v-if="history_list[history_selected].profile.published==='0'"
+                        @click="edit_child_json(item,struct_index)">编辑</span>
+                      <span style="color: rgb(0, 112, 204);cursor: pointer;"
+                        v-if="history_list[history_selected].profile.published==='0'"
+                        @click="del_child_json(card,struct_index)">删除</span>
+                      <span style="color: rgb(0, 112, 204);cursor: pointer;"
+                        v-if="history_list[history_selected].profile.published==='1'"
+                        @click="check_child_json(item)">查看</span>
+                    </div>
+                  </div>
+                  <span style="color: rgb(0, 112, 204);cursor: pointer;font-size: 12px;" @click="add_child_property">+
+                    新增参数</span>
+                  <el-tag type="warning" size="mini" effect="plain">必填</el-tag>
+                  <div class="verify_text" v-if="card.struct_array.length==0">不能为空</div>
+                </el-form-item>
+              </template>
+              <template v-if="card.dataType=='array'">
+                <el-form-item label="元素类型" size="medium">
+                  <el-select style="width: 80px;" v-model="card.itemType" @change="format_array_data(card)"
+                    :disabled="static_params.add_edit=='check'" placeholder="请选择元素类型">
+                    <el-option v-for="item in static_params.array_type_options" :key="item.value" :label="item.name"
+                      :value="item.value"></el-option>
+                  </el-select>
+                  <el-tag type="warning" size="mini" effect="plain">必填</el-tag>
+                </el-form-item>
+                <el-form-item label="元素个数" size="medium">
+                  <el-input class="form_input" v-model="card.size" @blur="form_verify(card.size,'size')"
+                    placeholder="请输入元素个数" :disabled="static_params.add_edit=='check'">
+                  </el-input>
+                  <el-tag type="warning" size="mini" effect="plain">必填</el-tag>
+                  <div class="verify_text" v-show="rules.size.show">{{rules.size.message}}</div>
+                </el-form-item>
+                <template v-if="card.itemType=='struct'">
+                  <el-form-item label="JSON对象" size="medium">
+                    <div class="struct_array_layout" v-for="item,struct_index in card.struct_array">
+                      <span style="font-size: 12px;color: #555;">参数名称： {{item.name}}</span>
+                      <div>
+                        <span class="struct_array_button" v-if="history_list[history_selected].profile.published==='0'"
+                          @click="edit_child_json(item,struct_index)">编辑</span>
+                        <span style="color: rgb(0, 112, 204);cursor: pointer;"
+                          v-if="history_list[history_selected].profile.published==='0'"
+                          @click="del_child_json(card,struct_index)">删除</span>
+                        <span style="color: rgb(0, 112, 204);cursor: pointer;"
+                          v-if="history_list[history_selected].profile.published==='1'"
+                          @click="check_child_json(item)">查看</span>
+                      </div>
+                    </div>
+                    <span style="color: rgb(0, 112, 204);cursor: pointer;font-size: 12px;" @click="add_child_property">+
+                      新增参数</span>
+                    <el-tag type="warning" size="mini" effect="plain">必填</el-tag>
+                    <div class="verify_text" v-if="card.struct_array.length==0">不能为空</div>
+                  </el-form-item>
+                </template>
+              </template>
+              <template v-if="card.dataType=='enum'">
+                <el-form-item label="枚举项" size="medium">
+                  <div class="enum_layout" style="margin-top:0;">
+                    <span>参数值<i class="el-icon-question" title="参数只当字符串处理，由设备端解析"></i></span>
+                    <span>参数描述</span>
+                  </div>
+                  <div class="enum_layout" v-for="item in card.enum_list">
+                    <div class="row_layout">
+                      <el-input v-model="item.value" size="small" placeholder="请输入内容" clearable></el-input>
+                      <span class="gap">-</span>
+                    </div>
+                    <div class="row_layout">
+                      <el-input v-model="item.label" maxlength="20" size="small" placeholder="请输入内容"
+                        clearable></el-input>
+                      <el-button class="gap" @click="del_enum(card)" type="text">删除</el-button>
+                    </div>
+                  </div>
+                  <span style="color: rgb(0, 112, 204);cursor: pointer;font-size: 12px;" @click="add_enum(card)">+
+                    新增枚举项</span>
+                  <el-tag type="warning" size="mini" effect="plain">必填</el-tag>
+                  <div class="verify_text" v-show="rules.enum_list.show">{{rules.enum_list.message}}</div>
+                </el-form-item>
+              </template>
+            </template>
+            <!-- 事件设置 -->
+            <template v-if="card.type=='事件'">
+              <el-form-item label="事件名称" size="medium">
+                <el-input class="form_input" v-model="card.name" :disabled="static_params.add_edit=='check'"
+                  @blur="form_verify(card.name,'name')"></el-input>
+                <el-tag type="warning" size="mini" effect="plain">必填</el-tag>
+                <div class="verify_text" v-show="rules.name.show">{{rules.name.message}}</div>
+              </el-form-item>
+              <el-form-item label="事件标识" size="medium">
+                <el-input class="form_input" v-model="card.identifier" :disabled="static_params.add_edit=='check'"
+                  @blur="form_verify(card.identifier,'identifier')">
+                </el-input>
+                <el-tag type="warning" size="mini" effect="plain">必填</el-tag>
+                <div class="verify_text" v-show="rules.identifier.show">{{rules.identifier.message}}</div>
+              </el-form-item>
+              <el-form-item label="事件类型" size="medium">
+                <el-select style="width: 80px;" v-model="card.dataType" :disabled="static_params.add_edit=='check'"
+                  placeholder="请选择事件类型">
+                  <el-option v-for="item in static_params.event_type_options" :key="item.value" :label="item.name"
+                    :value="item.value"></el-option>
+                </el-select>
+                <el-tag type="warning" size="mini" effect="plain">必填</el-tag>
+              </el-form-item>
+              <el-form-item label="输出参数" size="medium">
+                <el-select style="width: 200px;" v-model="card.outputData" :disabled="static_params.add_edit=='check'"
+                  value-key="propertyId" placeholder="请选择属性" multiple clearable>
+                  <el-option v-for="item in history_list[history_selected].properties" :label="item.name" :value="item">
+                  </el-option>
+                </el-select>
+              </el-form-item>
+            </template>
+            <!-- 服务设置 -->
+            <template v-if="card.type=='服务'">
+              <el-form-item label="服务名称" size="medium">
+                <el-input class="form_input" v-model="card.name" :disabled="static_params.add_edit=='check'"
+                  @blur="form_verify(card.name,'name')"></el-input>
+                <el-tag type="warning" size="mini" effect="plain">必填</el-tag>
+                <div class="verify_text" v-show="rules.name.show">{{rules.name.message}}</div>
+              </el-form-item>
+              <el-form-item label="服务标识" size="medium">
+                <el-input class="form_input" v-model="card.identifier" :disabled="static_params.add_edit=='check'"
+                  @blur="form_verify(card.identifier,'identifier')">
+                </el-input>
+                <el-tag type="warning" size="mini" effect="plain">必填</el-tag>
+                <div class="verify_text" v-show="rules.identifier.show">{{rules.identifier.message}}</div>
+              </el-form-item>
+              <el-form-item label="调用方式" size="medium">
+                <el-select style="width: 150px;" v-model="card.dataType" :disabled="static_params.add_edit=='check'"
+                  placeholder="请选择调用方式">
+                  <el-option v-for="item in static_params.server_type_options" :key="item.value" :label="item.name"
+                    :value="item.value"></el-option>
+                </el-select>
+                <el-tag type="warning" size="mini" effect="plain">必填</el-tag>
+              </el-form-item>
+              <el-form-item label="输入参数" size="medium">
+                <el-select style="width: 200px;" v-model="card.inputData" :disabled="static_params.add_edit=='check'"
+                  value-key="propertyId" placeholder="请选择输入属性" multiple clearable>
+                  <el-option v-for="item in history_list[history_selected].properties" :label="item.name" :value="item">
+                  </el-option>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="输出参数" size="medium">
+                <el-select style="width: 200px;" v-model="card.outputData" :disabled="static_params.add_edit=='check'"
+                  value-key="propertyId" placeholder="请选择输出属性" multiple clearable>
+                  <el-option v-for="item in history_list[history_selected].properties" :label="item.name" :value="item">
+                  </el-option>
+                </el-select>
+              </el-form-item>
+            </template>
+
+            <!-- 按钮 -->
+            <el-form-item class="button_layout">
+              <el-button type="primary" @click="submit_form(card,index)" :disabled="static_params.add_edit=='check'">
+                保存
+              </el-button>
+              <el-button @click="del_form(card)">取消</el-button>
+            </el-form-item>
+          </el-form>
+        </el-card>
+      </div>
+      <!-- 新增/编辑单位弹窗 -->
+      <div class="custom_center" v-show="static_params.unit_set_show">
+        <el-card style="width: 480px;overflow: auto;max-height: 90%;" shadow="hover" v-loading="static_params.loading">
+          <el-form label-width="80px">
+            <el-form-item label="单位名称" size="medium">
+              <el-input class="form_input" v-model="static_params.unit_paramas.unit_name" placeholder="请输入单位名称"
+                @blur="form_verify(static_params.unit_paramas.unit_name,'unit_name',static_params.unit_paramas.name_old)">
+              </el-input>
+              <el-tag type="warning" size="mini" effect="plain">必填</el-tag>
+              <div class="verify_text" v-show="rules.unit_name.show">{{rules.unit_name.message}}</div>
+            </el-form-item>
+            <el-form-item label="单位符号" size="medium">
+              <el-input class="form_input" v-model="static_params.unit_paramas.symbol" placeholder="请输入单位符号"
+                @blur="form_verify(static_params.unit_paramas.symbol,'symbol')">
+              </el-input>
+              <el-tag type="warning" size="mini" effect="plain">必填</el-tag>
+              <div class="verify_text" v-show="rules.symbol.show">{{rules.symbol.message}}</div>
+            </el-form-item>
+            <el-form-item label="单位类型" size="medium">
+              <el-select style="width: 120px;" v-model="static_params.unit_paramas.type" @change="clean_verify"
+                placeholder="请选择类型">
+                <el-option v-for="item,index in static_params.unit_type_options" :label="item" :value="index">
+                </el-option>
+              </el-select>
+              <el-tag type="warning" size="mini" effect="plain">必填</el-tag>
+            </el-form-item>
+            <el-form-item label="类型名称" size="medium" v-show="static_params.unit_paramas.type==0">
+              <el-input class="form_input" v-model="static_params.unit_paramas.typeName" placeholder="请输入类型名称"
+                @blur="form_verify(static_params.unit_paramas.typeName,'typeName',static_params.unit_paramas.typeName_old)">
+              </el-input>
+              <el-tag type="warning" size="mini" effect="plain">必填</el-tag>
+              <div class="verify_text" v-show="rules.typeName.show">{{rules.typeName.message}}</div>
+            </el-form-item>
+            <el-form-item label="备注" size="medium">
+              <el-input class="form_input" v-model="static_params.unit_paramas.remarks" type="textarea"
+                :autosize="{ minRows: 1, maxRows: 4}" placeholder="请输入内容">
+              </el-input>
+            </el-form-item>
+            <el-form-item class="button_layout">
+              <el-button type="primary" @click="unit_submit">保存
+              </el-button>
+              <el-button @click="unit_cancel">取消</el-button>
+            </el-form-item>
+          </el-form>
+        </el-card>
+      </div>
+      <!-- 查看当前物模型JSON -->
+      <div class="popover" v-show="static_params.model_json_display">
+        <el-card class="form_layout" shadow="never" style="width: 500px;overflow: hidden;">
+          <div class="form_head">
+            <span class="text">物模型JSON</span>
+            <div class="button" @click="static_params.model_json_display=false">
+              <i class="el-icon-close icon"></i>
+            </div>
+          </div>
+          <el-input type="textarea" v-model="current_model" readonly style="height:400px;display: grid;">
+          </el-input>
+          <div class="button_layout" style="margin-top: 10px;">
+            <el-button type="primary" @click="copy(current_model)">复制JSON</el-button>
+          </div>
+        </el-card>
+      </div>
+
+      <!-- 临时 发布物模型按钮 用绝对定位先弄个死的 -->
+      <el-card class="footer" v-if="history_list[history_selected].profile.published==='0'">
+        <el-button type="primary" size="small" @click="publish_model">发布上线</el-button>
+
+        <span class="info">
+          注意：如物模型处于测试联调阶段，请暂时不要发布模型，更利于修改调试；如物模型已完成联调，请正常发布上线需要启用的物模型
+        </span>
+      </el-card>
+    </div>
+  </div>
+
+  <script src="../../运维人员部署请修改我.js"></script>
+  <script src="../module/vue.js"></script>
+  <script src="../module/element-ui.js"></script>
+  <script src="../module/axios.min.js"></script>
+  <script src="../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

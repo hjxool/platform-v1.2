@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <link rel="stylesheet" href="../module/element-ui.css">
+  <link rel="stylesheet" href="../module/wangeditor.css">
+  <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index" v-cloak>
+    <div class="row_layout header">
+      <el-page-header @back="goBack" content="详情页面"></el-page-header>
+      <el-button v-show="html.end_display" @click="end_meeting" style="margin-right:20px;" type="primary" size="small"
+        round>结束会议</el-button>
+    </div>
+    <div class="body" v-loading="html.loading">
+      <div class="left">
+        <!-- 会议信息 -->
+        <el-card class="box1" shadow="never">
+          <div slot="header" class="row_layout">
+            <i class="el-icon-info title_icon" style="color: #f02424;"></i>
+            <span class="title">会议信息</span>
+          </div>
+          <div class="text1 text_ellipsis">{{meeting_detail.time||'空'}}</div>
+          <div class="text1 text_ellipsis" :title="meeting_detail.place">会议地点：{{meeting_detail.place}}</div>
+          <div class="text1 text_ellipsis">主持人：{{meeting_detail.user}}</div>
+        </el-card>
+        <!-- 会议附件 -->
+        <el-card class="box1" style="margin-left: 10px;" shadow="never">
+          <div slot="header" class="row_layout" style="justify-content:space-between;">
+            <div>
+              <i class="el-icon-folder-opened title_icon" style="color: #0770FF;"></i>
+              <span class="title">会议附件</span>
+            </div>
+            <el-button @click="click_add" type="primary" round size="mini">添加</el-button>
+            <input id="add_file" @change="add_file" type="file" style="display: none;">
+          </div>
+          <div class="text2" v-if="!meeting_detail.files.length">无</div>
+          <div style="overflow-x: hidden;">
+            <div class="text2 row_layout" v-for="item in meeting_detail.files">
+              <span :title="item.fileName" class="text_ellipsis">文件名：{{item.fileName}}</span>
+              <el-button @click="download_files(item)" class="flex_shrink" style="margin-left: auto;" size="small"
+                type="text">下载</el-button>
+              <i @click="del_file(item)" class="el-icon-close button" style="margin-left:20px;"></i>
+            </div>
+          </div>
+        </el-card>
+        <!-- 参会人 -->
+        <el-card class="box2" shadow="never">
+          <div slot="header" class="row_layout">
+            <i class="el-icon-user-solid title_icon" style="color: #00CD41;"></i>
+            <span class="title">参会人</span>
+            <el-radio-group v-model="html.user_type" size="mini" style="margin-left: auto;">
+              <el-radio-button :label="0">所有</el-radio-button>
+              <el-radio-button :label="1">已签到</el-radio-button>
+              <el-radio-button :label="2">未签到</el-radio-button>
+              <el-radio-button :label="3">未回复</el-radio-button>
+              <el-radio-button :label="4">已回复</el-radio-button>
+            </el-radio-group>
+          </div>
+          <el-table :data="user_list[html.user_type]" max-height="250">
+            <el-table-column prop="username" label="姓名"></el-table-column>
+            <el-table-column prop="phone" label="电话"></el-table-column>
+            <el-table-column label="状态">
+              <template slot-scope="scope">
+                <el-tag v-if="!scope.row.signIn" size="medium">未签到</el-tag>
+                <el-tag v-if="scope.row.signIn==1" type="success" size="medium">已签到</el-tag>
+                <el-tag v-if="scope.row.signIn==2" type="warning" size="medium">迟到</el-tag>
+                <el-tag v-if="!scope.row.reply" type="warning" size="medium">未回复</el-tag>
+                <el-tag v-if="scope.row.reply" type="success" size="medium">已回复</el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+        <!-- 会议纪要 -->
+        <el-card class="box2" v-show="meeting_detail.save" shadow="never">
+          <div slot="header" class="row_layout">
+            <i class="el-icon-s-order title_icon" style="color: #00CD41;"></i>
+            <span class="title">会议纪要</span>
+            <el-button @click="save_summary(0)" style="margin-left:auto;" type="primary" round>保存</el-button>
+            <el-button @click="save_summary(1)" style="margin-left:20px;" round>提交</el-button>
+            <el-button @click="download_summary" style="margin-left:20px;" type="warning" size="small">导出</el-button>
+          </div>
+          <div id="editor_tool"></div>
+          <div id="editor_input"></div>
+        </el-card>
+      </div>
+
+      <div class="right">
+        <el-card style="margin-bottom:20px;" shadow="never">
+          <div slot="header" class="row_layout">
+            <i class="el-icon-full-screen title_icon" style="color: #0770FF;"></i>
+            <span class="title">扫码签到</span>
+          </div>
+          <div class="margin icon1 center">
+            <img v-if="meeting_detail.qr_src" :src="meeting_detail.qr_src" class="bg_img">
+            <i v-if="!meeting_detail.qr_src" class="el-icon-picture-outline" style="font-size: 40px;"></i>
+          </div>
+          <div class="margin">请与会人员签到扫码</div>
+          <div class="margin text1">时间 {{meeting_detail.time}}</div>
+        </el-card>
+        <el-card shadow="never">
+          <div slot="header" class="clearfix">
+            <i class="el-icon-s-data title_icon" style="color: #0770FF;"></i>
+            <span class="title">会议统计</span>
+          </div>
+          <!-- 统计参加不参加 -->
+          <div class="echart1"></div>
+          <!-- 统计签到人数图表 -->
+          <div class="echart1"></div>
+          <!-- 统计迟到 -->
+          <div class="echart1"></div>
+        </el-card>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../运维人员部署请修改我.js"></script>
+  <script src="../module/vue.js"></script>
+  <script src="../module/wangeditorjs.js"></script>
+  <script src="../module/element-ui.js"></script>
+  <script src="../module/axios.min.js"></script>
+  <script src="../module/echarts.min.js"></script>
+  <script src="../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

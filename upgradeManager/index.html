@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link rel="stylesheet" href="../module/element-ui.css">
+  <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index" v-cloak v-loading="html.page_loading">
+    <div class="header row_layout flex_shrink">固件详情</div>
+    <div class="header2 row_layout flex_shrink">
+      <el-input @keyup.enter.native="get_firmware_list" clearable placeholder="模糊搜索" v-model="html.search"
+        class="search" size="small">
+        <i slot="suffix" @click="get_firmware_list" class="el-input__icon el-icon-search button"></i>
+      </el-input>
+      <el-select v-model="html.product_selected" @change="get_firmware_list('')" clearable filterable
+        placeholder="根据产品筛选" class="product" size="small">
+        <el-option v-for="item in product_list" :label="item.productName" :value="item.id">
+        </el-option>
+      </el-select>
+      <el-button @click="add_firmware" type="primary" round size="small">创建固件</el-button>
+    </div>
+    <div class="table_box">
+      <el-table :data="firmware_list" :max-height="html.table_h" border>
+        <el-table-column prop="id" label="固件ID"></el-table-column>
+        <el-table-column prop="firmwareName" label="固件版本名称"></el-table-column>
+        <el-table-column prop="productName" label="产品名称"></el-table-column>
+        <el-table-column prop="firmwareVersion" label="固件版本号"></el-table-column>
+        <el-table-column prop="firmwareUrl" label="文件路径"></el-table-column>
+        <el-table-column label="操作" width="150">
+          <template slot-scope="scope">
+            <el-dropdown @click="edit_firmware(scope.row)" @command="other_operate($event,scope.row)" split-button
+              type="primary">
+              编辑
+              <el-dropdown-menu slot="dropdown">
+                <el-dropdown-item command="export">导出文件</el-dropdown-item>
+                <el-dropdown-item command="upgrade">升级</el-dropdown-item>
+                <el-dropdown-item command="del">删除</el-dropdown-item>
+              </el-dropdown-menu>
+            </el-dropdown>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+    <div class="paging flex_shrink row_layout">
+      <el-pagination @current-change="get_firmware_list" background layout="total, prev, pager, next"
+        :total="firmware_total"></el-pagination>
+    </div>
+
+    <!-- 弹窗 -->
+    <!-- 创建固件 -->
+    <div class="popover" v-if="html.firmware_display">
+      <el-card class="form_layout" style="width: 500px;" v-loading="html.popover_loading"
+        :element-loading-text="firmware_form.load_text">
+        <div class="form_head">
+          <span class="title">{{add_or_edit=='add'?'创建':'编辑'}}固件版本</span>
+          <div class="button" @click="html.firmware_display=false">
+            <i class="el-icon-close icon"></i>
+          </div>
+        </div>
+        <el-form ref="firmware_form" :model="firmware_form" :rules="firmware_rules" label-width="auto">
+          <div class="scroll_box">
+            <el-form-item label="固件关联产品" prop="product">
+              <el-select v-model="firmware_form.product" clearable placeholder="请选择产品" size="medium" filterable>
+                <el-option v-for="item in product_list" :label="item.productName" :value="item.id">
+                </el-option>
+              </el-select>
+            </el-form-item>
+            <el-form-item label="固件版本名称" prop="name">
+              <el-input v-model="firmware_form.name" size="medium" placeholder="请输入名称" clearable></el-input>
+            </el-form-item>
+            <el-form-item label="固件版本" required>
+              <el-input v-model="firmware_form.ver" size="medium" disabled></el-input>
+            </el-form-item>
+            <el-form-item label="选择固件" required>
+              <div class="row_layout">
+                <input @change="file_selected" type="file" id="select_file" style="width: 0;height: 0;">
+                <span class="text row_layout text_ellipsis" :title="firmware_form.file_name">
+                  {{firmware_form.file_name}}
+                </span>
+                <el-button @click="select_file" :disabled="add_or_edit=='edit'" size="small" type="primary"
+                  style="margin-left: 20px;">选取文件</el-button>
+              </div>
+              <div class="verify_text" v-show="firmware_rules.file.show">{{firmware_rules.file.message}}</div>
+            </el-form-item>
+          </div>
+          <el-form-item>
+            <el-button type="primary" @click="firm_sub('firmware_form')">确定</el-button>
+            <el-button @click="html.firmware_display=false">取消</el-button>
+          </el-form-item>
+        </el-form>
+      </el-card>
+    </div>
+    <!-- 选择升级设备 -->
+    <div class="popover" v-if="html.upgrade_display">
+      <el-card class="form_layout" style="width: 600px;" v-loading="html.popover_loading">
+        <div class="form_head">
+          <span class="title">选择固件升级设备</span>
+          <div class="button" @click="html.upgrade_display=false">
+            <i class="el-icon-close icon"></i>
+          </div>
+        </div>
+        <el-form ref="upgrade_form" :model="upgrade_form" :rules="upgrade_rules" label-width="auto" class="up_form">
+          <el-form-item label="文件切片传输大小" prop="size">
+            <div class="row_layout">
+              <el-input v-model="upgrade_form.size" size="mini" placeholder="请输入切片大小" clearable></el-input>
+              <span style="margin:0 10px">KB</span>
+            </div>
+          </el-form-item>
+          <el-form-item label="是否强制重传" required>
+            <div class="row_layout" style="height: 40px;">
+              <el-radio-group v-model="upgrade_form.force">
+                <el-radio :label="false">否</el-radio>
+                <el-radio :label="true">是</el-radio>
+              </el-radio-group>
+              <i class="el-icon-warning-outline tips_icon" :title="html.tips"></i>
+            </div>
+          </el-form-item>
+          <el-form-item label="选择要升级的设备" required>
+            <div v-if="upgrade_form.list.length>0" style="display: flex;flex-direction: column;">
+              <!-- <el-checkbox :indeterminate="upgrade_form.not_all" v-model="upgrade_form.checkAll" @change="check_all"
+                style="align-self: start;">
+                全选
+              </el-checkbox> -->
+              <div class="scroll_box2">
+                <el-checkbox-group v-model="upgrade_form.select_list" @change="check_change">
+                  <el-checkbox v-for="item in upgrade_form.list" :label="item.id" :key="item.id"
+                    :title="item.deviceName" class="row_layout text_ellipsis"
+                    style="max-width: 80%;padding-bottom: 10px;">
+                    {{item.deviceName}}
+                  </el-checkbox>
+                </el-checkbox-group>
+              </div>
+              <el-pagination class="paging" style="justify-content: start;" @current-change="get_product_device_list"
+                layout="prev, pager, next" :total="upgrade_form.total"
+                :page-size="upgrade_form.page_size"></el-pagination>
+            </div>
+            <el-empty v-show="upgrade_form.list.length==0" description="无设备" :image-size="100"
+              style="width: 70%;padding: 0;">
+            </el-empty>
+            <div class="verify_text" v-show="upgrade_rules.select.show">{{upgrade_rules.select.message}}</div>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="up_sub('upgrade_form')">确定</el-button>
+            <el-button @click="html.upgrade_display=false">取消</el-button>
+          </el-form-item>
+        </el-form>
+      </el-card>
+    </div>
+  </div>
+
+  <script src="../../运维人员部署请修改我.js"></script>
+  <script src="../../js/Zhr_Basics.js"></script>
+  <!-- <script src="../module/vue.js"></script>
+  <script src="../module/element-ui.js"></script>
+  <script src="../module/axios.min.js"></script> -->
+  <script src="../module/spark-md5.min.js"></script>
+  <!-- <script src="../module/fcup.min.js"></script> -->
+  <script src="../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>
