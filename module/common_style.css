@@ -71,6 +71,8 @@ body {
 	justify-items: center;
 	align-items: start;
 	z-index: 990;
+	left: 0;
+	top: 0;
 }
 .popover .form_layout {
 	max-height: 90%;

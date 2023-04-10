@@ -22,6 +22,10 @@ const common_functions = {
 					window.sessionStorage.prePage = this.prePage = t[1];
 				} else if (t[0].match(/^type$/) != null) {
 					window.sessionStorage.router = this.router = t[1];
+				} else if (t[0].match(/^theme$/) != null) {
+					window.sessionStorage.theme = this.theme = t[1];
+				} else if (t[0].match(/^source$/) != null) {
+					window.sessionStorage.source = this.source = t[1];
 				}
 			}
 			let url = location.href.split('?')[0];

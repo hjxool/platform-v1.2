@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <!-- <link rel="stylesheet" href="../module/element-ui.css"> -->
+  <link rel="stylesheet" href="../../css/eleme-dark.css">
+  <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+  <div id="index" v-cloak>
+    <!-- 选项页 -->
+    <div v-show="html.page_select==-1" class="page_select">
+      <div v-for="page,index in html.pages" class="flex_shrink page" @mouseenter="html.page_hover=index"
+        @mouseleave="html.page_hover=-1" @click="turn_to_page(index)">
+        <img v-show="html.page_hover!==index" :src="page.dark" class="icon">
+        <img v-show="html.page_hover===index" :src="page.light" class="icon">
+      </div>
+    </div>
+    <!-- 详情嵌入页 -->
+    <div v-if="html.page_select!==-1" class="detail">
+      <div class="flex_shrink head row_layout">
+        <el-page-header @back="go_back" :content="html.page_title" style="color:#fff;"></el-page-header>
+      </div>
+
+      <iframe :src="html.page_url" frameborder="0" scrolling="no" style="flex-grow:1;"></iframe>
+    </div>
+  </div>
+
+  <script src="../../运维人员部署请修改我.js"></script>
+  <script src="../module/vue.js"></script>
+  <script src="../module/element-ui.js"></script>
+  <script src="../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

@@ -87,7 +87,13 @@ new Vue({
 					break;
 				case 'role_add_user':
 				case 'department_add_user':
-					path = 'add_persons';
+					path = 'add_person';
+					break;
+				case 'ResourceCenter':
+					path = 'ResourceCenter';
+					break;
+				case 'screen_management':
+					path = 'screen_management';
 					break;
 				default:
 					location.href = `${this.path}${location.search}`;

@@ -7,10 +7,7 @@
 		let file_size = file.size; // 此处获取文件大小用于判断是大文件还是小文件
 		if (file_size <= max_size) {
 			// 小文件
-			if (!obj.small_file_slice_size) {
-				return false;
-			}
-			let slice_size = 1024 * 1024 * obj.small_file_slice_size; // 配置小文件分片大小 M为单位
+			let slice_size = 1024 * 1024 * (obj.small_file_slice_size || 10); // 配置小文件分片大小 M为单位
 			let slice_total = Math.ceil(file_size / slice_size); // 计算总片数 用以生成切片数组
 			for (let i = 0; i < slice_total; i++) {
 				let t = file.slice(slice_size * i, slice_size * (i + 1));
@@ -25,12 +22,12 @@
 				slice_upload(upload_index, slice_list, md5, file, obj, fail_index); // 需要传入索引、切片数组、总文件md5、文件对象、配置对象、失败次数
 			};
 		} else {
-			if (!obj.large_file_slice_size || obj.large_file_slice_size > 50) {
-				// 单片大小大于50M的也不能传
-				return false;
-			}
+			// if (obj.large_file_slice_size > 50) {
+			// 	// 单片大小大于50M的也不能传
+			// 	return false;
+			// }
 			obj.readStart(); // 配置 大文件读取较慢时执行开始读取提示
-			let slice_size = 1024 * 1024 * obj.large_file_slice_size; // 配置大文件切片大小
+			let slice_size = 1024 * 1024 * (obj.large_file_slice_size || 40); // 配置大文件切片大小
 			let slice_total = Math.ceil(file_size / slice_size);
 			for (let i = 0; i < slice_total; i++) {
 				let t = file.slice(slice_size * i, slice_size * (i + 1));
@@ -85,10 +82,11 @@
 				headers: {
 					Authorization: `Bearer ${obj.token}`,
 					'content-type': 'multipart/form-data',
+					'Oss-Bucket-Name': obj?.page_source === 'developer' ? 'sys-file-resource' : 'file-center-storage',
 				},
 			}).then((res) => {
 				if (res.data.head.code != 200) {
-					obj.uploadFail(++fail_index); // 配置 上传失败时执行
+					obj.uploadFail(++fail_index, md5, file.name); // 配置 上传失败时执行
 					// 限制失败次数
 					if (fail_index == obj.fail_count) {
 						return;

@@ -2,8 +2,8 @@ let url = `${我是接口地址}/`;
 let material_search_url = `${url}api-file/doc/catalogue/shareMaterial/search`;
 let upload_file_url = `${url}api-file/doc/file/chunk/create`;
 let del_material_url = `${url}api-file/doc/file/delete`;
-let device_list_url = `${url}api-portal/video/search/liveDevice`;
-let publish_url = `${url}api-portal/video/rule/saveOrUpdate`;
+let get_file_url = `${url}api-file/doc/showFileUrl`;
+let upload_error_url = `${url}api-file/files`;
 
 new Vue({
 	el: '#index',
@@ -19,37 +19,39 @@ new Vue({
 			data: [], //表格数据
 			total: 0, // 数据总数
 			page_size: 10, //单页显示数量
+			cur_page: 1, //当前页
 		},
 		form: {
 			show: false, //发布表单显示
 			loading: false, //表单加载
-			name: '', // 计划名
-			start_time: '', //直播开始时间
-			end_time: '', //直播结束时间
-			device_list: [], //设备列表
-			rules: {
-				name: [{ required: true, message: '请输入计划名称', trigger: 'blur' }],
-				end_time: [{ type: 'date', required: true, message: '请选择时间', trigger: 'change' }],
-				device: [{ required: true, message: '请选择设备', trigger: 'change' }],
-			},
-			props: {
-				value: 'id',
-				label: 'nodeName',
-				children: 'children',
-				multiple: true,
-			},
+			url: '', // iframe页面地址
 		},
+		theme: '', //页面主题颜色
+		source: '', // 页面来源
 	},
 	mounted() {
 		if (!location.search) {
 			this.token = sessionStorage.token;
+			this.theme = sessionStorage.theme;
+			this.source = sessionStorage.source;
 		} else {
 			this.get_token();
+		}
+		if (this.theme === 'dark') {
+			let dom = document.getElementsByTagName('link');
+			dom[0].href = `http://${我是ip地址}/css/eleme-dark.css`;
 		}
 		this.get_data(1);
 		this.resize();
 		window.onresize = () => {
 			this.resize();
+		};
+		window.onmessage = (e) => {
+			console.log('子iframe消息', e);
+			if (e.data.type === 'Close popup') {
+				this.form.show = false;
+				this.get_data(1);
+			}
 		};
 	},
 	methods: {
@@ -65,17 +67,24 @@ new Vue({
 		},
 		get_data(page) {
 			this.html.page_loading = true;
-			this.request('post', material_search_url, this.token, { pageNum: page, pageSize: this.table.page_size, keyword: this.html.search }, (res) => {
-				console.log('素材', res);
-				this.html.page_loading = false;
-				if (res.data.head.code != 200) {
-					this.table.total = 0;
-					return;
+			this.request(
+				'post',
+				material_search_url,
+				this.token,
+				{ pageNum: page, pageSize: this.table.page_size, keyword: this.html.search, condition: { catalogueId: this.source === 'developer' ? -2 : -1 } },
+				(res) => {
+					console.log('素材', res);
+					this.html.page_loading = false;
+					if (res.data.head.code != 200) {
+						this.table.total = 0;
+						return;
+					}
+					let data = res.data.data;
+					this.table.total = data.total;
+					this.table.data = data.data;
+					this.table.cur_page = page;
 				}
-				let data = res.data.data;
-				this.table.total = data.total;
-				this.table.data = data.data;
-			});
+			);
 		},
 		select_file() {
 			select_file.click();
@@ -83,19 +92,21 @@ new Vue({
 		upload_file() {
 			Upload({
 				id: 'select_file',
-				small_file_slice_size: 5,
-				large_file_slice_size: 50,
-				upload_url: `${upload_file_url}/-1`,
+				// small_file_slice_size: 5,
+				// large_file_slice_size: 50,
+				upload_url: `${upload_file_url}/${this.source == 'developer' ? '-2' : '-1'}`,
 				token: this.token,
 				fail_count: 3,
+				page_source: this.source,
 				uploadStart: () => {
 					this.html.page_loading = true;
 					this.html.load_text = '读取完成，准备开始上传';
 				},
-				uploadFail: (index) => {
+				uploadFail: (index, md5, name) => {
 					this.html.load_text = `重试第${index}次`;
 					if (index == 3) {
 						this.html.page_loading = false;
+						this.request('delete', `${upload_error_url}/${md5}?fileName=${name}`, this.token);
 					}
 				},
 				uploadProgress: (cur, total) => {
@@ -132,86 +143,65 @@ new Vue({
 		},
 		// 下载素材
 		download_material(row_obj) {
-			axios({
-				method: 'get',
-				url: row_obj.fileUrl,
-				responseType: 'blob',
-				header: {
-					Authorization: `Bearer ${this.token}`,
-					'Content-Type': 'application/x-download',
-				},
-			}).then((res) => {
-				// let b = new Blob([res.data]);
-				let a = document.createElement('a');
-				let href = URL.createObjectURL(res.data);
-				a.download = row_obj.fileName;
-				a.href = href;
-				a.target = '_blank';
-				document.body.appendChild(a);
-				a.click();
-				document.body.removeChild(a);
-				URL.revokeObjectURL(href);
+			this.html.page_loading = true;
+			this.html.load_text = '正在下载，请耐心等待';
+			this.request('get', `${get_file_url}/${row_obj.id}`, this.token, (res) => {
+				console.log('文件url', res);
+				if (res.data.head.code !== 200) {
+					this.html.page_loading = false;
+					return;
+				}
+				axios({
+					method: 'get',
+					url: res.data.data,
+					responseType: 'blob',
+					header: {
+						Authorization: `Bearer ${this.token}`,
+						'Content-Type': 'application/x-download',
+					},
+				}).then((res) => {
+					this.html.page_loading = false;
+					// let b = new Blob([res.data]);
+					let a = document.createElement('a');
+					let href = URL.createObjectURL(res.data);
+					a.download = row_obj.fileName;
+					a.href = href;
+					a.target = '_blank';
+					document.body.appendChild(a);
+					a.click();
+					document.body.removeChild(a);
+					URL.revokeObjectURL(href);
+				});
 			});
 		},
 		// 发布素材
-		publish_show(row_obj) {
-			this.material_id = row_obj.id;
+		publish_show(row_obj, type) {
 			this.form.show = true;
-			this.form.loading = true;
-			this.request('get', device_list_url, this.token, (res) => {
-				console.log('设备列表', res);
-				this.form.loading = false;
-				if (res.data.head.code != 200) {
-					this.$message('设备获取失败');
-					return;
-				}
-				this.form.device_list = res.data.data;
-			});
+			// this.form.loading = true;
+			this.form.url = `${候工链接.replace(/dlc/i, 'dlc2')}?token=${this.token}&type=release&ReleaseType=${type}&id=${row_obj.id}&sourceType=2`;
 		},
-		publish_submit(form) {
-			this.$refs.form.validate((result) => {
-				if (result) {
-					let data = {
-						planName: form.name,
-						pullDeviceIds: [],
-						sourceType: 2, //2表示公共素材
-						sourceId: this.material_id,
-					};
-					for (let val of form.device) {
-						data.pullDeviceIds.push(val[val.length - 1]);
-					}
-					if (form.start_time === '') {
-						data.pushStartExecuteTime = '';
-					} else {
-						let t = form.start_time;
-						data.pushStartExecuteTime = `${t.getFullYear()}-${t.getMonth() + 1 < 10 ? '0' + (t.getMonth() + 1) : t.getMonth + 1}-${t.getDate() < 10 ? '0' + t.getDate() : t.getDate()} ${
-							t.toString().split(' ')[4]
-						}`;
-					}
-					let t2 = form.end_time;
-					data.pushEndExecuteTime = `${t2.getFullYear()}-${t2.getMonth() + 1 < 10 ? '0' + (t2.getMonth() + 1) : t2.getMonth + 1}-${t2.getDate() < 10 ? '0' + t2.getDate() : t2.getDate()} ${
-						t2.toString().split(' ')[4]
-					}`;
-					this.form.loading = true;
-					this.request('post', publish_url, this.token, data, (res) => {
-						this.form.loading = false;
-						if (res.data.head.code != 200) {
-							this.$message.error('发布失败');
-							return;
-						}
-						this.form.show = false;
-						this.get_data(1);
-					});
-				}
-			});
-		},
-		// 预约日期不能是当天之前的
-		date_options() {
+		// 主题颜色
+		theme_bg() {
 			return {
-				disabledDate(curr_time) {
-					return curr_time.getTime() < Date.now() - 86400000;
-				},
+				background: this?.theme == 'dark' ? '#242632' : '',
 			};
+		},
+		theme_font() {
+			return {
+				color: this?.theme == 'dark' ? '#fff' : '',
+			};
+		},
+		// 发布按钮是否禁用
+		can_publish(type) {
+			switch (type) {
+				case '文档':
+				case '图片':
+				case '视频':
+				case '音频':
+					return false;
+				default:
+					return true;
+			}
 		},
 	},
 });
