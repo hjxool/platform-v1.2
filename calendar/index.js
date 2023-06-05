@@ -1,5 +1,6 @@
 let url = `${我是接口地址}/`;
 let calender_search = `${url}api-portal/meeting/calender/search`;
+let limits_url = `${url}api-user/menus/current`; //获取菜单权限
 
 Vue.config.productionTip = false;
 new Vue({
@@ -25,16 +26,55 @@ new Vue({
 			{ title: '已结束', num: 0 },
 		],
 		meeting_list: [], //会议列表
+		config: {
+			detail_show: false,
+			create_show: false,
+		},
 	},
-	mounted() {
+	async mounted() {
 		if (!location.search) {
 			this.token = sessionStorage.token;
 		} else {
 			this.get_token();
 		}
+		if (!sessionStorage.hushanwebmenuTree) {
+			await new Promise((success) => {
+				this.request('get', limits_url, this.token, (res) => {
+					success();
+					if (res.data.head.code !== 200) {
+						return;
+					}
+					sessionStorage.hushanwebmenuTree = JSON.stringify(res.data.data.menuTree);
+				});
+			});
+		}
+		let limits;
+		for (let val of JSON.parse(sessionStorage.hushanwebmenuTree)) {
+			if (val.name === '湖山云会管平台') {
+				for (let val2 of val.subMenus) {
+					if (val2.name === '会议日历') {
+						limits = val2.subMenus;
+						break;
+					}
+				}
+				break;
+			}
+		}
+		this.config.detail_show = this.is_element_show(limits, '详情');
+		this.config.create_show = this.is_element_show(limits, '创建会议');
+
 		this.time_display(this.html.time_option);
 	},
 	methods: {
+		// 解析权限树
+		is_element_show(source, key) {
+			for (let val of source) {
+				if (val.name === key) {
+					return true;
+				}
+			}
+			return false;
+		},
 		time_display(index) {
 			this.html.time_option = index;
 			for (let val of this.meeting_count) {

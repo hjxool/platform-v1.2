@@ -152,3 +152,48 @@
 		}
 	}
 }
+.control_box {
+	width: 22%;
+	min-width: 330px;
+	overflow: hidden;
+	background-color: #fff;
+	border-radius: 14px;
+	padding: 1rem;
+	display: flex;
+	flex-direction: column;
+	margin: auto;
+	> .head {
+		margin-bottom: 1rem;
+		> .title {
+			font-size: 1.2rem;
+			font-weight: bold;
+			margin-right: auto;
+		}
+	}
+	> .grid_box {
+		margin: 0 1rem 1rem 1rem;
+		display: grid;
+		grid-template-columns: 1fr 2px 1fr;
+		> .left {
+			justify-self: start;
+		}
+		> .right {
+			justify-self: end;
+		}
+		> .line {
+			height: 40px;
+			width: 2px;
+			background: #bdddff;
+			border-radius: 6px;
+		}
+	}
+	> .margin {
+		margin-bottom: 20px;
+		overflow: hidden;
+	}
+	.label {
+		width: 4rem;
+		margin-right: 20px;
+		font-size: 0.8rem;
+	}
+}

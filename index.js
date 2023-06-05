@@ -52,12 +52,9 @@ new Vue({
 				case 'power_supply':
 					location.href = `../湖山智慧设备/电源设备/index.html${location.search}`;
 					return;
-				case 'Wisdom_Scene':
-					path = 'powerScene';
-					break;
-				case 'Wisdom_Scene2':
-					path = 'scene2';
-					break;
+				case 'power_supply2':
+					location.href = `../湖山智慧设备/电源设备2/index.html${location.search}`;
+					return;
 				case 'UpgradeManagement':
 					path = 'upgradeManager';
 					break;
@@ -94,6 +91,19 @@ new Vue({
 					break;
 				case 'screen_management':
 					path = 'screen_management';
+					break;
+				case 'playlist':
+					path = 'playlist';
+					break;
+				case 'playlist_edit':
+					path = 'playlist_edit';
+					break;
+				case 'Edit_timed_broadcast_added':
+				case 'Added_edit_fire_alarm':
+					path = 'edit_time_broadcast';
+					break;
+				case 'scene_popup':
+					path = 'scene_popup';
 					break;
 				default:
 					location.href = `${this.path}${location.search}`;

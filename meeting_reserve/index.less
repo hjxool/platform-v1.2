@@ -1,6 +1,15 @@
 * {
 	user-select: none;
 }
+.row_layout {
+	display: flex;
+	align-items: center;
+}
+.col_layout {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
 #index {
 	width: 100%;
 	height: 100%;
@@ -377,6 +386,35 @@
 			cursor: pointer;
 			&:hover {
 				background-color: #e7e9ea;
+			}
+		}
+		.emcee_box {
+			border: 1px solid #eaebed;
+			border-radius: 6px;
+			> .person {
+				background-color: #f2f2f7;
+				padding: 6px 10px;
+				width: 100px;
+				margin: 6px 0 6px 8px;
+				display: flex;
+				align-items: center;
+				overflow: hidden;
+				border-radius: 6px;
+				> .icon1 {
+					font-weight: bold;
+					font-size: 12px;
+					margin-right: 6px;
+				}
+				> .name {
+					flex-grow: 1;
+					font-size: 14px;
+					margin-right: auto;
+					line-height: initial; //element的行高会影响内部未设置行高的字体元素
+				}
+			}
+			> .placeholder {
+				color: #c0c4cc;
+				margin-left: 10px;
 			}
 		}
 	}

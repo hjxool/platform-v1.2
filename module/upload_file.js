@@ -5,6 +5,10 @@
 		let file = document.getElementById(obj.id).files[0]; // 根据input标签id获取文件
 		let max_size = 1024 * 1024 * 50; // 50M以内文件读取很快 以此为分隔
 		let file_size = file.size; // 此处获取文件大小用于判断是大文件还是小文件
+		if (!file.size) {
+			alert('空文件不能上传！');
+			return;
+		}
 		if (file_size <= max_size) {
 			// 小文件
 			let slice_size = 1024 * 1024 * (obj.small_file_slice_size || 10); // 配置小文件分片大小 M为单位
@@ -67,7 +71,6 @@
 		let t = file.name.split('.'); // 为了避免文件名中含多个.
 		form_obj.append(obj.file_suffix ? obj.file_suffix : 'file_suffix', t[t.length - 1]); // 文件后缀
 		form_obj.append(obj.file_total ? obj.file_total : 'file_total', slice_list.length); // 总片数
-
 		obj.uploadProgress(index + 1, slice_list.length, form_obj); // 配置 上传进程执行
 
 		let r = new FileReader();
@@ -82,7 +85,7 @@
 				headers: {
 					Authorization: `Bearer ${obj.token}`,
 					'content-type': 'multipart/form-data',
-					'Oss-Bucket-Name': obj?.page_source === 'developer' ? 'sys-file-resource' : 'file-center-storage',
+					'Oss-Bucket-Name': obj?.cus_header || 'file-center-storage',
 				},
 			}).then((res) => {
 				if (res.data.head.code != 200) {

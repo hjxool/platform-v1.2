@@ -2,6 +2,7 @@ let url = `${我是接口地址}/`;
 let data_url = `${url}api-portal/place/tenant/device/analyse`;
 let search_device_list_url = `${url}api-portal/place/user/findDeviceByType`;
 let search_place_list_url = `${url}api-portal/place/user/findAll`;
+let limits_url = `${url}api-user/menus/current`; //获取菜单权限
 
 new Vue({
 	el: '#index',
@@ -24,12 +25,38 @@ new Vue({
 		place_num: 0, //场所数量
 		statistic_window_list: [], //统计弹窗列表
 	},
-	mounted() {
+	async mounted() {
 		if (!location.search) {
 			this.token = sessionStorage.token;
 		} else {
 			this.get_token();
 		}
+		// if (!sessionStorage.hushanwebmenuTree) {
+		// 	await new Promise((success) => {
+		// 		this.request('get', limits_url, this.token, (res) => {
+		// 			success();
+		// 			if (res.data.head.code !== 200) {
+		// 				return;
+		// 			}
+		// 			sessionStorage.hushanwebmenuTree = JSON.stringify(res.data.data.menuTree);
+		// 		});
+		// 	});
+		// }
+		// // 解析权限树
+		// let limits;
+		// for (let val of JSON.parse(sessionStorage.hushanwebmenuTree)) {
+		// 	if (val.name === '湖山智慧设备') {
+		// 		for (let val2 of val.subMenus) {
+		// 			if (val2.name === '项目总览') {
+		//         limits = val2.subMenus;
+		// 				break;
+		// 			}
+		// 		}
+		// 		break;
+		// 	}
+		// }
+		// this.config.timing_show = this.is_element_show(limits, '定时发布');
+
 		// 初始化图表实例
 		let dom = document.querySelectorAll('.body');
 		for (let i = 1; i <= 4; i++) {
@@ -39,6 +66,15 @@ new Vue({
 		this.get_data();
 	},
 	methods: {
+		// 解析权限树
+		// is_element_show(source, key) {
+		// 	for (let val of source) {
+		// 		if (val.name === key) {
+		// 			return true;
+		// 		}
+		// 	}
+		// 	return false;
+		// },
 		// 视窗大小改变根元素字体大小
 		resize() {
 			let dom = document.documentElement;

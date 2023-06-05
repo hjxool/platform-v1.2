@@ -25,7 +25,7 @@
     <!-- 内容框 -->
     <div class="contents">
       <!-- 设备管理 -->
-      <div class="page1" v-show="html.option_focus==0" v-loading="html.page_loading">
+      <div class="page1" v-show="html.option[html.option_focus].name==='设备管理'" v-loading="html.page_loading">
         <!-- 搜索框等功能 -->
         <div class="header">
           <el-input class="search" placeholder="模糊搜索" v-model="devices.search" size="small"
@@ -38,9 +38,10 @@
             <el-radio :label="2">在线<span class="num">{{devices.type_online}}</span></el-radio>
             <el-radio :label="3">离线<span class="num">{{devices.type_offline}}</span></el-radio>
           </el-radio-group>
-          <el-button class="button1 button" @click="distribute_place" size="small">设备绑定</el-button>
-          <el-button class="button1 button" style="margin: 0;" @click="add_place(status.user_id)"
-            size="small">新增场所</el-button>
+          <el-button v-show="config.device_bind_show" class="button1 button" @click="distribute_place"
+            size="small">设备绑定</el-button>
+          <el-button v-show="config.add_place_show" class="button1 button" style="margin: 0;"
+            @click="add_place(status.user_id)" size="small">新增场所</el-button>
         </div>
         <!-- 列表 -->
         <div class="all_device">
@@ -50,13 +51,15 @@
             <el-table-column prop="deviceName" label="设备名"></el-table-column>
             <el-table-column prop="productName" label="所属产品"></el-table-column>
             <el-table-column prop="productTypeValue" label="设备类型"></el-table-column>
-            <el-table-column label="所属项目|场所">
+            <el-table-column label="所属项目|场所" width="350">
               <template slot-scope="scope">
                 <span style="color: #fff;">{{scope.row.companyName}} {{scope.row.placeName?'->':''}}
                   {{scope.row.placeName||''}}</span>
+
+                <el-tag v-show="scope.row.placeTypeValue" size="mini">{{scope.row.placeTypeValue}}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="设备状态">
+            <el-table-column label="设备状态" width="80">
               <template slot-scope="scope">
                 <el-tag v-if="scope.row.statusValue==0" size="small">未注册</el-tag>
                 <el-tag v-if="scope.row.statusValue==1" size="small" type="success">在线</el-tag>
@@ -70,8 +73,8 @@
             </el-table-column>
             <el-table-column prop="onlineTime" label="上线时间"></el-table-column>
             <el-table-column prop="offlineTime" label="离线时间"></el-table-column>
-            <el-table-column prop="deviceRunTime" label="累计运行时间(小时)"></el-table-column>
-            <el-table-column label="操作" width="80">
+            <el-table-column prop="deviceRunTime" label="累计运行时间(小时)" width="80"></el-table-column>
+            <el-table-column v-show="config.rename_device_show" label="操作" width="80">
               <template slot-scope="scope">
                 <el-button @click="edit_device_name(scope.row)" type="text">改名</el-button>
               </template>
@@ -85,7 +88,7 @@
         </div>
       </div>
       <!-- 设备监控 -->
-      <div class="page2" v-show="html.option_focus==1">
+      <div class="page2" v-show="html.option[html.option_focus].name==='设备监控'">
         <!-- 按钮等 -->
         <!-- <div class="header">
           <el-select v-model="status.user_id" class="select" size="small" @change="req_place_list"
@@ -106,12 +109,12 @@
               @mouseleave="html.place_icon_display=-1">
               <img v-show="status.place_id==item.id" src="./img/场所亮.png" class="bg_img">
               <img v-show="status.place_id!=item.id" src="./img/场所暗.png" class="bg_img">
-              <img v-show="html.place_icon_display==index" src="./img/edit.png" class="icon"
+              <img v-show="config.rename_place_show && html.place_icon_display==index" src="./img/edit.png" class="icon"
                 @click.stop="edit_place(item)">
               <span :class="['text','text_ellipsis',status.place_id==item.id?'':'text_dark']"
                 :title="item.placeName">{{item.placeName}}</span>
-              <img v-show="html.place_icon_display==index" src="./img/closeIcon.png" class="icon2"
-                @click.stop="del_place(item)">
+              <img v-show="config.del_place_show && html.place_icon_display==index" src="./img/closeIcon.png"
+                class="icon2" @click.stop="del_place(item)">
             </div>
             <div :class="[html.place_fold?'fold':'unfold','center','button']" @click="html.place_fold=!html.place_fold">
               <div class="icon"></div>
@@ -126,7 +129,8 @@
                 <div class="num">{{item.num}}</div>
                 <div class="text">{{item.type}}</div>
               </div>
-              <img v-show="status.user_id" src="./img/delete.png" class="icon" @drop="del_device" id="del_area">
+              <img v-show="config.del_device_show && status.user_id" src="./img/delete.png" class="icon"
+                @drop="del_device" id="del_area">
             </div>
             <!-- 卡片容器 -->
             <div class="box2">
@@ -154,7 +158,7 @@
                       :style="{color:item.statusValue==1?'#00FFA2':'#F6B63C'}">{{item.statusValue==1?'在线':item.statusValue?'离线':'未注册'}}</span>
                   </div>
                 </div>
-                <div class="button2" @click="turn_to_device(item)">
+                <div v-show="config.control_device_show" class="button2" @click="turn_to_device(item)">
                   <img src="./img/button.png" class="bg_img" draggable="false">
                 </div>
               </div>
@@ -185,10 +189,11 @@
             <el-collapse-transition>
               <div class="box2" v-show="status.user_id==item.tenantId">
                 <div v-for="item2 in status.place_list" class="box2_box" @click="status.place_id=item2.id">
-                  <span class="text" :title="item2.placeName">{{item2.placeName}}</span>
                   <div class="icon">
                     <i class="el-icon-check icon2" v-show="status.place_id==item2.id"></i>
                   </div>
+                  <span class="text" :title="item2.placeName">{{item2.placeName}}</span>
+                  <el-tag v-show="item2.placeTypeValue" size="mini">{{item2.placeTypeValue}}</el-tag>
                 </div>
               </div>
             </el-collapse-transition>

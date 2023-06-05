@@ -13,6 +13,7 @@ let protocol_unit_add = `${url}api-device/protocol/unit`;
 let protocol_unit_delete = `${url}api-device/protocol/delete`;
 let product_model = `${url}api-device/product/model`;
 let default_property_url = `${url}api-device/protocol/property/default/list/`;
+let limits_url = `${url}api-user/menus/current`; //获取菜单权限
 
 Vue.config.productionTip = false;
 new Vue({
@@ -54,6 +55,8 @@ new Vue({
 					{ value: 'async', name: '异步调用' },
 					{ value: 'sync', name: '同步调用' },
 				],
+				// 枚举参数值类型
+				enum_option: ['text', 'int'],
 				// 单位种类
 				unit_options: [],
 				add_edit: '', //新建和编辑取值方式不同
@@ -91,6 +94,7 @@ new Vue({
 				unit: '', //属性 单位
 				size: '', //属性 数组大小
 				itemType: '', //属性 数组元素类型
+				enum_value_type: 'text', // 属性 枚举类型参数值类型
 				textLength: '', //属性 text类型
 				outputData: [], //事件/服务 属性数组
 				inputData: [], //服务 属性数组
@@ -116,20 +120,73 @@ new Vue({
 			},
 			default_property: [], //默认属性列表
 			current_model: '', //当前启用物模型
+			config: {
+				add_property_show: false,
+				del_show: false,
+				enable_show: false,
+				create_show: false,
+				publish_show: false,
+				edit_show: false,
+			},
 		};
 	},
-	mounted() {
+	async mounted() {
 		if (!location.search) {
 			this.id = sessionStorage.id;
 			this.token = sessionStorage.token;
 		} else {
 			this.get_token();
 		}
+		if (!sessionStorage.hushanwebmenuTree) {
+			await new Promise((success) => {
+				this.request('get', limits_url, this.token, (res) => {
+					success();
+					if (res.data.head.code !== 200) {
+						return;
+					}
+					sessionStorage.hushanwebmenuTree = JSON.stringify(res.data.data.menuTree);
+				});
+			});
+		}
+		// 解析权限树
+		let limits;
+		for (let val of JSON.parse(sessionStorage.hushanwebmenuTree)) {
+			if (val.name === '开发者中心') {
+				for (let val2 of val.subMenus) {
+					if (val2.name === '产品列表') {
+						for (let val3 of val2.subMenus) {
+							if (val3.name === '物模型配置') {
+								limits = val3.subMenus;
+								break;
+							}
+						}
+						break;
+					}
+				}
+				break;
+			}
+		}
+		this.config.add_property_show = this.is_element_show(limits, '添加自定义功能');
+		this.config.del_show = this.is_element_show(limits, '删除');
+		this.config.enable_show = this.is_element_show(limits, '启用当前物模型');
+		this.config.create_show = this.is_element_show(limits, '新增版本');
+		this.config.publish_show = this.is_element_show(limits, '发布上线');
+		this.config.edit_show = this.is_element_show(limits, '编辑');
+
 		this.res_history_model(0);
 		this.get_unit();
 		this.get_default_property();
 	},
 	methods: {
+		// 解析权限树
+		is_element_show(source, key) {
+			for (let val of source) {
+				if (val.name === key) {
+					return true;
+				}
+			}
+			return false;
+		},
 		// 页面加载时历史版本
 		res_history_model(index) {
 			this.request('post', protocol_list, this.token, { condition: this.id, pageNum: 1, pageSize: 999 }, (res) => {
@@ -200,6 +257,7 @@ new Vue({
 					}
 				} else if (e.dataType.type == 'enum') {
 					table.enum_list = [];
+					table.enum_value_type = e.dataType.specs.enumType || 'text'; // 枚举类型的参数值类型
 					for (let key in e.dataType.specs.enumValue) {
 						let t = { value: key, label: e.dataType.specs.enumValue[key] };
 						table.enum_list.push(t);
@@ -257,6 +315,7 @@ new Vue({
 			}
 			if (row_data.enum_list != undefined) {
 				temp.enum_list = JSON.parse(JSON.stringify(row_data.enum_list));
+				temp.enum_value_type = row_data.enum_value_type;
 			}
 			this.form_list.push(temp);
 			this.$nextTick(() => {
@@ -375,6 +434,7 @@ new Vue({
 					break;
 				case 'enum':
 					temp.enum_list = [];
+					temp.enum_value_type = row_data.dataType.specs.enumType || 'text';
 					for (let key in row_data.dataType.specs.enumValue) {
 						let t = { value: key, label: row_data.dataType.specs.enumValue[key] };
 						temp.enum_list.push(t);
@@ -557,11 +617,16 @@ new Vue({
 					}
 					break;
 				case 'enum_list':
-					if (value.length) {
+					if (value[flag].length) {
 						reg = /^[\u4E00-\u9FA5A-Za-z0-9_]+$/;
-						for (let val of value) {
+						let type = value.enum_value_type;
+						for (let val of value[flag]) {
 							if (!reg.test(val.value) || !reg.test(val.label)) {
 								this.rules[flag].message = '枚举项不能为空';
+								return false;
+							}
+							if (type === 'int' && isNaN(Number(val.value))) {
+								this.rules[flag].message = '参数值类型不匹配';
 								return false;
 							}
 						}
@@ -601,7 +666,7 @@ new Vue({
 				result.push(this.form_verify(obj.size, 'size'));
 			}
 			if (obj.dataType == 'enum') {
-				result.push(this.form_verify(obj.enum_list, 'enum_list'));
+				result.push(this.form_verify(obj, 'enum_list'));
 			}
 			for (let value of result) {
 				if (!value) {
@@ -618,6 +683,7 @@ new Vue({
 				// 如果已经到了最近的编辑层 再判断是否是最外层的编辑或新增功能 同时删除后一个计数器
 				if (this.form_list.length > 1) {
 					// 在编辑和新增里 如果未到最外层这一部分是公共逻辑 进行的是往上找 修改上一层级数据
+					// 其实也可以修改成将当前表单编辑的数据格式化 再替换上一层struct_array里对应的元素对象
 					let array = this.form_list[index - 1].struct_array;
 					array[obj.index].name = obj.name;
 					array[obj.index].identifier = obj.identifier;
@@ -654,7 +720,7 @@ new Vue({
 							}
 							break;
 						case 'enum':
-							array[obj.index].dataType.specs = { enumValue: {} };
+							array[obj.index].dataType.specs = { enumValue: {}, enumType: obj.enum_value_type };
 							for (let val of obj.enum_list) {
 								array[obj.index].dataType.specs.enumValue[val.value] = val.label;
 							}
@@ -766,7 +832,7 @@ new Vue({
 												}
 												break;
 											case 'enum':
-												e.dataType.specs = { enumValue: {} };
+												e.dataType.specs = { enumValue: {}, enumType: obj.enum_value_type };
 												for (let val of obj.enum_list) {
 													e.dataType.specs.enumValue[val.value] = val.label;
 												}
@@ -863,7 +929,7 @@ new Vue({
 					}
 					break;
 				case 'enum':
-					dataType.specs = { enumValue: {} };
+					dataType.specs = { enumValue: {}, enumType: obj.enum_value_type };
 					for (let val of obj.enum_list) {
 						dataType.specs.enumValue[val.value] = val.label;
 					}
@@ -1146,7 +1212,12 @@ new Vue({
 		},
 		// 启用当前物模型
 		set_product_model() {
-			this.request('put', `${product_model}/${this.id}/${this.model_id}`, this.token, () => {
+			this.request('put', `${product_model}/${this.id}/${this.model_id}`, this.token, (res) => {
+				if (res.data.head.code !== 200) {
+					this.$message.error('操作失败');
+					return;
+				}
+				this.$message.success('操作成功');
 				this.res_history_model(this.history_selected);
 			});
 		},

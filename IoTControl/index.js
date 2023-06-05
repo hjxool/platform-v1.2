@@ -1,8 +1,8 @@
 let url = `${我是接口地址}/`;
 let rule_search = `${url}api-portal/online-check-rule/search`;
 let update_rule = `${url}api-portal/online-check-rule/saveOrUpdate`;
-let device_list = `${url}api-portal/room/device`;
-let room_search = `${url}api-portal/room/search/status`;
+let device_list = `${url}api-portal/place/device`; // 分页查询场所下的设备
+let room_search = `${url}api-portal/place/search`; // 根据应用查询场所(设备监控)
 let model_server_search = `${url}api-device/protocol/current/services`;
 let joint_rule_enable = `${url}api-portal/online-check-rule/start`;
 let joint_rule_disable = `${url}api-portal/online-check-rule/stop`;
@@ -12,6 +12,7 @@ let record_search = `${url}api-portal/online-check-record/search`;
 let all_device_url = `${url}api-device/device/search`;
 let user_info_url = `${url}api-user/users/tenantSimple`; //获取租户列表
 let current_tenants = `${url}api-user/users/tenants`; //获取当前租户名称
+let limits_url = `${url}api-user/menus/current`; //获取菜单权限
 
 Vue.config.productionTip = false;
 new Vue({
@@ -78,17 +79,64 @@ new Vue({
 		total_size2: 0, //总页数
 		current_page: 1, //当前页
 		current_page2: 1, //弹窗当前页
+		config: {
+			detail_show: false,
+			control_show: false,
+		},
 	},
-	mounted() {
+	async mounted() {
 		if (!location.search) {
 			this.token = sessionStorage.token;
+			this.application = decodeURIComponent(window.sessionStorage.application);
 		} else {
 			this.get_token();
+			this.application = decodeURIComponent(this.application);
 		}
+		if (!sessionStorage.hushanwebmenuTree) {
+			await new Promise((success) => {
+				this.request('get', limits_url, this.token, (res) => {
+					success();
+					if (res.data.head.code !== 200) {
+						return;
+					}
+					sessionStorage.hushanwebmenuTree = JSON.stringify(res.data.data.menuTree);
+				});
+			});
+		}
+		// 解析权限树
+		let limits;
+		for (let val of JSON.parse(sessionStorage.hushanwebmenuTree)) {
+			if (val.name === '湖山云会管平台') {
+				for (let val2 of val.subMenus) {
+					if (val2.name === '物联管控') {
+						for (let val3 of val2.subMenus) {
+							if (val3.name === '设备监控') {
+								limits = val3.subMenus;
+								break;
+							}
+						}
+						break;
+					}
+				}
+				break;
+			}
+		}
+		this.config.detail_show = this.is_element_show(limits, '查看设备详情');
+		this.config.control_show = this.is_element_show(limits, '设备操作');
+
 		this.get_user_info();
 		this.get_place_list();
 	},
 	methods: {
+		// 解析权限树
+		is_element_show(source, key) {
+			for (let val of source) {
+				if (val.name === key) {
+					return true;
+				}
+			}
+			return false;
+		},
 		// 获取用户信息包括 id 连接stomp用户名和密码
 		get_user_info() {
 			this.request('get', user_info_url, this.token, (res) => {
@@ -115,10 +163,19 @@ new Vue({
 		// 获取会议室列表
 		get_place_list() {
 			this.html.page_loading = true;
-			this.request('get', room_search, this.token, (res) => {
+			let applicationId;
+			switch (this.application) {
+				case '湖山云会管平台':
+					applicationId = '7';
+					break;
+				case '智慧音视频广播':
+					applicationId = '17';
+					break;
+			}
+			this.request('get', `${room_search}/${applicationId}`, this.token, (res) => {
 				console.log('会议室列表', res);
 				this.html.page_loading = false;
-				if (res.data.head.code != 200 || Object.entries(res.data.data).length == 0) {
+				if (res.data.head.code != 200) {
 					return;
 				}
 				this.place_list = res.data.data;
@@ -126,11 +183,15 @@ new Vue({
 		},
 		// 场所一切换 设备列表就要更新
 		place_change(place_id) {
+			if (!this.config.detail_show) {
+				this.$message.error('没权限查看');
+				return;
+			}
 			this.html.page_loading = true;
 			this.place_id = place_id;
 			this.device.list = [];
 			this.html.page_select = '1';
-			this.request('post', `${device_list}/${this.place_id}`, this.token, { condition: {} }, (res) => {
+			this.request('post', `${device_list}/${this.place_id}`, this.token, {}, (res) => {
 				console.log('设备列表', res);
 				this.html.page_loading = false;
 				this.html.detail_display = true;
@@ -479,15 +540,6 @@ new Vue({
 				disabledDate(time) {
 					return time.getTime() < new Date(`${t.getFullYear()}-${t.getMonth() + 1}-${t.getDate()}`).getTime();
 				},
-			};
-		},
-		// element card样式
-		card_style() {
-			return {
-				display: 'flex',
-				alignItems: 'center',
-				height: '100%',
-				justifyContent: 'space-between',
 			};
 		},
 		// 跳转到设备页面

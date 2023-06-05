@@ -359,7 +359,7 @@ new Vue({
 		},
 		// 结束会议是否显示
 		end_meeting_show() {
-			if (this.current_user == this.meeting_obj.createUser && this.meeting_obj.status === 1) {
+			if ((this.current_user == this.meeting_obj.createUser || this.current_user == this.meeting_obj.moderatorId) && this.meeting_obj.status === 1) {
 				// 进行中且是当前用户才显示
 				this.html.end_display = true;
 			} else {

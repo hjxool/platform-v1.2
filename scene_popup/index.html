@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <link rel="stylesheet" href="../module/element-ui.css">
+  <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+  <el-form id="index" ref="form" v-cloak v-loading="html.loading" :model="form" :rules="rules" label-width="auto">
+    <div class="scroll">
+      <el-form-item class="flex_shrink" label="场景名称" prop="name">
+        <el-input class="form_item" v-model="form.name"></el-input>
+      </el-form-item>
+
+      <el-form-item class="flex_shrink" label="执行方式" required>
+        <el-select class="form_item" v-model="form.type" :disabled="is_edit">
+          <el-option v-for="item in html.type_options" :key="item.val" :label="item.name" :value="item.val"></el-option>
+        </el-select>
+      </el-form-item>
+      <!-- 自动执行选项 -->
+      <template v-if="form.type===2">
+        <el-form-item class="flex_shrink" label="开始日期" prop="start_time">
+          <el-date-picker class="form_item" v-model="form.start_time" type="date" placeholder="选择日期"></el-date-picker>
+        </el-form-item>
+
+        <el-form-item class="flex_shrink" label="结束日期" prop="end_time">
+          <el-date-picker class="form_item" v-model="form.end_time" type="date" placeholder="选择日期"></el-date-picker>
+        </el-form-item>
+
+        <el-form-item class="flex_shrink" label="执行时间" prop="ex_time">
+          <el-time-picker class="form_item" v-model="form.ex_time"></el-time-picker>
+        </el-form-item>
+
+        <el-form-item class="flex_shrink" label="执行周期" prop="ex_cycle">
+          <el-select class="form_item" v-model="form.ex_cycle" multiple placeholder="每周执行">
+            <el-option v-for="item in html.weeks" :key="item.val" :label="item.name" :value="item.val"
+              clearable></el-option>
+          </el-select>
+        </el-form-item>
+      </template>
+      <!-- 条件执行选项 -->
+      <template v-if="form.type===3">
+        <el-form-item label="条件类型" prop="condition_type">
+          <el-select v-model="form.condition_type">
+            <el-option label="场所活动开始前" :value="0"></el-option>
+            <el-option label="场所活动结束后" :value="1"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="form.condition_type?'结束后':'开始前'" prop="time_unit">
+          <div class="row_layout">
+            <el-input-number size="small" v-model="form.pre_after_time" :step="1" :min="0"
+              step-strictly></el-input-number>
+            <el-select v-model="form.time_unit" size="small" style="width:80px;margin-left:20px;">
+              <el-option label="小时" :value="10"></el-option>
+              <el-option label="分钟" :value="12"></el-option>
+              <el-option label="秒" :value="13"></el-option>
+              <el-option label="毫秒" :value="14"></el-option>
+            </el-select>
+          </div>
+        </el-form-item>
+      </template>
+      <!-- 服务列表 -->
+      <div class="server_box flex_shrink" :style="theme_border()">
+        <div class="list_box" :style="theme_border()">
+          <div class="title flex_shrink" :style="theme_border()">
+            <span v-for="text in html.titles" :style="theme_font()">{{text}}</span>
+          </div>
+          <!-- 服务列表 -->
+          <transition-group name="file" class="scroll">
+            <div class="server" v-for="item,index in form.servers" :key="index" @click="select_server(item)">
+              <span class="text_ellipsis" :style="theme_font()" :title="item.serviceName">{{item.serviceName}}</span>
+              <span class="text_ellipsis" :style="theme_font()" :title="item.deviceName">{{item.deviceName}}</span>
+              <span class="text_ellipsis" :style="theme_font()" :title="item.placeName">{{item.placeName}}</span>
+              <span class="text_ellipsis" :style="theme_font()"
+                :title="item.inputParamDesc">{{item.inputParamDesc}}</span>
+              <span :style="theme_font()">{{item.delayExecuteSeconds}}</span>
+              <!-- 不同主题背景色 -->
+              <div v-show="item.check" :class="[theme?'bg1':'bg2','bg_img']"></div>
+            </div>
+          </transition-group>
+        </div>
+        <!-- 功能按钮 -->
+        <div class="buttons flex_shrink col_layout">
+          <img class="icon flex_shrink" v-for="img,index in theme? html.button_dark : html.button_light"
+            :src="button_img(img,index)" :style="button_style(index)" @click="tool(index)">
+        </div>
+      </div>
+    </div>
+    <!-- 提交按钮 -->
+    <div class="foot flex_shrink">
+      <el-button @click="submit" type="primary">保存</el-button>
+      <el-button @click="close">取消</el-button>
+    </div>
+
+    <!-- 场所设备列表弹窗 -->
+    <div class="popover" v-show="devices.show">
+      <div class="place_box" :style="theme_bg_border()" v-loading="devices.loading">
+        <div class="head flex_shrink" :style="theme_pophead()">智慧设备</div>
+
+        <div class="search flex_shrink row_layout">
+          <el-checkbox class="flex_shrink" :indeterminate="devices.isIndeterminate" v-model="devices.checkAll"
+            @change="device_checkall">全选
+          </el-checkbox>
+          <el-input class="search_input" @keyup.enter.native="get_place_device" placeholder="模糊搜索"
+            v-model="devices.search" size="small" clearable>
+            <i slot="suffix" class="el-input__icon el-icon-search"></i>
+          </el-input>
+        </div>
+
+        <div v-if="devices.list.length" class="scroll" style="padding-left: 20px;">
+          <div v-for="place in devices.list">
+            <div class="place_box2 row_layout" @click="select_place(place)">
+              <el-checkbox :indeterminate="place.isIndeterminate" v-model="place.checkAll"
+                @change="place_check_all(place)" style="margin-right:10px;"></el-checkbox>
+              <i class="el-icon-caret-right icon" v-show="devices.place_id!=place.id" :style="theme_font()"></i>
+              <i class="el-icon-caret-bottom icon" v-show="devices.place_id==place.id" :style="theme_font()"></i>
+              <span class="text" :style="theme_font()">{{place.placeName}}</span>
+            </div>
+            <el-collapse-transition>
+              <div style="padding-left: 20px;" v-show="devices.place_id==place.id">
+                <div class="device_box row_layout" v-for="device in place.devices">
+                  <el-checkbox class="flex_shrink" v-model="device.check"
+                    @change="select_device(device,place,'el')"></el-checkbox>
+
+                  <span class="text text_ellipsis" @click="select_device(device,place)" :title="device.deviceName"
+                    :style="theme_font()">{{device.deviceName}}</span>
+
+                  <el-button class="flex_shrink" size="mini" round @click.stop="set_config(device,place)">配置</el-button>
+                </div>
+              </div>
+            </el-collapse-transition>
+          </div>
+        </div>
+        <div v-show="!devices.list.length" class="center" :style="theme_font()">无设备</div>
+
+        <div class="foot flex_shrink">
+          <el-button @click="device_submit" type="primary" size="small">确定</el-button>
+          <el-button @click="devices.show=false" size="small">取消</el-button>
+        </div>
+      </div>
+    </div>
+    <!-- 服务配置弹窗 -->
+    <div class="popover" v-show="servers.show">
+      <div class="server_box2" :style="theme_bg_border()">
+        <div class="head flex_shrink" :style="theme_pophead()">可选服务</div>
+
+        <div class="search flex_shrink row_layout">
+          <el-checkbox class="flex_shrink" :indeterminate="servers.isIndeterminate" v-model="servers.checkAll"
+            @change="server_checkall">全选
+          </el-checkbox>
+        </div>
+
+        <div class="scroll">
+          <div class="row_layout" v-for="server in servers.list">
+            <el-checkbox class="flex_shrink" v-model="server.check" @change="select_server2(null)"></el-checkbox>
+
+            <span class="text text_ellipsis" @click="select_server2(server)" :title="server.name"
+              :style="theme_font()">{{server.name}}</span>
+            <!-- 可选组件 -->
+            <selector class="flex_shrink" v-if="components_show(server.serviceIdentifier,server.productId,'selector')"
+              :input="server.serviceInputParam" @init_input="server.serviceInputParam=$event"
+              @text="server.inputParamDesc=$event">
+            </selector>
+
+            <order_control_relay class="flex_shrink"
+              v-if="components_show(server.serviceIdentifier,server.productId,'order_control_relay')"
+              :input="server.serviceInputParam" @init_input="server.serviceInputParam=$event"
+              @text="server.inputParamDesc=$event"></order_control_relay>
+
+            <selector2 class="flex_shrink" v-if="components_show(server.serviceIdentifier,server.productId,'selector2')"
+              :item="server">
+            </selector2>
+          </div>
+        </div>
+
+        <div class="foot flex_shrink">
+          <el-button @click="server_submit" type="primary" size="small">确定</el-button>
+          <el-button @click="servers.show=false" size="small">取消</el-button>
+        </div>
+      </div>
+    </div>
+    <!-- 延迟及服务配置 -->
+    <div class="popover" v-show="delay.show">
+      <div class="server_box3" :style="theme_bg_border()">
+        <div class="head flex_shrink" :style="theme_pophead()">服务修改及延迟设置</div>
+
+        <div class="scroll">
+          <div class="row_layout" v-for="server in delay.list">
+            <span class="text text_ellipsis flex_shrink" :title="server.serviceName"
+              :style="theme_font()">{{server.serviceName}}</span>
+
+            <div class="setting_box">
+              <!-- 可选组件 -->
+              <div class="row_layout">
+                <selector v-if="components_show(server.serviceIdentifier,server.productId,'selector')"
+                  :input="server.serviceInputParam" @init_input="server.serviceInputParam=$event"
+                  @text="server.inputParamDesc=$event">
+                </selector>
+
+                <order_control_relay
+                  v-if="components_show(server.serviceIdentifier,server.productId,'order_control_relay')"
+                  :input="server.serviceInputParam" @init_input="server.serviceInputParam=$event"
+                  @text="server.inputParamDesc=$event"></order_control_relay>
+
+                <selector2 v-if="components_show(server.serviceIdentifier,server.productId,'selector2')" :item="server">
+                </selector2>
+              </div>
+              <!-- 延迟设置 -->
+              <div class="row_layout" style="margin-top: 10px;">
+                <span :style="theme_font()">延迟</span>
+
+                <el-input v-model="server.delayExecuteSeconds" style="width: 60px;" size="mini"></el-input>
+
+                <span :style="theme_font()">秒</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="foot flex_shrink">
+          <el-button @click="delay_submit" type="primary" size="small">确定</el-button>
+          <el-button @click="delay.show=false" size="small">取消</el-button>
+        </div>
+      </div>
+    </div>
+  </el-form>
+
+  <script src="../../运维人员部署请修改我.js"></script>
+  <script src="../module/vue.js"></script>
+  <script src="../module/element-ui.js"></script>
+  <script src="../module/axios.min.js"></script>
+  <script src="./components.js"></script>
+  <script src="../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

@@ -120,7 +120,8 @@
       <div class="right1">
         <div class="right1_head row_layout">
           <span>会议总状态</span>
-          <el-button @click="turn_to_page('会议预约')" type="primary" size="small">+ 创建会议</el-button>
+          <el-button v-show="config.create_show" @click="turn_to_page('会议预约')" type="primary" size="small">+
+            创建会议</el-button>
         </div>
         <div class="right1_box row_layout" v-for="item in meeting_count">
           <span>{{item.title}}</span>
@@ -153,7 +154,8 @@
               </div>
             </div>
             <div>会议室 {{item.roomName}}</div>
-            <el-button class="right2_2_2" @click="turn_to_page('meetingDetail',item.id)" type="text">详情 ></el-button>
+            <el-button v-show="config.detail_show" class="right2_2_2" @click="turn_to_page('meetingDetail',item.id)"
+              type="text">详情 ></el-button>
           </div>
         </div>
       </div>

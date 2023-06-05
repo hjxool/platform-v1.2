@@ -17,7 +17,8 @@
       :style="{gridTemplateRows:history_list[history_selected].profile.published==='0'?'80px auto 70px':'80px auto'}">
       <!-- 按钮选项栏 -->
       <div class="nav_layout">
-        <el-button type="primary" round @click="add_protocol" :disabled="history_list.length == 0">添加自定义功能</el-button>
+        <el-button v-show="config.add_property_show" type="primary" round @click="add_protocol"
+          :disabled="history_list.length == 0">添加自定义功能</el-button>
         <div class="history_layout">
           <span style="margin-right: 20px;">历史版本</span>
           <el-select style="width:200px;" v-model="history_selected" placeholder="无历史版本"
@@ -26,8 +27,10 @@
             </el-option>
           </el-select>
         </div>
-        <el-button @click="new_ver_model" :disabled="history_list.length == 0">新增版本</el-button>
-        <el-button type="primary" round @click="set_product_model" :disabled="history_list.length == 0">启用当前物模型
+        <el-button v-show="config.create_show" @click="new_ver_model"
+          :disabled="history_list.length == 0">新增版本</el-button>
+        <el-button v-show="config.enable_show" type="primary" round @click="set_product_model"
+          :disabled="history_list.length == 0">启用当前物模型
         </el-button>
         <el-button @click="static_params.model_json_display=true" :disabled="history_list.length == 0">物模型 TSL
         </el-button>
@@ -45,9 +48,9 @@
           <el-table-column prop="dataType_text" label="数据定义"></el-table-column>
           <el-table-column label="操作" width="100" fixed="right">
             <template slot-scope="scope">
-              <el-button v-if="history_list[history_selected].profile.published==='0'" @click="edit_protocol(scope.row)"
-                type="text" size="small">编辑</el-button>
-              <el-button v-if="history_list[history_selected].profile.published==='0'"
+              <el-button v-if="history_list[history_selected].profile.published==='0' && config.edit_show"
+                @click="edit_protocol(scope.row)" type="text" size="small">编辑</el-button>
+              <el-button v-if="history_list[history_selected].profile.published==='0' && config.del_show"
                 @click="delete_protocol(scope.row)" type="text" size="small">删除</el-button>
               <el-button v-if="history_list[history_selected].profile.published==='1'"
                 @click="check_protocol(scope.row)" type="text" size="small">查看</el-button>
@@ -217,7 +220,13 @@
               <template v-if="card.dataType=='enum'">
                 <el-form-item label="枚举项" size="medium">
                   <div class="enum_layout" style="margin-top:0;">
-                    <span>参数值<i class="el-icon-question" title="参数只当字符串处理，由设备端解析"></i></span>
+                    <div class="row_layout">
+                      <span style="margin-right:10px;">参数值</span>
+                      <el-select v-model="card.enum_value_type" placeholder="参数值类型" size="mini" style="width:100px;">
+                        <el-option v-for="item in static_params.enum_option" :key="item" :label="item"
+                          :value="item"></el-option>
+                      </el-select>
+                    </div>
                     <span>参数描述</span>
                   </div>
                   <div class="enum_layout" v-for="item in card.enum_list">
@@ -382,7 +391,7 @@
       </div>
 
       <!-- 临时 发布物模型按钮 用绝对定位先弄个死的 -->
-      <el-card class="footer" v-if="history_list[history_selected].profile.published==='0'">
+      <el-card class="footer" v-if="history_list[history_selected].profile.published==='0' && config.publish_show">
         <el-button type="primary" size="small" @click="publish_model">发布上线</el-button>
 
         <span class="info">

@@ -56,13 +56,15 @@
 	align-self: center;
 }
 .form_layout {
-	overflow: hidden;
-	width: 35rem;
+	overflow: hidden !important;
+	width: 96%;
 	min-width: 500px;
+	height: 96%;
 	background-color: #fff;
 	border-radius: 14px;
 	display: flex;
 	flex-direction: column;
+	margin: auto;
 	> .head {
 		padding: 10px;
 		> .title {
@@ -79,4 +81,74 @@
 		align-self: end;
 		padding-right: 1rem;
 	}
+}
+.download_tips {
+	position: fixed;
+	right: 0;
+	top: 0;
+	// width: calc(13rem + 20px);
+	height: 100%;
+	overflow-x: hidden;
+	display: grid;
+	grid-template-columns: 20px auto;
+	background: #87cefa;
+	border-radius: 10px;
+	z-index: 100;
+	> .fold {
+		justify-self: center;
+		align-self: center;
+		width: 10px;
+		height: 50px;
+		background-color: #f56c6c;
+		border-radius: 10px;
+		cursor: pointer;
+		> .icon1 {
+			width: 6px;
+			height: 10px;
+			border-left: 6px solid #f2c260;
+			border-bottom: 5px solid transparent;
+			border-top: 5px solid transparent;
+		}
+		> .icon2 {
+			width: 6px;
+			height: 10px;
+			border-right: 6px solid #f2c260;
+			border-bottom: 5px solid transparent;
+			border-top: 5px solid transparent;
+		}
+	}
+	.box {
+		margin: 0.5rem;
+		height: 4.5rem;
+		background: #f56c6c;
+		border-radius: 10px;
+		color: #fff;
+		padding: 0.5rem;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-evenly;
+		overflow: hidden;
+		.text_ellipsis {
+			font-size: 0.9rem;
+		}
+		.icon {
+			color: #fff;
+			margin-left: auto;
+			cursor: pointer;
+		}
+	}
+}
+.download-enter,
+.download-leave-to {
+	transform: translateX(13rem);
+	opacity: 0;
+}
+.download-enter-to,
+.download-leave {
+	transform: translateX(0);
+	opacity: 1;
+}
+.download-enter-active,
+.download-leave-active {
+	transition: all 0.3s;
 }

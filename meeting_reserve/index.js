@@ -7,6 +7,8 @@ let upload_files = `${url}api-portal/meeting/upload/files`;
 let cur_user_url = `${url}api-auth/oauth/userinfo`;
 let stru_list_url = `${url}api-portal/department/getsubDeptAndCurrentDeptUser`;
 let remove_dup_url = `${url}api-portal/user/distinct`;
+let limits_url = `${url}api-user/menus/current`; //获取菜单权限
+let get_scene_url = `${url}api-portal/scene-rule/available`; //查询场所可用场景
 
 Vue.config.productionTip = false;
 new Vue({
@@ -60,6 +62,7 @@ new Vue({
 			description: '', //会议备注
 			is_rebook: false, //当从其他页面跳转而来时 需要禁用预约方式
 			reminds: ['开始时', '开始前15分钟', '开始前30分钟', '开始前1小时', '开始前2小时', '开始前1天', '开始前2天', '自定义'],
+			emcee: [], // 主持人
 		},
 		// 当前用户信息
 		user: {
@@ -112,14 +115,50 @@ new Vue({
 			page_size: 20, //查询人员一页最大数量
 			cur_path_id: '', //当前路径
 			stru_index: 0, //记录部门数组长度 以此分隔人员和部门
+			title: '', // 标题
+			add_type: '', // 添加主持人或是普通参会人
+		},
+		config: {
+			reserve_show: false,
 		},
 	},
-	mounted() {
+	async mounted() {
 		if (!location.search) {
 			this.token = sessionStorage.token;
 		} else {
 			this.get_token();
 		}
+		if (!sessionStorage.hushanwebmenuTree) {
+			await new Promise((success) => {
+				this.request('get', limits_url, this.token, (res) => {
+					success();
+					if (res.data.head.code !== 200) {
+						return;
+					}
+					sessionStorage.hushanwebmenuTree = JSON.stringify(res.data.data.menuTree);
+				});
+			});
+		}
+		// 解析权限树
+		let limits;
+		for (let val of JSON.parse(sessionStorage.hushanwebmenuTree)) {
+			if (val.name === '湖山云会管平台') {
+				for (let val2 of val.subMenus) {
+					if (val2.name === '会议管理') {
+						for (let val3 of val2.subMenus) {
+							if (val3.name === '会议预约') {
+								limits = val3.subMenus;
+								break;
+							}
+						}
+						break;
+					}
+				}
+				break;
+			}
+		}
+		this.config.reserve_show = this.is_element_show(limits, '新建会议');
+
 		if (localStorage.hushanwebuserinfo) {
 			let obj = JSON.parse(localStorage.hushanwebuserinfo);
 			this.user = {
@@ -170,6 +209,15 @@ new Vue({
 		this.scroll = false;
 	},
 	methods: {
+		// 解析权限树
+		is_element_show(source, key) {
+			for (let val of source) {
+				if (val.name === key) {
+					return true;
+				}
+			}
+			return false;
+		},
 		// 获取当前操作用户信息
 		get_user_info() {
 			this.request('get', cur_user_url, this.token, (res) => {
@@ -356,6 +404,10 @@ new Vue({
 		},
 		// 鼠标点下时 只有在当前时间后的才能框选
 		area_start(row_index, col_index) {
+			if (!this.config.reserve_show) {
+				// 如果权限不允许预约会议就返回
+				return;
+			}
 			if (this.html.block_list[row_index][col_index] == 0) {
 				this.start_move = true;
 				this.row_index = row_index;
@@ -518,6 +570,7 @@ new Vue({
 				this.new_meeting_form.signIn = 1;
 				this.new_meeting_form.summary = 1;
 				this.new_meeting_form.search_person = [this.user];
+				this.new_meeting_form.emcee = [this.user]; // 默认创建人是主持人
 				this.new_meeting_form.cycle_deadline = '';
 				this.new_meeting_form.files = [];
 				this.html.form_loading = false;
@@ -566,7 +619,7 @@ new Vue({
 		},
 		// 提交新建会议表单 并刷新数据 关闭弹窗
 		new_submit(form) {
-			this.$refs.new_meeting.validate((result) => {
+			this.$refs.new_meeting.validate(async (result) => {
 				let result2 = true;
 				if (form.sendMessage == 1) {
 					if (form.meetingReminds.length == 0) {
@@ -593,7 +646,60 @@ new Vue({
 						}
 					}
 				}
+				if (!form.emcee.length) {
+					this.$message.error('主持人不能为空！');
+					result2 = false;
+				}
 				if (result && result2) {
+					// 开始结束时间
+					let m = form.date.getMonth() + 1 < 10 ? '0' + (form.date.getMonth() + 1) : form.date.getMonth() + 1;
+					let d = form.date.getDate() < 10 ? '0' + form.date.getDate() : form.date.getDate();
+					et = `${form.date.getFullYear()}-${m}-${d} ${form.time_end}:00`;
+					st = `${form.date.getFullYear()}-${m}-${d} ${form.time_start}:00`;
+					// 提示是否有场景执行 而后提交请求
+					this.html.form_loading = true;
+					let text = await new Promise((success) => {
+						this.request('get', `${get_scene_url}/${this.roomId || this.place_list[this.row_index].id}?placeStartDate=${st}&placeEndDate=${et}`, this.token, (res) => {
+							this.html.form_loading = false;
+							if (res.data.head.code !== 200) {
+								success();
+								return;
+							}
+							let t = '';
+							for (let val of res.data.data) {
+								t += `${val.sceneName}、`;
+							}
+							success(t);
+						});
+					});
+					if (text) {
+						// 文本有内容说明有场景 就提示，否则直接发起请求
+						let result3 = await this.$confirm(
+							`
+              <div class="col_layout">
+                <div>该会议将执行以下自动或条件场景——${text}</div>
+                <div style="font-size:14px;">如果对此会议有影响，请及时处理</div>
+              </div>
+            `,
+							'提示',
+							{
+								confirmButtonText: '创建',
+								cancelButtonText: '取消',
+								dangerouslyUseHTMLString: true,
+								center: true,
+							}
+						)
+							.then(() => {
+								return true;
+							})
+							.catch(() => {
+								return false;
+							});
+						if (!result3) {
+							// 点取消则不发请求
+							return;
+						}
+					}
 					let data = {
 						appointmentMode: form.method,
 						reply: form.reply,
@@ -607,6 +713,7 @@ new Vue({
 						meetingReminds: [],
 						guestList: this.new_meeting_form.guestList,
 						description: form.description,
+						moderatorId: this.new_meeting_form.emcee[0].id,
 					};
 					for (let val of form.search_person) {
 						data.userIds.push(val.id);
@@ -624,10 +731,8 @@ new Vue({
 						data.appointmentPeriod = `${t}`;
 					}
 					// 开始结束时间
-					let m = form.date.getMonth() + 1 < 10 ? '0' + (form.date.getMonth() + 1) : form.date.getMonth() + 1;
-					let d = form.date.getDate() < 10 ? '0' + form.date.getDate() : form.date.getDate();
-					data.endTime = `${form.date.getFullYear()}-${m}-${d} ${form.time_end}:00`;
-					data.startTime = `${form.date.getFullYear()}-${m}-${d} ${form.time_start}:00`;
+					data.endTime = et;
+					data.startTime = st;
 					// 提醒时间
 					for (let i = 0; i < form.meetingReminds.length; i++) {
 						let t2 = {
@@ -840,6 +945,8 @@ new Vue({
 		},
 		upload_visitor(e) {
 			let file = e.target.files[0];
+			// 取完文件后就清除
+			upload.value = null;
 			let reader = new FileReader();
 			reader.readAsBinaryString(file);
 			reader.onload = (e2) => {
@@ -871,8 +978,16 @@ new Vue({
 			this.new_meeting_form.guestList.splice(index, 1);
 		},
 		// 删除参会人员
-		del_person(index) {
-			this.new_meeting_form.search_person.splice(index, 1);
+		del_person(index, type) {
+			this.new_meeting_form[type === 'join' ? 'search_person' : 'emcee'].splice(index, 1);
+		},
+		// 添加参会人 已选列表 是否显示删除按钮
+		add_del_show(index) {
+			if (this.add_person_form.add_type === 'join') {
+				return index;
+			} else {
+				return true;
+			}
 		},
 		// 删除勾选的组织或人员
 		del_select(index) {
@@ -1003,20 +1118,27 @@ new Vue({
 			this.area_start(this.mouse.row_index, this.mouse.col_index);
 		},
 		// 获取列表 初始化 展示添加人员弹窗
-		add_person_display() {
+		add_person_display(type) {
 			this.html.add_person_display = true;
 			this.add_person_form.search = '';
 			this.add_person_form.option_select = 0;
 			this.add_person_form.total_list = [];
 			this.add_person_form.stru_path = [];
 			this.add_person_form.select_list = [];
-			for (let val of this.new_meeting_form.search_person) {
+			this.add_person_form.add_type = type; // 标识 用于区别条件
+			// 不同类别 从不同数组灌入数据
+			for (let val of this.new_meeting_form[type === 'join' ? 'search_person' : 'emcee']) {
 				let t = {
 					id: val.id,
 					name: val.name,
 					type: 'person',
 				};
 				this.add_person_form.select_list.push(t);
+			}
+			if (type === 'join') {
+				this.add_person_form.title = '添加参会人';
+			} else {
+				this.add_person_form.title = '指定主持人';
 			}
 		},
 		// 获取人员或组织列表
@@ -1205,16 +1327,33 @@ new Vue({
 					this.$message('去重失败');
 					return;
 				}
-				this.html.add_person_display = false;
-				this.new_meeting_form.search_person = [this.user];
-				for (let val of res.data.data) {
-					if (val.id !== this.user.id) {
-						// 已经把当前用户添加到第一位 后面只需要把其余的加进来
+				if (this.add_person_form.add_type === 'join') {
+					this.html.add_person_display = false;
+					this.new_meeting_form.search_person = [this.user];
+					for (let val of res.data.data) {
+						if (val.id !== this.user.id) {
+							// 已经把当前用户添加到第一位 后面只需要把其余的加进来
+							let t = {
+								id: val.id,
+								name: val.username,
+							};
+							this.new_meeting_form.search_person.push(t);
+						}
+					}
+				} else {
+					// 去重结果不能大于一人
+					if (res.data.data.length > 1) {
+						this.$message.error('主持人只能选1个！');
+						return;
+					}
+					this.html.add_person_display = false;
+					this.new_meeting_form.emcee = [];
+					for (let val of res.data.data) {
 						let t = {
 							id: val.id,
 							name: val.username,
 						};
-						this.new_meeting_form.search_person.push(t);
+						this.new_meeting_form.emcee.push(t);
 					}
 				}
 			});

@@ -147,20 +147,36 @@
               </el-date-picker>
             </el-form-item>
 
+            <el-form-item label="主持人" required>
+              <div class="emcee_box row_layout">
+                <div class="person button flex_shrink" @click="add_person_display('holder')">
+                  <i class="el-icon-plus icon1"></i>
+                  <span class="name">添加</span>
+                </div>
+
+                <div class="person flex_shrink" v-for="item in new_meeting_form.emcee">
+                  <span class="name text_ellipsis" :title="item.name">{{item.name}}</span>
+                  <i class="el-icon-close" @click="del_person(index,'holder')"></i>
+                </div>
+
+                <div v-show="!new_meeting_form.emcee.length" class="placeholder">主持人</div>
+              </div>
+            </el-form-item>
+
             <el-form-item label="参会人员">
               <div style="display:flex;flex-direction:column;">
                 <!-- 必须参与人 -->
-                <div style="display:flex;align-items: start;">
+                <div class="row_layout">
                   <div class="person_box">
                     <!-- 人员显示列表 -->
                     <div class="box1">
-                      <div class="person button flex_shrink" @click="add_person_display">
+                      <div class="person button flex_shrink" @click="add_person_display('join')">
                         <i class="el-icon-plus icon1"></i>
                         <span class="name">批量添加</span>
                       </div>
                       <div class="person flex_shrink" v-for="item,index in new_meeting_form.search_person">
                         <span class="name text_ellipsis" :title="item.name">{{item.name}}</span>
-                        <i v-show="index" class="el-icon-close" @click="del_person(index)"></i>
+                        <i v-show="index" class="el-icon-close" @click="del_person(index,'join')"></i>
                       </div>
                       <div v-show="new_meeting_form.search_person.length==1" class="placeholder">参会人员</div>
                     </div>
@@ -291,7 +307,7 @@
     <div class="popover" v-if="html.add_person_display">
       <div class="add_person_window" v-loading="html.add_person_loading">
         <div class="head">
-          <span style="font-weight:bold;">添加参会人</span>
+          <span style="font-weight:bold;">{{add_person_form.title}}</span>
           <el-button @click="html.add_person_display=false" type="danger" icon="el-icon-close" circle
             size="mini"></el-button>
         </div>
@@ -310,7 +326,8 @@
               </div>
             </div>
             <div class="list_box" v-show="add_person_form.option_select!==0">
-              <div v-show="add_person_form.stru_path.length==1" class="box1 flex_shrink">
+              <div v-show="add_person_form.stru_path.length==1||add_person_form.option_select===1"
+                class="box1 flex_shrink">
                 <i class="el-icon-arrow-left icon button" @click="add_person_form.option_select=0"></i>
                 <span class="icon text">{{add_person_form.option_select==1?'按人员选':'按架构选'}}</span>
               </div>
@@ -343,12 +360,13 @@
           </div>
           <!-- 展示列表 -->
           <div class="right">
-            <span style="margin-bottom:10px;">已选择（ {{add_person_form.select_list.length}}/10000 ）</span>
+            <span v-if="add_person_form.add_type==='join'" style="margin-bottom:10px;">已选择（
+              {{add_person_form.select_list.length}}/10000 ）</span>
             <div class="scroll">
               <div class="person flex_shrink" v-for="item,index in add_person_form.select_list">
                 <span class="name text_ellipsis" :title="item.name">{{item.name}}</span>
                 <!-- 第一个人员不能删除 -->
-                <i v-show="index" class="el-icon-close" @click="del_select(index)"></i>
+                <i v-show="add_del_show(index)" class="el-icon-close" @click="del_select(index)"></i>
               </div>
             </div>
             <div class="submit">

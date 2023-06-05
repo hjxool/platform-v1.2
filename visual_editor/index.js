@@ -18,6 +18,9 @@ new Vue({
 		customPopup,
 		customButtonSwitch,
 		customMatrix,
+		customRadioGroup,
+		customCheckBox,
+		customTable,
 	},
 	data: {
 		html: {

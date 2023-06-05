@@ -2,13 +2,14 @@ let url = `${我是接口地址}/`;
 let search_meeting_url = `${url}api-portal/meeting/list`;
 let user_url = `${url}api-auth/oauth/userinfo`; //获取当前登录用户信息
 let cancel_url = `${url}api-portal/meeting/cancel`;
+let limits_url = `${url}api-user/menus/current`; //获取菜单权限
 
 new Vue({
 	el: '#index',
 	mixins: [common_functions],
 	data: {
 		html: {
-			loading: false, //页面加载
+			loading: true, //页面加载
 		},
 		total_size: 0, //总条目
 		current_user: '', //当前用户id
@@ -30,13 +31,49 @@ new Vue({
 			cur_op: '0,1,2', // 当前所选项
 			list: [], // 会议列表
 		},
+		config: {
+			cancel_show: false,
+			check_show: false,
+		},
 	},
-	mounted() {
+	async mounted() {
 		if (!location.search) {
 			this.token = sessionStorage.token;
 		} else {
 			this.get_token();
 		}
+		if (!sessionStorage.hushanwebmenuTree) {
+			await new Promise((success) => {
+				this.request('get', limits_url, this.token, (res) => {
+					success();
+					if (res.data.head.code !== 200) {
+						return;
+					}
+					sessionStorage.hushanwebmenuTree = JSON.stringify(res.data.data.menuTree);
+				});
+			});
+		}
+		// 解析权限树
+		let limits;
+		for (let val of JSON.parse(sessionStorage.hushanwebmenuTree)) {
+			if (val.name === '湖山云会管平台') {
+				for (let val2 of val.subMenus) {
+					if (val2.name === '会议管理') {
+						for (let val3 of val2.subMenus) {
+							if (val3.name === '今日会议') {
+								limits = val3.subMenus;
+								break;
+							}
+						}
+						break;
+					}
+				}
+				break;
+			}
+		}
+		this.config.cancel_show = this.is_element_show(limits, '取消会议');
+		this.config.check_show = this.is_element_show(limits, '查看会议');
+
 		if (localStorage.hushanwebuserinfo) {
 			let obj = JSON.parse(localStorage.hushanwebuserinfo);
 			this.current_user = obj.id;
@@ -55,6 +92,15 @@ new Vue({
 		window.addEventListener('resize', this.resize);
 	},
 	methods: {
+		// 解析权限树
+		is_element_show(source, key) {
+			for (let val of source) {
+				if (val.name === key) {
+					return true;
+				}
+			}
+			return false;
+		},
 		// 浏览器大小改变后执行方法
 		resize() {
 			let dom = document.documentElement;
@@ -177,13 +223,20 @@ new Vue({
 		},
 		// 取消会议
 		cancel_meeting(meeting_id) {
-			this.request('put', `${cancel_url}/${meeting_id}`, this.token, (res) => {
-				this.get_data(1);
+			this.$confirm('确认取消会议?', '提示', {
+				confirmButtonText: '确定',
+				cancelButtonText: '取消',
+				type: 'warning',
+				center: true,
+			}).then(() => {
+				this.request('put', `${cancel_url}/${meeting_id}`, this.token, (res) => {
+					this.get_data(1);
+				});
 			});
 		},
 		// 取消会议按钮是否显示
 		cancel_meeting_show(row_obj) {
-			if (this.current_user == row_obj.createUser) {
+			if ((this.current_user == row_obj.createUser || this.current_user == row_obj.moderatorId) && this.config.cancel_show) {
 				if (row_obj.auditStatus == 2 && row_obj.status === 0) {
 					return true;
 				} else {

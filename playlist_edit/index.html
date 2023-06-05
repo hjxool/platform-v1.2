@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link rel="stylesheet" href="../module/element-ui.css">
+  <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+  <div id="index" v-cloak v-loading="html.loading">
+    <div class="header flex_shrink row_layout">
+      <span class="title">播放列表</span>
+
+      <div class="box1 row_layout">
+        <span class="margin">名称</span>
+        <div class="line"></div>
+        <input class="input" v-model="form.name" type="text">
+      </div>
+
+      <el-button @click="show_playlist" size="small" type="primary">播放列表</el-button>
+      <el-button @click="save_playlist" size="small" type="primary">保存</el-button>
+      <el-button v-if="!source" @click="close" size="small" type="primary">关闭</el-button>
+    </div>
+
+    <div class="body">
+      <!-- 内容展示区域 -->
+      <div class="content">
+        <div class="box1 flex_shrink row_layout">
+          <el-checkbox :indeterminate="html.isIndeterminate" v-model="html.checkAll"
+            @change="check_all">全选</el-checkbox>
+
+          <span v-show="!form.select_list.length" class="text1">共{{form.list.length}}个文件</span>
+          <span v-show="form.select_list.length" class="text3">已选中{{form.select_list.length}}个文件</span>
+
+          <span class="text2">总时长：{{total_time}}</span>
+        </div>
+
+        <transition-group name="file" class="box2">
+          <!-- loop_box不启用时只有外边距 相当于一层膜贴在item_box上 -->
+          <div class="loop_box" v-for="item,index in form.list" :key="item.fileId">
+            <!-- 循环头部内容 -->
+            <div v-show="item.cycleNum!==1" class="loop_head text_ellipsis row_layout">
+              <span>重复播放</span>
+              <el-input-number v-model="item.cycleNum" @change="is_loop_min($event,item)" :min="1" :max="100"
+                size="mini" style="margin: 0 4px;"></el-input-number>
+              <span>次</span>
+
+              <span style="margin-left: 20px;">单次时长：{{item_single_time(item)}}，总时长：{{item_total_time(item)}}</span>
+            </div>
+            <!-- 循环内容框 -->
+            <div :class="[item.cycleNum===1?'':'loop_content']" style="overflow: hidden;">
+              <div class="item_box" :style="select_style(item)" @click="select_item(item)">
+                <div class="box1 flex_shrink">
+                  <img :src="item.img" class="bg_img">
+                  <div class="sequence center" :style="select_style2(item)">{{index+1}}</div>
+                </div>
+
+                <div class="box2 flex_shrink">
+                  <span class="title text_ellipsis" :title="item.fileName">{{item.fileName}}</span>
+                  <span class="text">
+                    {{display_text(item.fileTypeString)}}{{item.fileTypeString.indexOf('模板')!==-1?'':item.time_format}}
+                    {{item.docTotalPage?`，总页数：${item.docTotalPage}`:''}}
+                  </span>
+                </div>
+
+                <div class="box3">
+                  <el-tag class="margin" type="info">{{item.fileTypeString}}</el-tag>
+                  <!-- <el-tag class="margin">{{item.size}}</el-tag> -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </transition-group>
+      </div>
+
+      <div class="tool">
+        <span class="title">工具栏</span>
+        <div v-for="icon,index in html.tool_list" :class="tool_style(index)" @click="tool(index)" :title="icon.tips">
+          <i :class="[icon.icon,'icon']"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- 弹窗 -->
+    <!-- 播放设置 -->
+    <div class="popover" v-if="html.play_set_show">
+      <div class="play_set_box">
+        <span class="flex_shrink">播放设置</span>
+
+        <el-form class="set" :model="play_form" label-width="80px">
+          <el-form-item label="展示时长">
+            <div class="row_layout">
+              <el-input-number class="flex_shrink" v-model="play_form.format_time" :min="0"
+                size="small"></el-input-number>
+
+              <el-select class="flex_shrink" v-model="play_form.unit" size="small"
+                style="width: 80px;margin-left: 10px;">
+                <el-option v-for="unit,index in play_form.option" :key="unit" :label="unit" :value="index"></el-option>
+              </el-select>
+
+              <span v-show="play_form.err_show" class="err_text flex_shrink">展示时长不一致</span>
+            </div>
+          </el-form-item>
+        </el-form>
+
+        <div class="foot flex_shrink">
+          <el-button @click="html.play_set_show=false" style="margin-right: 10px;">取消</el-button>
+          <el-button @click="set_play_time" type="primary">确认</el-button>
+        </div>
+      </div>
+    </div>
+    <!-- 添加素材 -->
+    <div class="popover" v-if="html.material_show">
+      <div class="material_box" v-loading="material_form.loading" :element-loading-text="material_form.load_text">
+        <div class="header flex_shrink row_layout">
+          <div :class="['page_box','flex_shrink',material_form.page===index?'page_box2':'']"
+            v-for="page,index in html.page_list" @click="get_page_data(index)">{{page}}</div>
+
+          <el-input @keyup.enter.native="get_material(1,material_form.type)" class="search"
+            v-model="material_form.search" placeholder="搜索" size="small"></el-input>
+
+          <div class="row_layout" style="margin-left: auto;">
+            <el-button v-if="source!=3&&source!=4" @click="select_file" type="primary" icon="el-icon-upload"
+              size="small">上传</el-button>
+            <input id="select_file" @change="classify_upload" type="file" style="display: none;">
+
+            <el-button @click="add_material_to_list" class="margin" type="primary" size="small">确认</el-button>
+            <el-button @click="html.material_show=false" class="margin" type="primary" size="small">取消</el-button>
+          </div>
+        </div>
+
+        <div class="box">
+          <div class="left flex_shrink">
+            <div :class="['type','center',material_form.type===index?'type2':'']"
+              :style="{zIndex:material_form.type===index?9:''}" v-for="item,index in material_form.list"
+              @click="classify_get_data(index)">
+              {{item.type}}
+
+              <div v-show="item.count" class="icon center">{{item.count}}</div>
+            </div>
+          </div>
+
+          <div class="right">
+            <div class="box1 row_layout flex_shrink">
+              <div class="row_layout button1" @click="clean_material_select">
+                <i class="el-icon-s-open"></i>
+                清除选中
+              </div>
+
+              <span v-show="classify_show1()" class="info">模板不能和其他素材混用</span>
+            </div>
+
+            <div class="box2">
+              <div :class="['card',item.check?'card2':'']" v-for="item in material_form.list[material_form.type].list"
+                @click="select_material(item)">
+                <div class="box1">
+                  <div v-show="item.check" class="icon center">
+                    <i class="el-icon-check"></i>
+                  </div>
+
+                  <img :src="item.img" class="bg_img">
+                  <div v-if="item.created" class="box1_1">{{item.created}}</div>
+                </div>
+
+                <div class="box2 flex_shrink row_layout">
+                  <span class="text text_ellipsis" :title="item.fileName">{{item.fileName}}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="footer flex_shrink">
+              <el-pagination background layout="slot, total, prev, pager, next" :total="material_form.total"
+                :page-size="material_form.page_size" @current-change="classify_get_data2"
+                :current-page="material_form.cur_page">
+                <span class="text1">{{classify_show2()}}</span>
+              </el-pagination>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 迷你播放列表 用于复制 -->
+    <div class="popover" v-if="playlist.show">
+      <div class="playlist_box" v-loading="playlist.loading">
+        <span class="flex_shrink" style="margin: 0 auto;">复制播放列表内容</span>
+
+        <div class="scroll">
+          <div class="row_layout" v-for="item in playlist.list">
+            <el-checkbox class="flex_shrink" v-model="item.check"
+              @change="select_playlist_change($event,item)"></el-checkbox>
+
+            <span class="text_ellipsis" @click="select_playlist(item)" :title="item.fileName"
+              style="margin-left:0.5rem;">{{item.playListName}}</span>
+          </div>
+        </div>
+
+        <el-pagination layout="total, prev, pager, next" :total="playlist.total" :page-size="playlist.page_size"
+          @current-change="get_playlist" :current-page="playlist.cur_page" style="align-self: center;"></el-pagination>
+
+        <div class="foot flex_shrink">
+          <el-button @click="playlist.show=false" style="margin-right: 10px;">取消</el-button>
+          <el-button @click="clone_playlist" type="primary">确认复制</el-button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../运维人员部署请修改我.js"></script>
+  <script src="../module/vue.js"></script>
+  <script src="../module/element-ui.js"></script>
+  <script src="../module/axios.min.js"></script>
+  <script src="../module/spark-md5.min.js"></script>
+  <script src="../module/upload_file.js"></script>
+  <script src="../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

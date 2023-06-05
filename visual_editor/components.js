@@ -39,6 +39,9 @@ const fn = {
 	},
 	methods: {
 		send_order(value) {
+			if (!this.path) {
+				return;
+			}
 			let body = {
 				contentType: 0,
 				deviceId: this.device_id,
@@ -83,13 +86,66 @@ const fn = {
 						}
 						if (path_index == path.length - 1) {
 							// 如果是path最后一层则取值
-							// 这里稍有特殊 矩阵所选的属性不对上传错误的数据格式时不能接收值
-							if (this.obj.type == 'matrix') {
-								if (value.length && value.length == this.obj.nh && value[0].length && value[0].length == this.obj.mw) {
+							switch (this.obj.type) {
+								case 'matrix':
+									// 这里稍有特殊 矩阵所选的属性不对上传错误的数据格式时不能接收值
+									if (typeof value !== 'string') {
+										return;
+									}
+									// 传入的是字符串 根据行和列截断
+									let arr = [];
+									for (let index = 0; index < this.obj.nh; index++) {
+										let row = value.substring(index * this.obj.mw, (index + 1) * this.obj.mw);
+										let row2 = row.split('');
+										let row3 = [];
+										for (let val of row2) {
+											row3.push(isNaN(Number(val)) ? 0 : Number(val));
+										}
+										arr.push(row3);
+									}
+									this.value = arr;
+									break;
+								case 'slider':
+								case 'progress':
+									if (this.data_type !== 'int' && this.data_type !== 'float' && this.data_type !== 'double' && this.data_type !== 'any') {
+										return;
+									}
+									// data_type为any时能转数字转数字
+									if (isNaN(Number(value))) {
+										return;
+									}
+									this.value = Number(value);
+									break;
+								case 'switch':
+								case 'switch_button':
+									if (this.data_type !== 'int' && this.data_type !== 'any') {
+										return;
+									}
+									if (Number(value) !== 0 && Number(value) !== 1) {
+										return;
+									}
 									this.value = value;
-								}
-							} else {
-								this.value = value;
+									break;
+								case 'select':
+								case 'radio':
+									if (this.data_type === 'int' || this.data_type === 'float' || this.data_type === 'double') {
+										this.value = Number(value);
+									} else if (this.data_type === 'any') {
+										this.value = isNaN(Number(value)) ? value : Number(value);
+									} else {
+										this.value = value;
+									}
+									break;
+								case 'checkbox':
+								case 'table':
+									if (this.data_type !== 'array' && this.data_type !== 'any') {
+										return;
+									}
+									if (!Array.isArray(value)) {
+										return;
+									}
+									this.value = value;
+									break;
 							}
 						} else {
 							// 否则继续递归
@@ -106,14 +162,31 @@ const fn = {
 			let t = this.obj.attribute;
 			if (t && t.length > 0) {
 				// return this.obj.attribute[this.obj.attribute.length - 1].replace(/\.propertyValue/g, '');
-				return this.obj.attribute[this.obj.attribute.length - 1];
+				let t2 = this.obj.attribute[this.obj.attribute.length - 1];
+				return t2?.path || t2;
 			} else {
 				return null;
+			}
+		},
+		data_type() {
+			let t = this.obj.attribute;
+			if (t && t.length > 0) {
+				let t2 = this.obj.attribute[this.obj.attribute.length - 1];
+				//最后一层数据类型 如果是旧数据则能转数字转数字
+				return t2?.type || 'any';
+			} else {
+				return 'any';
 			}
 		},
 		custom() {
 			let t = {};
 			for (let val of this.obj.customize) {
+				if (!val?.key?.path) {
+					break;
+				}
+				if (val?.key?.type === 'int') {
+					val.value = Number(val.value);
+				}
 				t[val.key.path] = val.value;
 			}
 			return t;
@@ -377,7 +450,6 @@ let customSelector = {
 		return {
 			label: '',
 			value: '',
-			options: this.obj.option || [],
 		};
 	},
 	beforeMount() {
@@ -406,6 +478,26 @@ let customSelector = {
 			this.$bus.$emit('current_group', this.group);
 		},
 	},
+	computed: {
+		options() {
+			let arr = [];
+			if (this.data_type === 'int' || this.data_type === 'float' || this.data_type === 'double') {
+				for (let val of this.obj.option) {
+					let t = { label: val.label };
+					// 选项中可能有字符
+					t.value = isNaN(Number(val.value)) ? 0 : Number(val.value);
+					arr.push(t);
+				}
+			} else if (this.data_type === 'any') {
+				for (let val of this.obj.option) {
+					let t = { label: val.label };
+					t.value = isNaN(Number(val.value)) ? val.value : Number(val.value);
+					arr.push(t);
+				}
+			}
+			return arr;
+		},
+	},
 	watch: {
 		value(newvalue, oldvalue) {
 			if (newvalue != oldvalue) {
@@ -422,7 +514,7 @@ let customSelector = {
 let customPopup = {
 	template: `
     <el-card v-show="display" :style="position(obj)" :body-style="{overflow:'auto',maxHeight:'500px'}" shadow="never">
-      <div class="popup_text" :style="size(obj)" v-for="item in options" @click="select(item)">{{item.label}}</div>
+      <div class="popup_text" :style="size(obj)" v-for="item,index in options" :key="index" @click="select(item)">{{item.label}}</div>
     </el-card>
   `,
 	mixins: [common_functions, fn],
@@ -436,7 +528,6 @@ let customPopup = {
 	},
 	data() {
 		return {
-			options: this.obj.option || [],
 			display: false,
 		};
 	},
@@ -468,6 +559,26 @@ let customPopup = {
 			return {
 				fontSize: fz + 'rem',
 			};
+		},
+	},
+	computed: {
+		options() {
+			let arr = [];
+			if (this.data_type === 'int' || this.data_type === 'float' || this.data_type === 'double') {
+				for (let val of this.obj.option) {
+					let t = { label: val.label };
+					// 选项中可能有字符
+					t.value = isNaN(Number(val.value)) ? 0 : Number(val.value);
+					arr.push(t);
+				}
+			} else if (this.data_type === 'any') {
+				for (let val of this.obj.option) {
+					let t = { label: val.label };
+					t.value = isNaN(Number(val.value)) ? val.value : Number(val.value);
+					arr.push(t);
+				}
+			}
+			return arr;
 		},
 	},
 };
@@ -508,7 +619,11 @@ let customMatrix = {
 		},
 		control(row, col) {
 			this.value[row].splice(col, 1, this.value[row][col] ? 0 : 1);
-			this.send_order(this.value);
+			let str = '';
+			for (let val of this.value) {
+				str += val.join('');
+			}
+			this.send_order(str);
 		},
 		init() {
 			let t = [];
@@ -520,6 +635,134 @@ let customMatrix = {
 				t.push(t2);
 			}
 			return t;
+		},
+	},
+};
+// 单选框组
+let customRadioGroup = {
+	template: `
+    <el-radio-group class="radio_group" :style="style(obj)" v-model="value" @change="send_order(value)">
+      <el-radio v-for="item,index in options" :key="index" :label="item.value">{{item.label}}</el-radio>
+    </el-radio-group>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			value: '',
+		};
+	},
+	computed: {
+		options() {
+			let arr = [];
+			if (this.data_type === 'int' || this.data_type === 'float' || this.data_type === 'double') {
+				for (let val of this.obj.option) {
+					let t = { label: val.label };
+					// 选项中可能有字符
+					t.value = isNaN(Number(val.value)) ? 0 : Number(val.value);
+					arr.push(t);
+				}
+			} else if (this.data_type === 'any') {
+				for (let val of this.obj.option) {
+					let t = { label: val.label };
+					t.value = isNaN(Number(val.value)) ? val.value : Number(val.value);
+					arr.push(t);
+				}
+			}
+			return arr;
+		},
+	},
+};
+// 多选框
+let customCheckBox = {
+	template: `
+    <el-checkbox-group class="check_box" :style="style(obj)" v-model="value" @change="send_order(value)">
+      <el-checkbox v-for="item,index in options" :key="index" :label="item.value">{{item.label}}</el-checkbox>
+    </el-checkbox-group>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			value: [],
+		};
+	},
+	computed: {
+		options() {
+			let arr = [];
+			if (this.data_type === 'int' || this.data_type === 'float' || this.data_type === 'double') {
+				for (let val of this.obj.option) {
+					let t = { label: val.label };
+					// 选项中可能有字符
+					t.value = isNaN(Number(val.value)) ? 0 : Number(val.value);
+					arr.push(t);
+				}
+			} else if (this.data_type === 'any') {
+				for (let val of this.obj.option) {
+					let t = { label: val.label };
+					t.value = isNaN(Number(val.value)) ? val.value : Number(val.value);
+					arr.push(t);
+				}
+			}
+			return arr;
+		},
+	},
+};
+// 表格及控制按钮
+let customTable = {
+	template: `
+    <el-table :data="value" :style="table_style(obj)" :max-height="maxheight">
+      <el-table-column v-for="item in obj.option" :prop="item.value" :label="item.label"></el-table-column>
+      <el-table-column label="操作">
+        <template slot-scope="scope">
+          <el-button v-for="button in obj.button" @click="table_button_order(button)" size="mini">{{button.label}}</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			value: [],
+		};
+	},
+	methods: {
+		// 表格样式
+		table_style(obj) {
+			return {
+				position: 'absolute',
+				width: obj.w * this.radio + 'px',
+				top: obj.y * this.radio + 'px',
+				left: obj.x * this.radio + 'px',
+				zIndex: obj.z_index,
+			};
+		},
+		// 表格下发指令
+		table_button_order(button) {
+			let body = {
+				contentType: 0,
+				deviceId: this.device_id,
+			};
+			// 有服务则下发
+			if (button.service) {
+				body.contentType = 2;
+				body.service = button.service;
+			}
+			// 有设置属性值则下发
+			let t = JSON.parse(JSON.stringify(this.custom)); // 拷贝一份不修改原值
+			if (button.value) {
+				let p = button.attribute[button.attribute.length - 1];
+				let path = p?.path || p;
+				t[path] = button.value;
+			}
+			body.attributeMap = t;
+			// 有topic才能下发指令
+			if (button.topic) {
+				this.request('put', `${sendCmdtoDevice}/${button.topic}`, this.token, body);
+			}
+		},
+	},
+	computed: {
+		maxheight() {
+			return this.obj.h * this.radio;
 		},
 	},
 };

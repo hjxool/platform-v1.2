@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <link rel="stylesheet" href="../module/element-ui.css">
+  <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+  <div id="index" v-cloak v-loading="html.page_loading">
+    <el-form ref="form" :model="form" :rules="rules" label-width="auto" style="overflow-x:hidden;">
+      <div class="row_layout">
+        <el-form-item label="任务名称" prop="name" class="margin_right">
+          <el-input v-model="form.name" size="small"></el-input>
+        </el-form-item>
+        <!-- 消防部分 -->
+        <template v-if="router==='Added_edit_fire_alarm'">
+          <el-form-item label="触发设备" class="margin_right" prop="trigger_device">
+            <el-select v-model="form.trigger_device" filterable placeholder="请选择" size="small">
+              <el-option v-for="item in trigger_list" :key="item.id" :label="item.deviceName"
+                :value="item.id"></el-option>
+            </el-select>
+          </el-form-item>
+
+          <el-form-item label="触发端口" class="margin_right">
+            <el-input v-model="form.trigger_port" @change="is_port_max(form,'trigger_port')" size="small"
+              placeholder="0~100" style="width:4rem;"></el-input>
+          </el-form-item>
+        </template>
+      </div>
+
+      <div class="box1">
+        <div class="left">
+          <el-form-item v-if="router==='Edit_timed_broadcast_added'" label="音源类型">
+            <el-radio-group v-model="form.source_type">
+              <el-radio :label="1">音频文件</el-radio>
+              <el-radio :label="2">文字转语音</el-radio>
+              <el-radio :label="4">音频采集器</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <span v-if="router==='Added_edit_fire_alarm'" style="padding: 22px 0;">选择音乐列表：</span>
+          <!-- 音源是音频文件 -->
+          <div v-show="form.source_type===1" class="box1_1" v-loading="html.left_loading">
+            <div class="left">
+              <div class="row_layout flex_shrink">
+                <span class="text_bg" @click="check_all_file">全选</span>
+                <span class="text_count">共{{form.source_list.length}}项</span>
+              </div>
+
+              <el-input v-model="form.left_search" @keyup.enter.native="get_file_list(1)" placeholder="搜索"
+                suffix-icon="el-icon-search" size="mini"></el-input>
+
+              <div class="scroll_box">
+                <div class="source_box row_layout" v-for="item in form.source_list">
+                  <el-checkbox class="flex_shrink" v-model="item.check"
+                    @change="source_select_change($event,item)"></el-checkbox>
+
+                  <span class="text_ellipsis" @click="source_select(item)"
+                    :title="item.fileName">{{item.fileName}}</span>
+                </div>
+              </div>
+
+              <div class="footer flex_shrink">
+                <el-pagination layout="prev, pager, next" :total="html.file_total" :page-size="html.page_size"
+                  @current-change="get_file_list" :current-page="html.cur_page"></el-pagination>
+              </div>
+            </div>
+
+            <div class="right">
+              <div class="row_layout">
+                <span v-show="form.select_file.length" @click="clear_file_select" class="text_bg">清除</span>
+                <span class="text_count">已选{{form.select_file.length}}项</span>
+              </div>
+
+              <div class="scroll_box">
+                <div class="item_box row_layout" v-for="file,index in form.select_file"
+                  @mouseenter="form.left_hover=index" @mouseleave="form.left_hover=-1">
+                  <span class="text_ellipsis" :title="file.fileName">{{file.fileName}}</span>
+                  <i v-show="form.left_hover===index" @click="del_select_file(index)" class="el-icon-close"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- 文字转语音 -->
+          <el-input v-show="form.source_type===2" class="box1_2" v-model="form.tts_input"
+            :autosize="{ minRows: 13,maxRows: 13}" type="textarea" placeholder="文字转语音"></el-input>
+          <!-- 音频采集器 -->
+          <div v-show="form.source_type===4" class="box1_1" v-loading="html.left_loading">
+            <div class="left">
+              <div class="row_layout flex_shrink">
+                <span @click="check_all_device('left')" class="text_bg">全选</span>
+                <span class="text_count">共{{device_count('left')}}项</span>
+              </div>
+
+              <el-input v-model="form.audio_collector_search" @keyup.enter.native="get_device_list('left')"
+                placeholder="搜索" suffix-icon="el-icon-search" size="mini"></el-input>
+
+              <div class="scroll_box">
+                <el-tree ref="audio_collector" :data="form.audio_collector_list" :props="props"
+                  @check="audio_list_select" node-key="id" accordion show-checkbox></el-tree>
+              </div>
+            </div>
+
+            <div class="right">
+              <div class="row_layout">
+                <span v-show="form.audio_collector_select.length" @click="clear_device_select('left')"
+                  class="text_bg">清除</span>
+                <span class="text_count">已选{{form.audio_collector_select.length}}项</span>
+              </div>
+
+              <div class="scroll_box">
+                <div class="item_box row_layout" v-for="device,index in form.audio_collector_select"
+                  @mouseenter="form.left_hover=index" @mouseleave="form.left_hover=-1">
+                  <span class="text_ellipsis" :title="device.name">{{device.name}}</span>
+                  <i v-show="form.left_hover===index" @click="del_select_device(index,'left')"
+                    class="el-icon-close"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="right">
+          <span class="text1">选择播放设备列表:</span>
+
+          <div class="box1_1" v-loading="html.right_loading">
+            <div class="left">
+              <div class="row_layout flex_shrink">
+                <span @click="check_all_device('right')" class="text_bg">全选</span>
+                <span class="text_count">共{{device_count('right')}}项</span>
+              </div>
+
+              <el-input v-model="form.right_search" @keyup.enter.native="get_device_list('right')" placeholder="搜索"
+                suffix-icon="el-icon-search" size="mini"></el-input>
+
+              <div class="scroll_box">
+                <el-tree ref="device_tree" :data="form.device_list" :props="props" @check="device_list_select"
+                  node-key="id" accordion show-checkbox></el-tree>
+              </div>
+            </div>
+
+            <div class="right">
+              <div class="row_layout">
+                <span v-show="form.select_device.length" @click="clear_device_select('right')" class="text_bg">清除</span>
+                <span class="text_count">已选{{form.select_device.length}}项</span>
+              </div>
+
+              <div class="scroll_box">
+                <div class="item_box row_layout" v-for="device,index in form.select_device"
+                  @mouseenter="form.right_hover=index" @mouseleave="form.right_hover=-1">
+                  <span class="text_ellipsis" :title="device.name">{{device.name}}</span>
+                  <i v-show="form.right_hover===index" @click="del_select_device(index,'right')"
+                    class="el-icon-close"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 定时广播部分 -->
+      <div v-if="router==='Edit_timed_broadcast_added'" class="box2">
+        <div class="col_box">
+          <el-form-item label="播放时长">
+            <div class="row_layout">
+              <el-input class="input_mini" v-model="form.playtime.hour" @input="is_num(form.playtime,'hour')"
+                :maxlength="2" size="mini"></el-input>时
+              <el-input class="input_mini" v-model="form.playtime.minutes" @input="is_num(form.playtime,'minutes')"
+                :maxlength="2" size="mini"></el-input>分
+              <el-input class="input_mini" v-model="form.playtime.seconds" @input="is_num(form.playtime,'seconds')"
+                :maxlength="2" size="mini"></el-input>秒
+
+              <el-tooltip effect="light" content="时长为0时，默认播放文件时长" placement="top" class="tips flex_shrink">
+                <i class="el-icon-question tip_icon"></i>
+              </el-tooltip>
+
+              <div class="button1" @click="set_playtime">
+                <span class="text">设置为</span>
+                <span class="text">文件时长</span>
+              </div>
+            </div>
+          </el-form-item>
+
+          <el-form-item label="开始日期" prop="starttime">
+            <el-date-picker v-model="form.starttime" type="datetime" placeholder="选择日期时间" size="small"
+              style="width:75%;"></el-date-picker>
+          </el-form-item>
+
+          <el-form-item label="设置终止日期">
+            <div class="row_layout">
+              <el-date-picker v-model="form.end_date" :disabled="!form.ban_end" size="small" style="width:75%;"
+                type="date" placeholder="选择日期"></el-date-picker>
+
+              <el-switch v-model="form.ban_end" style="margin-left:1rem;"></el-switch>
+            </div>
+          </el-form-item>
+        </div>
+
+        <div class="col_box">
+          <el-form-item label="播放模式">
+            <el-radio-group v-model="form.play_mode">
+              <el-radio :label="0">顺序播放</el-radio>
+              <el-radio :label="1">随机播放</el-radio>
+            </el-radio-group>
+          </el-form-item>
+
+          <el-form-item label="工作计划" style="margin-bottom: 0;">
+            <el-radio-group v-model="form.work_plan">
+              <el-radio :label="0">每天</el-radio>
+              <el-radio :label="7">每周</el-radio>
+              <el-radio :label="1">一次</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <!-- 如果选每周则显示 -->
+          <el-checkbox-group v-show="form.work_plan==7" v-model="form.week_plan" class="week_box">
+            <el-checkbox :label="1">周一</el-checkbox>
+            <el-checkbox :label="2">周二</el-checkbox>
+            <el-checkbox :label="3">周三</el-checkbox>
+            <el-checkbox :label="4">周四</el-checkbox>
+            <el-checkbox :label="5">周五</el-checkbox>
+            <el-checkbox :label="6">周六</el-checkbox>
+            <el-checkbox :label="0">周日</el-checkbox>
+          </el-checkbox-group>
+        </div>
+
+        <div class="col_box">
+          <el-form-item label="播放音量">
+            <div class="row_layout">
+              <el-input-number v-model="form.vol" :min="-1" :max="100" :step="1" :precision="0" size="small"
+                controls-position="right"></el-input-number>
+
+              <el-tooltip effect="light" content="音量为-1时，使用设备音量" placement="top" style="margin-left:5px;">
+                <i class="el-icon-question tip_icon"></i>
+              </el-tooltip>
+            </div>
+          </el-form-item>
+
+          <el-form-item label="跳过节假日" style="margin-bottom: 0;">
+            <div class="row_layout">
+              <el-date-picker v-model="form.skip_date" @change="add_skip_list" :disabled="!form.ban_skip"
+                type="daterange" range-separator="→" start-placeholder="开始日期" end-placeholder="结束日期" size="small"
+                style="width: 11rem;"></el-date-picker>
+              <el-switch v-model="form.ban_skip" @change="reset_skip" style="margin-left:1rem;"></el-switch>
+            </div>
+          </el-form-item>
+
+          <div class="skip_scroll">
+            <div class="row_layout" v-for="skip,index in form.skip_list">
+              <span class="text_ellipsis" :title="skip_text(skip)">{{skip_text(skip)}}</span>
+              <i class="el-icon-delete flex_shrink" @click="del_skip(index)" style="cursor:pointer;"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 消防部分 -->
+      <div v-if="router==='Added_edit_fire_alarm'" class="box3">
+        <el-form-item label="播放时长">
+          <div class="row_layout">
+            <el-input class="input_mini" v-model="form.playtime.hour" @input="is_num(form.playtime,'hour')"
+              :maxlength="2" size="mini"></el-input>时
+            <el-input class="input_mini" v-model="form.playtime.minutes" @input="is_num(form.playtime,'minutes')"
+              :maxlength="2" size="mini"></el-input>分
+            <el-input class="input_mini" v-model="form.playtime.seconds" @input="is_num(form.playtime,'seconds')"
+              :maxlength="2" size="mini"></el-input>秒
+
+            <el-tooltip effect="light" content="时长为0时，默认播放文件时长" placement="top" class="tips flex_shrink">
+              <i class="el-icon-question tip_icon"></i>
+            </el-tooltip>
+
+            <div class="button1" @click="set_playtime">
+              <span class="text">设置为</span>
+              <span class="text">文件时长</span>
+            </div>
+          </div>
+        </el-form-item>
+
+        <el-form-item label="播放音量">
+          <div class="row_layout">
+            <el-input-number v-model="form.vol" :min="-1" :max="100" :step="1" :precision="0" size="small"
+              controls-position="right"></el-input-number>
+
+            <el-tooltip effect="light" content="音量为-1时，使用设备音量" placement="top" style="margin-left:5px;">
+              <i class="el-icon-question tip_icon"></i>
+            </el-tooltip>
+          </div>
+        </el-form-item>
+
+        <el-form-item label="播放模式">
+          <el-radio-group v-model="form.play_mode">
+            <el-radio :label="0">顺序播放</el-radio>
+            <el-radio :label="1">随机播放</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </div>
+    </el-form>
+
+    <div class="submit">
+      <el-button @click="close()" size="medium">取消</el-button>
+      <el-button @click="submit" type="primary" size="medium">确认</el-button>
+    </div>
+  </div>
+
+  <script src="../../运维人员部署请修改我.js"></script>
+  <script src="../module/vue.js"></script>
+  <script src="../module/element-ui.js"></script>
+  <script src="../module/axios.min.js"></script>
+  <script src="../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

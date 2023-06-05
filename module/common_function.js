@@ -26,6 +26,8 @@ const common_functions = {
 					window.sessionStorage.theme = this.theme = t[1];
 				} else if (t[0].match(/^source$/) != null) {
 					window.sessionStorage.source = this.source = t[1];
+				} else if (t[0].match(/^application$/) != null) {
+					window.sessionStorage.application = this.application = t[1];
 				}
 			}
 			let url = location.href.split('?')[0];
@@ -49,7 +51,7 @@ const common_functions = {
 				} else if (res.data.head.code == 401) {
 					window.parent.postMessage({ type: 'log_out' });
 				} else {
-					this.$alert(res.data.head.message, '提示', {
+					this.$alert(res?.data?.head?.message, '提示', {
 						confirmButtonText: '确定',
 						callback: () => {
 							if (typeof func === 'function') {

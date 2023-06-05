@@ -11,6 +11,7 @@ let devices_status_info_url = `${url}api-portal/deviceAnalyse/ops/search/devices
 let edit_device_url = `${url}api-device/device`;
 let device_alert_url = `${url}api-portal/device-alarm/search`;
 let handle_alert_url = `${url}api-portal/device-alarm/deal`;
+let limits_url = `${url}api-user/menus/current`; //获取菜单权限
 
 Vue.config.productionTip = false;
 new Vue({
@@ -28,7 +29,7 @@ new Vue({
 			edit_place_display: false, //编辑及新增场所时弹窗
 			place_icon_display: -1, //鼠标移入时显示场所图标
 			place_fold: false, //场所折叠
-			page_loading: false, //选项页切换
+			page_loading: true, //选项页切换
 			distribute_place_display: false, //分配场所页面显示
 			popover_loading: false, //分配场所弹窗查询和保存时加载
 			turn_to_device: false, //跳转设备弹窗显示
@@ -75,13 +76,74 @@ new Vue({
 			alert_table_h: 0,
 			alert_list: [], //告警列表
 		},
+		config: {
+			device_manage_show: false,
+			device_control_show: false,
+			add_place_show: false,
+			device_bind_show: false,
+			rename_device_show: false,
+			control_device_show: false,
+			del_place_show: false,
+			del_device_show: false,
+			rename_place_show: false,
+		},
 	},
-	mounted() {
+	async mounted() {
 		if (!location.search) {
 			this.token = sessionStorage.token;
 		} else {
 			this.get_token();
 		}
+		if (!sessionStorage.hushanwebmenuTree) {
+			await new Promise((success) => {
+				this.request('get', limits_url, this.token, (res) => {
+					success();
+					if (res.data.head.code !== 200) {
+						return;
+					}
+					sessionStorage.hushanwebmenuTree = JSON.stringify(res.data.data.menuTree);
+				});
+			});
+		}
+		// 解析权限树
+		let limits, limits2, limits3;
+		for (let val of JSON.parse(sessionStorage.hushanwebmenuTree)) {
+			if (val.name === '运维中心') {
+				limits = val.subMenus;
+				for (let val2 of val.subMenus) {
+					if (val2.name === '设备管理') {
+						limits2 = val2.subMenus;
+						continue;
+					}
+					if (val2.name === '设备监控') {
+						limits3 = val2.subMenus;
+						continue;
+					}
+				}
+				break;
+			}
+		}
+		this.config.device_manage_show = this.is_element_show(limits, '设备管理');
+		this.config.device_control_show = this.is_element_show(limits, '设备监控');
+		// 哪个按钮没权限就清除
+		if (!this.config.device_manage_show) {
+			this.html.option.splice(0, 1);
+		}
+		if (!this.config.device_control_show) {
+			this.html.option.splice(1, 1);
+		}
+		if (this.config.device_manage_show) {
+			this.config.add_place_show = this.is_element_show(limits2, '新增场所');
+			this.config.device_bind_show = this.is_element_show(limits2, '设备绑定');
+			this.config.rename_device_show = this.is_element_show(limits2, '改名');
+		}
+		if (this.config.device_control_show) {
+			this.config.control_device_show = this.is_element_show(limits3, '查看设备详情');
+			this.config.del_place_show = this.is_element_show(limits3, '删除场所');
+			this.config.del_device_show = this.is_element_show(limits3, '移除设备');
+			this.config.rename_place_show = this.is_element_show(limits3, '重命名');
+		}
+
 		this.get_place_type();
 		this.option_switch(0);
 		window.onresize = () => {
@@ -94,6 +156,15 @@ new Vue({
 		};
 	},
 	methods: {
+		// 解析权限树
+		is_element_show(source, key) {
+			for (let val of source) {
+				if (val.name === key) {
+					return true;
+				}
+			}
+			return false;
+		},
 		// 租户列表
 		req_user_list() {
 			this.request('get', user_list, this.token, (res) => {
@@ -308,7 +379,7 @@ new Vue({
 		option_switch(index) {
 			this.html.option_focus = index;
 			this.req_user_list();
-			if (index == 0) {
+			if (this.html.option[index].name === '设备管理') {
 				this.get_all_user_devices();
 				this.request('get', user_list, this.token, (res) => {
 					console.log('租户', res);
@@ -320,8 +391,8 @@ new Vue({
 					let dom = document.querySelector('.all_device');
 					this.devices.table_h = dom.offsetHeight - 20;
 				});
-			} else if (index == 1) {
-				// this.req_user_list();
+			} else if (this.html.option[index].name == '设备监控') {
+				this.req_user_list();
 			}
 		},
 		// 查询所有租户设备

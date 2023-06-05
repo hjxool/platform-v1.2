@@ -31,6 +31,9 @@
         <custom-popup v-if="item.type=='select'" :obj="item" :radio="page.radio" :group="index"></custom-popup>
         <custom-button-switch v-if="item.type=='switch_button'" :obj="item" :radio="page.radio"></custom-button-switch>
         <custom-matrix v-if="item.type=='matrix'" :obj="item" :radio="page.radio"></custom-matrix>
+        <custom-radio-group v-if="item.type=='radio'" :obj="item" :radio="page.radio"></custom-radio-group>
+        <custom-check-box v-if="item.type=='checkbox'" :obj="item" :radio="page.radio"></custom-check-box>
+        <custom-table v-if="item.type=='table'" :obj="item" :radio="page.radio"></custom-table>
       </template>
     </div>
   </div>

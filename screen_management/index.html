@@ -31,9 +31,9 @@
         <el-table-column label="设备名称" prop="deviceName"></el-table-column>
         <el-table-column label="所属场所" prop="productName"></el-table-column>
         <el-table-column label="设备类型" prop="productTypeValue"></el-table-column>
-        <el-table-column label="MAC地址" prop="deviceIp"></el-table-column>
+        <el-table-column label="IP地址" prop="deviceIp"></el-table-column>
 
-        <el-table-column label="当前发布" width="150">
+        <el-table-column v-if="config.schedule_show" label="当前发布" width="150">
           <template slot-scope="scope">
             <el-button @click="show_schedule(scope.row)" size="mini" type="primary" plain>查看排期</el-button>
           </template>
@@ -41,9 +41,9 @@
 
         <el-table-column label="状态" prop="status" width="100"></el-table-column>
 
-        <el-table-column label="操作" width="100">
+        <el-table-column v-if="config.control_show" label="操作" width="100">
           <template slot-scope="scope">
-            <el-button size="mini" type="text">控制</el-button>
+            <el-button @click="control_show(scope.row.id)" size="mini" type="text">控制</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -55,6 +55,7 @@
     </div>
 
     <!-- 弹窗 -->
+    <!-- 排期 -->
     <div class="popover" v-if="schedule.show">
       <div class="form_layout" v-loading="schedule.loading" style="overflow: hidden;">
         <div class="head row_layout flex_shrink">
@@ -102,6 +103,38 @@
               <div class="row_layout text_ellipsis">结束时间：{{schedule.pop.end_time}}</div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+    <!-- 设备控制 -->
+    <div class="popover" v-show="html.control_show">
+      <div class="control_box" v-loading="html.control_loading">
+        <div class="head row_layout flex_shrink">
+          <span class="title">控制</span>
+          <el-button @click="html.control_show=false" size="mini" type="danger" circle icon="el-icon-close"></el-button>
+        </div>
+
+        <div class="grid_box">
+          <el-button @click="debounce('clearCache',1)" class="left" size="medium">清除应用缓存</el-button>
+          <div class="line"></div>
+          <el-button @click="debounce('restart',1)" class="right" size="medium">重启应用</el-button>
+        </div>
+
+        <div class="grid_box">
+          <el-button @click="debounce('volumeUp',1)" class="left" size="medium">音量
+            +</el-button>
+          <div class="line"></div>
+          <el-button @click="debounce('volumeDown',1)" class="right" size="medium">音量
+            -</el-button>
+        </div>
+
+        <div class="row_layout margin">
+          <span class="label flex_shrink">当前任务:</span>
+          <span class="text_ellipsis" :title="cur_task_name">{{cur_task_name}}</span>
+        </div>
+        <div class="row_layout margin">
+          <span class="label flex_shrink">当前播放:</span>
+          <span class="text_ellipsis" :title="cur_play_source">{{cur_play_source}}</span>
         </div>
       </div>
     </div>

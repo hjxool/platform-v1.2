@@ -362,7 +362,7 @@ new Vue({
 			this.html.set_config_display = false;
 			this.request('post', `${device_server_url}/${device_obj.productId}/${device_obj.id}`, this.token, [3], (res) => {
 				console.log('设备服务列表', res);
-				if (res.data.data == null || res.data.data.length == 0) {
+				if (res.data.head.code !== 200 || res.data.data == null || res.data.data.length == 0) {
 					this.$message('设备下无服务可选');
 					return;
 				}

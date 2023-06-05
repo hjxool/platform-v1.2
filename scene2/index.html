@@ -17,7 +17,7 @@
       <!-- <el-button class="button1" v-for="item,index in html.options" :type="html.select==index?'primary':''"
         @click="switch_options(index)" v-show="index!=0">
         {{item}}</el-button> -->
-      <div class="button1 button" @click="switch_options(1)">
+      <div v-show="false" class="button1 button" @click="switch_options(1)">
         <img src="./img/icon5.png" class="bg_img">
       </div>
       <div class="button2 button" v-show="html.select==1" @click="add_scene">

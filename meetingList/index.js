@@ -4,6 +4,7 @@ let edit_meeting_url = `${url}api-portal/meeting`;
 let delay_meeting_url = `${url}api-portal/meeting/delay`;
 let user_url = `${url}api-auth/oauth/userinfo`; //获取当前登录用户信息
 let cancel_url = `${url}api-portal/meeting/cancel`;
+let limits_url = `${url}api-user/menus/current`; //获取菜单权限
 
 new Vue({
 	el: '#index',
@@ -64,13 +65,55 @@ new Vue({
 			min: 15, // 延后最小值
 			max: 120, // 延后最大值
 		},
+		config: {
+			cancel_show: false,
+			delay_show: false,
+			recall_show: false,
+			detail_show: false,
+			rebook_show: false,
+		},
 	},
-	mounted() {
+	async mounted() {
 		if (!location.search) {
 			this.token = sessionStorage.token;
 		} else {
 			this.get_token();
 		}
+		if (!sessionStorage.hushanwebmenuTree) {
+			await new Promise((success) => {
+				this.request('get', limits_url, this.token, (res) => {
+					success();
+					if (res.data.head.code !== 200) {
+						return;
+					}
+					sessionStorage.hushanwebmenuTree = JSON.stringify(res.data.data.menuTree);
+				});
+			});
+		}
+		// 解析权限树
+		let limits;
+		for (let val of JSON.parse(sessionStorage.hushanwebmenuTree)) {
+			if (val.name === '湖山云会管平台') {
+				for (let val2 of val.subMenus) {
+					if (val2.name === '会议管理') {
+						for (let val3 of val2.subMenus) {
+							if (val3.name === '我的会议') {
+								limits = val3.subMenus;
+								break;
+							}
+						}
+						break;
+					}
+				}
+				break;
+			}
+		}
+		this.config.cancel_show = this.is_element_show(limits, '取消会议');
+		this.config.delay_show = this.is_element_show(limits, '延后');
+		this.config.recall_show = this.is_element_show(limits, '撤回');
+		this.config.detail_show = this.is_element_show(limits, '详情');
+		this.config.rebook_show = this.is_element_show(limits, '重新预定');
+
 		if (localStorage.hushanwebuserinfo) {
 			let obj = JSON.parse(localStorage.hushanwebuserinfo);
 			this.current_user = obj.id;
@@ -81,6 +124,15 @@ new Vue({
 		this.get_data();
 	},
 	methods: {
+		// 解析权限树
+		is_element_show(source, key) {
+			for (let val of source) {
+				if (val.name === key) {
+					return true;
+				}
+			}
+			return false;
+		},
 		// 获取当前登录用户名
 		get_current_user() {
 			this.request('get', user_url, this.token, (res) => {

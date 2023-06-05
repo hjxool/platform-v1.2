@@ -61,14 +61,14 @@
 
               <div class="row_layout">
                 <img src="./img/icon1.png" class="icon1">
-                <span class="text2">主持人：{{meeting.createUserNickName}}</span>
+                <span class="text2">主持人：{{meeting.moderatorName}}</span>
                 <div class="line"></div>
                 <img src="./img/icon2.png" class="icon1">
                 <span class="text2">{{meeting.roomName}}</span>
               </div>
             </div>
 
-            <div class="flex_shrink button" @click="turn_to(meeting.id)">
+            <div v-show="config.check_show" class="flex_shrink button" @click="turn_to(meeting.id)">
               <img src="./img/icon3.png" class="bg_img">
             </div>
           </div>

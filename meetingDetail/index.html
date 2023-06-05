@@ -65,9 +65,9 @@
             </el-radio-group>
           </div>
           <el-table :data="user_list[html.user_type]" max-height="250">
-            <el-table-column prop="username" label="姓名"></el-table-column>
-            <el-table-column prop="phone" label="电话"></el-table-column>
-            <el-table-column label="状态">
+            <el-table-column prop="username" label="姓名" width="200"></el-table-column>
+            <el-table-column prop="phone" label="电话" width="200"></el-table-column>
+            <el-table-column label="状态" width="150">
               <template slot-scope="scope">
                 <el-tag v-if="!scope.row.signIn" size="medium">未签到</el-tag>
                 <el-tag v-if="scope.row.signIn==1" type="success" size="medium">已签到</el-tag>
@@ -76,6 +76,7 @@
                 <el-tag v-if="scope.row.reply" type="success" size="medium">已回复</el-tag>
               </template>
             </el-table-column>
+            <el-table-column prop="replyMsg" label="回复内容"></el-table-column>
           </el-table>
         </el-card>
         <!-- 会议纪要 -->

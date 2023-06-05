@@ -1,7 +1,10 @@
 let url = `${我是接口地址}/`;
-let get_device_url = `${url}api-portal/publish/device/getAllDevice`;
-let get_today_url = `${url}api-portal/publish/device/getDeviceTimeSlot/toDay`;
-let get_tomorrow_url = `${url}api-portal/publish/device/getDeviceTimeSlot/tomorrow`;
+let get_device_url = `${url}api-portal/publish/device/getAllDevice`; // 获取设备列表
+let get_today_url = `${url}api-portal/publish/device/getDeviceTimeSlot/toDay`; // 获取今天的排期
+let get_tomorrow_url = `${url}api-portal/publish/device/getDeviceTimeSlot/tomorrow`; // 获取明天排期
+let sendCmdtoDevice = url + 'api-device/device/operation'; // 下发指令
+let get_device_status_url = `${url}api-device/device/status`; // 获取设备状态
+let limits_url = `${url}api-user/menus/current`; //获取菜单权限
 
 new Vue({
 	el: '#index',
@@ -15,7 +18,12 @@ new Vue({
 			], // 筛选状态
 			cur_status: 0, // 当前所选状态
 			page_loading: true, // 页面加载
+			control_show: false, // 控制弹窗显示
+			control_loading: false, // 控制下发遮罩
+			control_button: false, // 控制按钮点击频率
 		},
+		cur_task_name: '', //当前任务名
+		cur_play_source: '', //当前播放资源
 		table: {
 			data: [], // 表格数据
 			h: 0, // 表格最大高度
@@ -39,13 +47,44 @@ new Vue({
 				end_time: '', // 结束时间
 			},
 		},
+		config: {
+			schedule_show: false,
+			control_show: false,
+		},
 	},
-	mounted() {
+	async mounted() {
 		if (!location.search) {
 			this.token = sessionStorage.token;
 		} else {
 			this.get_token();
 		}
+		if (!sessionStorage.hushanwebmenuTree) {
+			await new Promise((success) => {
+				this.request('get', limits_url, this.token, (res) => {
+					success();
+					if (res.data.head.code !== 200) {
+						return;
+					}
+					sessionStorage.hushanwebmenuTree = JSON.stringify(res.data.data.menuTree);
+				});
+			});
+		}
+		// 解析权限树
+		let limits;
+		for (let val of JSON.parse(sessionStorage.hushanwebmenuTree)) {
+			if (val.name === '智慧信息发布') {
+				for (let val2 of val.subMenus) {
+					if (val2.name === '屏幕管理') {
+						limits = val2.subMenus;
+						break;
+					}
+				}
+				break;
+			}
+		}
+		this.config.schedule_show = this.is_element_show(limits, '查看排期');
+		this.config.control_show = this.is_element_show(limits, '控制');
+
 		this.get_data();
 		this.resize();
 		window.onresize = () => {
@@ -54,6 +93,15 @@ new Vue({
 		this.total_time_s = 24 * 60 * 60; // 用于计算定位的一天时间秒数
 	},
 	methods: {
+		// 解析权限树
+		is_element_show(source, key) {
+			for (let val of source) {
+				if (val.name === key) {
+					return true;
+				}
+			}
+			return false;
+		},
 		resize() {
 			// 计算根节点子体大小
 			let dom = document.documentElement;
@@ -260,6 +308,52 @@ new Vue({
 				let total_width = dom.clientWidth;
 				if (width + this.schedule.pop_left > total_width) {
 					this.schedule.pop_left = total_width - width;
+				}
+			});
+		},
+		// 展示控制弹窗 显示当前播放任务
+		control_show(id) {
+			this.html.control_show = true;
+			this.device_id = id;
+			this.html.control_loading = true;
+			this.cur_task_name = '空';
+			this.cur_play_source = '空';
+			this.request('get', `${get_device_status_url}/${id}`, this.token, (res) => {
+				console.log('设备状态', res);
+				this.html.control_loading = false;
+				if (res.data.head.code !== 200) {
+					return;
+				}
+				let data = res.data.data.properties.currentTask.propertyValue;
+				this.cur_task_name = data.taskName.propertyValue || '空';
+				this.cur_play_source = data.resName.propertyValue || '空';
+			});
+		},
+		// 控制按钮点击频率
+		debounce(key, ...params) {
+			if (this.html.control_button) {
+				this.$message('点的太快啦！');
+				return;
+			}
+			this.html.control_button = true; // 点击进来就会置为禁止
+			this.send_order(key, ...params);
+			setTimeout(() => {
+				this.html.control_button = false;
+			}, 1500);
+		},
+		// 下发指令 设置属性
+		send_order(key, ...params) {
+			let topic = 8;
+			let body = {
+				contentType: 0,
+				contents: [{ deviceId: this.device_id, attributes: {} }],
+			};
+			body.contents[0].attributes[key] = params[0];
+			// this.html.control_loading = true;
+			this.request('put', `${sendCmdtoDevice}/${topic}`, this.token, body, (res) => {
+				// this.html.control_loading = false;
+				if (res.data.head.code !== 200) {
+					return;
 				}
 			});
 		},

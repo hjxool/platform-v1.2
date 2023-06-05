@@ -24,7 +24,7 @@
         <el-option v-for="item in product_list" :label="item.productName" :value="item.id">
         </el-option>
       </el-select>
-      <el-button @click="add_firmware" type="primary" round size="small">创建固件</el-button>
+      <el-button v-show="config.create_show" @click="add_firmware" type="primary" round size="small">创建固件</el-button>
     </div>
     <div class="table_box">
       <el-table :data="firmware_list" :max-height="html.table_h" border>
@@ -39,9 +39,9 @@
               type="primary">
               编辑
               <el-dropdown-menu slot="dropdown">
-                <el-dropdown-item command="export">导出文件</el-dropdown-item>
-                <el-dropdown-item command="upgrade">升级</el-dropdown-item>
-                <el-dropdown-item command="del">删除</el-dropdown-item>
+                <el-dropdown-item v-show="config.export_show" command="export">导出文件</el-dropdown-item>
+                <el-dropdown-item v-show="config.update_show" command="upgrade">升级</el-dropdown-item>
+                <el-dropdown-item v-show="config.del_show" command="del">删除</el-dropdown-item>
               </el-dropdown-menu>
             </el-dropdown>
           </template>
@@ -49,8 +49,8 @@
       </el-table>
     </div>
     <div class="paging flex_shrink row_layout">
-      <el-pagination @current-change="get_firmware_list" background layout="total, prev, pager, next"
-        :total="firmware_total"></el-pagination>
+      <el-pagination @current-change="get_firmware_list" background layout="total, prev, pager, next" :page-size="20"
+        :current-page="firmware_cur_page" :total="firmware_total"></el-pagination>
     </div>
 
     <!-- 弹窗 -->

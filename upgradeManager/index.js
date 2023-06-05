@@ -7,6 +7,7 @@ let upgrade_url = `${url}api-device/firmware/update`;
 let del_firmware_url = `${url}api-device/firmware/delete`;
 let export_firmware_url = `${url}api-device/firmware/export`;
 let device_list_url = `${url}api-device/device/search`;
+let limits_url = `${url}api-user/menus/current`; //获取菜单权限
 
 new Vue({
 	el: '#index',
@@ -18,7 +19,7 @@ new Vue({
 			table_h: 0, //表格最大高度
 			firmware_display: false, //创建固件版本弹窗
 			popover_loading: false, //弹窗加载遮罩
-			page_loading: false, //页面加载
+			page_loading: true, //页面加载
 			upgrade_display: false, //固件升级设备弹窗
 			tips: '设备之前可能有传输中断的升级文件，选是则会把文件从头开始传',
 			fail_c: 0, //上传失败次数
@@ -26,7 +27,8 @@ new Vue({
 		},
 		product_list: [], //产品列表
 		firmware_list: [], //固件列表
-		firmware_total: 100, //固件信息条数
+		firmware_total: 0, //固件信息条数
+		firmware_cur_page: 1, // 分页当前页
 		firmware_form: {
 			product: '', //产品id
 			name: '', //固件名称
@@ -57,13 +59,50 @@ new Vue({
 			select: { show: false, message: '至少选择一台设备' },
 		},
 		add_or_edit: '', //区分新增还是编辑 同时影响页面渲染
+		config: {
+			update_show: false,
+			del_show: false,
+			edit_show: false,
+			export_show: false,
+			create_show: false,
+		},
 	},
-	mounted() {
+	async mounted() {
 		if (!location.search) {
 			this.token = window.sessionStorage.token;
 		} else {
 			this.get_token();
 		}
+		if (!sessionStorage.hushanwebmenuTree) {
+			await new Promise((success) => {
+				this.request('get', limits_url, this.token, (res) => {
+					success();
+					if (res.data.head.code !== 200) {
+						return;
+					}
+					sessionStorage.hushanwebmenuTree = JSON.stringify(res.data.data.menuTree);
+				});
+			});
+		}
+		// 解析权限树
+		let limits;
+		for (let val of JSON.parse(sessionStorage.hushanwebmenuTree)) {
+			if (val.name === '开发者中心') {
+				for (let val2 of val.subMenus) {
+					if (val2.name === '升级管理') {
+						limits = val2.subMenus;
+						break;
+					}
+				}
+				break;
+			}
+		}
+		this.config.update_show = this.is_element_show(limits, '升级');
+		this.config.del_show = this.is_element_show(limits, '删除');
+		this.config.edit_show = this.is_element_show(limits, '编辑');
+		this.config.export_show = this.is_element_show(limits, '导出文件');
+		this.config.create_show = this.is_element_show(limits, '创建固件');
+
 		this.get_product_list();
 		this.get_firmware_list();
 		// mounted只是挂载节点 元素还没渲染前大小都是0
@@ -71,6 +110,15 @@ new Vue({
 		this.$nextTick(this.table_height);
 	},
 	methods: {
+		// 解析权限树
+		is_element_show(source, key) {
+			for (let val of source) {
+				if (val.name === key) {
+					return true;
+				}
+			}
+			return false;
+		},
 		// 获取产品列表
 		get_product_list() {
 			this.request('post', product_list_url, this.token, { condition: {}, pageNum: 1, pageSize: 1000 }, (res) => {
@@ -106,6 +154,7 @@ new Vue({
 				}
 				let data = res.data.data;
 				this.firmware_total = data.total;
+				this.firmware_cur_page = cur_page;
 				this.firmware_list = data.data;
 			});
 		},
@@ -128,6 +177,10 @@ new Vue({
 		},
 		// 编辑固件版本
 		edit_firmware(row_obj) {
+			if (!this.config.edit_show) {
+				this.$message.error('没权限操作');
+				return;
+			}
 			this.add_or_edit = 'edit';
 			this.firmware_form.name = row_obj.firmwareName;
 			this.firmware_form.ver = row_obj.firmwareVersion;

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link rel="stylesheet" href="../module/element-ui.css">
+  <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+  <div id="index" v-cloak v-loading="html.page_loading">
+    <div class="header row_layout flex_shrink">
+      <span class="margin">模糊搜索</span>
+      <el-input v-model="html.search" style="margin-right:2rem;width:10rem;" placeholder="请输入内容" size="mini"
+        clearable></el-input>
+      <span class="margin">操作</span>
+      <el-button class="margin" @click="get_data(1)" type="primary" size="mini">条件查询</el-button>
+      <el-button v-show="config.add_show" @click="show_play_list()" type="success" size="mini">新增播放列表</el-button>
+    </div>
+
+    <div class="body">
+      <div class="card" v-for="item in playlist">
+        <div class="box1">
+          <img v-show="item.thumbnailUrl" :src="item.thumbnailUrl" class="bg_img">
+          <img v-show="!item.thumbnailUrl" src="./img/icon.png" class="bg_img">
+          <div class="box1_1">{{item.created}}</div>
+        </div>
+
+        <div class="box2 flex_shrink row_layout">
+          <span class="text text_ellipsis">{{item.playListName}}</span>
+          <el-dropdown @command="operation($event,item)">
+            <el-button type="primary" size="mini">
+              操作<i class="el-icon-arrow-down el-icon--right"></i>
+            </el-button>
+
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item v-show="config.instant_show" command="instant">即时发布</el-dropdown-item>
+              <el-dropdown-item v-show="config.timing_show" command="timing">定时发布</el-dropdown-item>
+              <el-dropdown-item v-show="config.edit_show" command="material">编辑</el-dropdown-item>
+              <el-dropdown-item v-show="config.del_show" command="delete">删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer flex_shrink">
+      <el-pagination background layout="total, prev, pager, next" :total="html.total" :page-size="html.page_size"
+        @current-change="get_data" :current-page="html.cur_page"></el-pagination>
+    </div>
+
+    <!-- 弹窗 -->
+    <div class="popover" v-if="popup.show">
+      <div class="form_layout" :style="popup_size()" v-loading="popup.loading">
+        <div class="box1 flex_shrink row_layout" v-show="popup.type!=='material'">
+          <span class="title">发布计划</span>
+          <el-button @click="popup.show=false" size="mini" type="danger" circle icon="el-icon-close"></el-button>
+        </div>
+
+        <iframe id="edit" :src="popup.url" frameborder="0" scrolling="no" style="flex-grow:1;"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../运维人员部署请修改我.js"></script>
+  <script src="../module/vue.js"></script>
+  <script src="../module/element-ui.js"></script>
+  <script src="../module/axios.min.js"></script>
+  <script src="../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>
