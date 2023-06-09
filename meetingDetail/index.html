@@ -67,16 +67,28 @@
           <el-table :data="user_list[html.user_type]" max-height="250">
             <el-table-column prop="username" label="姓名" width="200"></el-table-column>
             <el-table-column prop="phone" label="电话" width="200"></el-table-column>
-            <el-table-column label="状态" width="150">
+            <el-table-column label="签到状态" width="100">
               <template slot-scope="scope">
                 <el-tag v-if="!scope.row.signIn" size="medium">未签到</el-tag>
                 <el-tag v-if="scope.row.signIn==1" type="success" size="medium">已签到</el-tag>
                 <el-tag v-if="scope.row.signIn==2" type="warning" size="medium">迟到</el-tag>
-                <el-tag v-if="!scope.row.reply" type="warning" size="medium">未回复</el-tag>
-                <el-tag v-if="scope.row.reply" type="success" size="medium">已回复</el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="replyMsg" label="回复内容"></el-table-column>
+            <el-table-column label="回复状态及原因">
+              <template slot-scope="scope">
+                <div class="row_layout">
+                  <div class="flex_shrink" style="margin-right: 10px;">
+                    <el-tag v-if="scope.row.reply===0" type="warning" size="medium">不参加</el-tag>
+                    <el-tag v-if="scope.row.reply===1" type="success" size="medium">参加</el-tag>
+                    <el-tag v-if="scope.row.reply===null" size="medium">未回复</el-tag>
+                  </div>
+
+                  <span style="margin-right: 4px;">{{scope.row.reply===0?'原因:':''}}</span>
+
+                  <span v-if="scope.row.reply===0">{{scope.row.replyMsg?scope.row.replyMsg:'空'}}</span>
+                </div>
+              </template>
+            </el-table-column>
           </el-table>
         </el-card>
         <!-- 会议纪要 -->

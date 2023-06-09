@@ -1288,14 +1288,49 @@ new Vue({
 			this.form_verify(form_obj.name, 'name');
 		},
 		// 复制内容到剪贴板
-		copy(content) {
-			let t = document.createElement('textarea');
-			t.innerText = content;
-			document.body.appendChild(t);
-			t.select();
-			document.execCommand('copy');
-			document.body.removeChild(t);
-			this.$message.success('已复制到剪贴板');
+		//#region
+		// copy(content) {
+		// 	let t = document.createElement('textarea');
+		// 	t.innerText = content;
+		// 	document.body.appendChild(t);
+		// 	t.select();
+		// 	document.execCommand('copy');
+		// 	document.body.removeChild(t);
+		// 	this.$message.success('已复制到剪贴板');
+		// },
+		//#endregion
+		// 导出JSON
+		save_to_local(content) {
+			let { schema, profile, properties, events, services } = JSON.parse(content);
+			let c = JSON.stringify({ schema, profile, properties, events, services });
+			let blob = new Blob([c], { type: 'application/json' });
+			let a = document.createElement('a');
+			let url = URL.createObjectURL(blob);
+			a.download = '物模型';
+			a.href = url;
+			a.target = '_blank';
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+		},
+		// 点击导入
+		import_click() {
+			import_file.click();
+		},
+		// 导入物模型
+		import_model() {
+			let file = document.querySelector('#import_file').files[0];
+			let reader = new FileReader();
+			reader.readAsText(file);
+			document.querySelector('#import_file').value = '';
+			reader.onload = (data) => {
+				let body = JSON.parse(data.target.result);
+				body.profile.productId = this.history_list[0].profile.productId;
+				this.request('post', protocol_newVersion, this.token, body, () => {
+					this.request('post', protocol_list, this.token, { condition: this.id, pageNum: 1, pageSize: 999 }, this.res_history_model(0));
+				});
+			};
 		},
 	},
 });

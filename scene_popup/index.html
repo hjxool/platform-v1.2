@@ -99,11 +99,11 @@
     </div>
 
     <!-- 场所设备列表弹窗 -->
-    <div class="popover" v-show="devices.show">
+    <div class="popover" v-if="devices.show">
       <div class="place_box" :style="theme_bg_border()" v-loading="devices.loading">
         <div class="head flex_shrink" :style="theme_pophead()">智慧设备</div>
 
-        <div class="search flex_shrink row_layout">
+        <!-- <div class="search flex_shrink row_layout">
           <el-checkbox class="flex_shrink" :indeterminate="devices.isIndeterminate" v-model="devices.checkAll"
             @change="device_checkall">全选
           </el-checkbox>
@@ -111,13 +111,13 @@
             v-model="devices.search" size="small" clearable>
             <i slot="suffix" class="el-input__icon el-icon-search"></i>
           </el-input>
-        </div>
+        </div> -->
 
         <div v-if="devices.list.length" class="scroll" style="padding-left: 20px;">
           <div v-for="place in devices.list">
             <div class="place_box2 row_layout" @click="select_place(place)">
-              <el-checkbox :indeterminate="place.isIndeterminate" v-model="place.checkAll"
-                @change="place_check_all(place)" style="margin-right:10px;"></el-checkbox>
+              <!-- <el-checkbox :indeterminate="place.isIndeterminate" v-model="place.checkAll"
+                @change="place_check_all(place)" style="margin-right:10px;"></el-checkbox> -->
               <i class="el-icon-caret-right icon" v-show="devices.place_id!=place.id" :style="theme_font()"></i>
               <i class="el-icon-caret-bottom icon" v-show="devices.place_id==place.id" :style="theme_font()"></i>
               <span class="text" :style="theme_font()">{{place.placeName}}</span>
@@ -125,10 +125,10 @@
             <el-collapse-transition>
               <div style="padding-left: 20px;" v-show="devices.place_id==place.id">
                 <div class="device_box row_layout" v-for="device in place.devices">
-                  <el-checkbox class="flex_shrink" v-model="device.check"
-                    @change="select_device(device,place,'el')"></el-checkbox>
+                  <!-- <el-checkbox class="flex_shrink" v-model="device.check"
+                    @change="select_device(device,place,'el')"></el-checkbox> @click="select_device(device,place)"-->
 
-                  <span class="text text_ellipsis" @click="select_device(device,place)" :title="device.deviceName"
+                  <span class="text text_ellipsis" :title="device.deviceName"
                     :style="theme_font()">{{device.deviceName}}</span>
 
                   <el-button class="flex_shrink" size="mini" round @click.stop="set_config(device,place)">配置</el-button>
@@ -140,13 +140,13 @@
         <div v-show="!devices.list.length" class="center" :style="theme_font()">无设备</div>
 
         <div class="foot flex_shrink">
-          <el-button @click="device_submit" type="primary" size="small">确定</el-button>
-          <el-button @click="devices.show=false" size="small">取消</el-button>
+          <!-- <el-button @click="device_submit" type="primary" size="small">确定</el-button> -->
+          <el-button @click="devices.show=false" size="small">关闭</el-button>
         </div>
       </div>
     </div>
     <!-- 服务配置弹窗 -->
-    <div class="popover" v-show="servers.show">
+    <div class="popover" v-if="servers.show">
       <div class="server_box2" :style="theme_bg_border()">
         <div class="head flex_shrink" :style="theme_pophead()">可选服务</div>
 
@@ -186,12 +186,12 @@
       </div>
     </div>
     <!-- 延迟及服务配置 -->
-    <div class="popover" v-show="delay.show">
+    <div class="popover" v-if="delay.show">
       <div class="server_box3" :style="theme_bg_border()">
         <div class="head flex_shrink" :style="theme_pophead()">服务修改及延迟设置</div>
 
         <div class="scroll">
-          <div class="row_layout" v-for="server in delay.list">
+          <div class="row_layout" v-for="server in delay.list" :style="theme_border()">
             <span class="text text_ellipsis flex_shrink" :title="server.serviceName"
               :style="theme_font()">{{server.serviceName}}</span>
 

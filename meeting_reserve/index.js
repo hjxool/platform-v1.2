@@ -662,7 +662,7 @@ new Vue({
 						this.request('get', `${get_scene_url}/${this.roomId || this.place_list[this.row_index].id}?placeStartDate=${st}&placeEndDate=${et}`, this.token, (res) => {
 							this.html.form_loading = false;
 							if (res.data.head.code !== 200) {
-								success();
+								success('error');
 								return;
 							}
 							let t = '';
@@ -672,6 +672,10 @@ new Vue({
 							success(t);
 						});
 					});
+					// 如果接口报错 不显示提示 且 不继续执行
+					if (text === 'error') {
+						return;
+					}
 					if (text) {
 						// 文本有内容说明有场景 就提示，否则直接发起请求
 						let result3 = await this.$confirm(

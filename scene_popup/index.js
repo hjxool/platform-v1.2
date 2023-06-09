@@ -57,10 +57,10 @@ new Vue({
 			time_unit: 13, //时间单位
 		},
 		rules: {
-			name: [{ required: true, message: '请输入活动名称', trigger: 'blur' }],
-			start_time: [{ type: 'date', required: true, message: '请选择日期', trigger: 'change' }],
-			end_time: [{ type: 'date', required: true, message: '请选择日期', trigger: 'change' }],
-			ex_time: [{ type: 'date', required: true, message: '请选择时间', trigger: 'change' }],
+			name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
+			start_time: [{ required: true, message: '请选择日期', trigger: 'change' }],
+			end_time: [{ required: true, message: '请选择日期', trigger: 'change' }],
+			ex_time: [{ required: true, message: '请选择时间', trigger: 'change' }],
 			ex_cycle: [{ type: 'array', required: true, message: '至少选一个', trigger: 'change' }],
 			condition_type: [{ required: true, message: '', trigger: 'change' }],
 			time_unit: [{ required: true, message: '', trigger: 'change' }],
@@ -70,8 +70,8 @@ new Vue({
 			show: false, // 弹窗显示
 			loading: false, // 加载
 			search: '',
-			isIndeterminate: false,
-			checkAll: false,
+			// isIndeterminate: false,
+			// checkAll: false,
 			list: [], // 场所设备列表
 			place_id: '',
 		},
@@ -96,11 +96,17 @@ new Vue({
 			this.form.name = data.sceneName;
 			this.form.type = data.sceneType;
 			if (this.form.type === 2) {
-				this.form.start_time = data.planDatetimeStart;
-				this.form.end_time = data.planDatetimeEnd;
-				let year = this.form.end_time.split(' ')[0].replace(/-/gi, '/');
-				this.form.ex_time = `${year} ` + data.planDatetimeEnd;
-				this.form.ex_cycle = data.executePeriodDaysList;
+				this.form.start_time = new Date(data.planDatetimeStart);
+				this.form.end_time = new Date(data.planDatetimeEnd);
+				// let year = this.form.end_time.split(' ')[0].replace(/-/gi, '/');
+				let year = data.planDatetimeEnd.split(' ')[0];
+				this.form.ex_time = new Date(`${year} ${data.executeTime}`);
+				this.form.ex_cycle = JSON.parse(data.executePeriodDays);
+			} else if (this.form.type === 3) {
+				let t = data.sceneConditionParamVOS[0];
+				this.form.condition_type = t.preTriggerEventTime ? 0 : 1;
+				this.form.pre_after_time = t.preTriggerEventTime || t.afterTriggerEventTime;
+				this.form.time_unit = t.triggerEvenTimeUnit;
 			}
 			if (data.deviceCommandVOS) {
 				for (let val of data.deviceCommandVOS) {
@@ -145,7 +151,7 @@ new Vue({
 		// 弹窗头部背景色
 		theme_pophead() {
 			return {
-				background: this.theme ? '' : '#53B0FF',
+				background: this.theme ? '#53B0FF' : '#53B0FF',
 				color: this.theme ? '#fff' : '#05050B',
 			};
 		},
@@ -199,10 +205,10 @@ new Vue({
 			switch (index) {
 				case 0:
 					this.devices.show = true;
-					this.server_selected = []; //总勾选服务列表 回显设备服务
-					this.device_selected = []; //总勾选设备列表 查询设备时回显
-					this.devices.isIndeterminate = false;
-					this.devices.checkAll = false;
+					// this.server_selected = []; //总勾选服务列表 回显设备服务
+					// this.device_selected = []; //总勾选设备列表 查询设备时回显
+					// this.devices.isIndeterminate = false;
+					// this.devices.checkAll = false;
 					this.get_place_device();
 					break;
 				case 1:
@@ -280,10 +286,10 @@ new Vue({
 						let t = {
 							delayExecuteSeconds: val.delayExecuteSeconds,
 							deviceId: val.deviceId,
-							inputParamDesc: val.inputParamDesc,
+							inputParamDesc: val.inputParamDesc || null,
 							placeId: val.placeId,
 							serviceIdentifier: val.serviceIdentifier,
-							serviceInputParam: val.serviceInputParam,
+							serviceInputParam: val.serviceInputParam || null,
 							serviceName: val.serviceName,
 						};
 						data.deviceCommandDTOS.push(t);
@@ -292,9 +298,13 @@ new Vue({
 						data.executePeriodDays = JSON.stringify(this.form.ex_cycle);
 						data.executeTime = this.form.ex_time.toString().split(' ')[4];
 						let t = this.form.end_time;
-						data.planDatetimeEnd = `${t.getFullYear()}-${t.getMonth() + 1 < 10 ? '0' + (t.getMonth() + 1) : t.getMonth() + 1}-${t.getDate() > 10 ? t.getDate() : '0' + t.getDate()} 00:00:00`;
+						data.planDatetimeEnd = `${t.getFullYear()}-${t.getMonth() + 1 < 10 ? '0' + (t.getMonth() + 1) : t.getMonth() + 1}-${t.getDate() > 10 ? t.getDate() : '0' + t.getDate()} 23:59:59`;
 						let t2 = this.form.start_time;
-						data.planDatetimeStart = `${t2.getFullYear()}-${t2.getMonth() + 1 < 10 ? '0' + (t2.getMonth() + 1) : t2.getMonth() + 1}-${t2.getDate() > 10 ? t2.getDate() : '0' + t2.getDate()} 23:59:59`;
+						data.planDatetimeStart = `${t2.getFullYear()}-${t2.getMonth() + 1 < 10 ? '0' + (t2.getMonth() + 1) : t2.getMonth() + 1}-${t2.getDate() > 10 ? t2.getDate() : '0' + t2.getDate()} 00:00:00`;
+						if (new Date(data.planDatetimeStart).getTime() > new Date(data.planDatetimeEnd).getTime()) {
+							this.$message.error('开始日期不能大于结束日期');
+							return;
+						}
 					} else if (this.form.type === 3) {
 						data.sceneConditionParamDTOS = [{ triggerType: 1, triggerEvenTimeUnit: this.form.time_unit }];
 						switch (this.form.condition_type) {
@@ -322,24 +332,26 @@ new Vue({
 			});
 		},
 		// 场所设备弹窗提交 只将勾选了设备的服务添加到外层列表展示
-		device_submit() {
-			let add = [];
-			for (let val of this.server_selected) {
-				for (let val2 of this.device_selected) {
-					if (val.deviceId === val2.id) {
-						val.check = false; //清除服务勾选 避免影响外层显示
-						add.push(val);
-						break;
-					}
-				}
-			}
-			if (!add.length) {
-				this.$message.error('必须勾选设备！');
-				return;
-			}
-			this.form.servers.push(...add);
-			this.devices.show = false;
-		},
+		//#region
+		// device_submit() {
+		// 	let add = [];
+		// 	for (let val of this.server_selected) {
+		// 		for (let val2 of this.device_selected) {
+		// 			if (val.deviceId === val2.id) {
+		// 				val.check = false; //清除服务勾选 避免影响外层显示
+		// 				add.push(val);
+		// 				break;
+		// 			}
+		// 		}
+		// 	}
+		// 	if (!add.length) {
+		// 		this.$message.error('必须勾选设备和服务！');
+		// 		return;
+		// 	}
+		// 	this.form.servers.push(...add);
+		// 	this.devices.show = false;
+		// },
+		//#endregion
 		// 服务列表提交 将勾选项添加到总勾选服务列表
 		server_submit() {
 			let result = false;
@@ -353,28 +365,36 @@ new Vue({
 				this.$message.error('至少勾选一个服务！');
 				return;
 			}
+			//#region
+			// for (let val of this.servers.list) {
+			// 	if (val.check) {
+			// 		let find = false;
+			// 		for (let val2 of this.server_selected) {
+			// 			// 设备想同 标识符相同就认为是同一个
+			// 			if (val.deviceId === val2.deviceId && val.serviceIdentifier === val2.serviceIdentifier) {
+			// 				find = true;
+			// 				break;
+			// 			}
+			// 		}
+			// 		if (!find) {
+			// 			this.server_selected.push(val);
+			// 		}
+			// 	} else {
+			// 		let index = 0;
+			// 		for (let val2 of this.server_selected) {
+			// 			if (val.deviceId === val2.deviceId && val.serviceIdentifier === val2.serviceIdentifier) {
+			// 				this.server_selected.splice(index, 1);
+			// 				break;
+			// 			}
+			// 			index++;
+			// 		}
+			// 	}
+			// }
+			//#endregion
 			for (let val of this.servers.list) {
 				if (val.check) {
-					let find = false;
-					for (let val2 of this.server_selected) {
-						// 设备想同 标识符相同就认为是同一个
-						if (val.deviceId === val2.deviceId && val.serviceIdentifier === val2.serviceIdentifier) {
-							find = true;
-							break;
-						}
-					}
-					if (!find) {
-						this.server_selected.push(val);
-					}
-				} else {
-					let index = 0;
-					for (let val2 of this.server_selected) {
-						if (val.deviceId === val2.deviceId && val.serviceIdentifier === val2.serviceIdentifier) {
-							this.server_selected.splice(index, 1);
-							break;
-						}
-						index++;
-					}
+					val.check = false;
+					this.form.servers.push(val);
 				}
 			}
 			this.servers.show = false;
@@ -402,16 +422,16 @@ new Vue({
 			this.delay.show = false;
 		},
 		// 全选设备
-		device_checkall(value) {
-			this.devices.isIndeterminate = false;
-			for (let val of this.devices.list) {
-				val.checkAll = value;
-				val.isIndeterminate = false;
-				for (let val2 of val.devices) {
-					val2.check = value;
-				}
-			}
-		},
+		// device_checkall(value) {
+		// 	this.devices.isIndeterminate = false;
+		// 	for (let val of this.devices.list) {
+		// 		val.checkAll = value;
+		// 		val.isIndeterminate = false;
+		// 		for (let val2 of val.devices) {
+		// 			val2.check = value;
+		// 		}
+		// 	}
+		// },
 		// 全选服务
 		server_checkall(value) {
 			this.servers.isIndeterminate = false;
@@ -429,16 +449,17 @@ new Vue({
 					return;
 				}
 				let data = res.data.data;
-				this.device_total = 0; // 记录下设备数量
-				for (let val of data) {
-					val.isIndeterminate = false; // 添加属性
-					val.checkAll = false; // 添加属性
-					for (let val2 of val.devices) {
-						this.device_total++;
-						val2.check = false; // 添加属性
-						// val2.server_config = []; // 用于保存设备所有服务编辑状态 但如果只记录勾选服务则每次查询设备服务未勾选的数据会重置
-					}
-				}
+				//#region
+				// this.device_total = 0; // 记录下设备数量
+				// for (let val of data) {
+				// 	val.isIndeterminate = false; // 添加属性
+				// 	val.checkAll = false; // 添加属性
+				// 	for (let val2 of val.devices) {
+				// 		this.device_total++;
+				// 		val2.check = false; // 添加属性
+				// 		// val2.server_config = []; // 用于保存设备所有服务编辑状态 但如果只记录勾选服务则每次查询设备服务未勾选的数据会重置
+				// 	}
+				// }
 				// 只需要二次点开设备配置时回显之前的输入
 				// for (let val of this.server_selected) {
 				// 	for (let val2 of data) {
@@ -456,113 +477,118 @@ new Vue({
 				// 		}
 				// 	}
 				// }
-				if (this.device_selected.length) {
-					// 回显设备勾选
-					for (let val of this.device_selected) {
-						for (let val2 of data) {
-							for (let val3 of val2.devices) {
-								if (val.id === val3.id) {
-									val3.check = true;
-									break;
-								}
-							}
-						}
-					}
-					// 统计
-					let dt = 0;
-					for (let val of data) {
-						let p = 0;
-						let d = 0;
-						for (let val2 of val.devices) {
-							p++;
-							if (val2.check) {
-								d++;
-								dt++;
-							}
-						}
-						// 可能会有场所为空
-						if (p) {
-							val.checkAll = p === d;
-						}
-						val.isIndeterminate = d > 0 && d < p;
-					}
-					this.devices.checkAll = this.device_total === dt;
-					this.devices.isIndeterminate = dt > 0 && dt < this.device_total;
-				}
+				// if (this.device_selected.length) {
+				// 	// 回显设备勾选
+				// 	for (let val of this.device_selected) {
+				// 		for (let val2 of data) {
+				// 			for (let val3 of val2.devices) {
+				// 				if (val.id === val3.id) {
+				// 					val3.check = true;
+				// 					break;
+				// 				}
+				// 			}
+				// 		}
+				// 	}
+				// 	// 统计
+				// 	let dt = 0;
+				// 	for (let val of data) {
+				// 		let p = 0;
+				// 		let d = 0;
+				// 		for (let val2 of val.devices) {
+				// 			p++;
+				// 			if (val2.check) {
+				// 				d++;
+				// 				dt++;
+				// 			}
+				// 		}
+				// 		// 可能会有场所为空
+				// 		if (p) {
+				// 			val.checkAll = p === d;
+				// 		}
+				// 		val.isIndeterminate = d > 0 && d < p;
+				// 	}
+				// 	this.devices.checkAll = this.device_total === dt;
+				// 	this.devices.isIndeterminate = dt > 0 && dt < this.device_total;
+				// }
+				//#endregion
 				this.devices.list = data;
 			});
 		},
 		// 勾选场所下全部设备
-		place_check_all(place) {
-			place.isIndeterminate = false;
-			if (!place.devices.length) {
-				place.checkAll = false;
-				return;
-			}
-			for (let val of place.devices) {
-				val.check = place.checkAll;
-			}
-			if (place.checkAll) {
-				// 如果全选场所设备
-				for (let val of place.devices) {
-					let find = false;
-					for (let val2 of this.device_selected) {
-						if (val.id === val2.id) {
-							find = true;
-							break;
-						}
-					}
-					if (!find) {
-						this.device_selected.push(val);
-					}
-				}
-			}
-			// 全选场所设备时不需要统计场所
-			this.select_device();
-		},
+		//#region
+		// place_check_all(place) {
+		// 	place.isIndeterminate = false;
+		// 	if (!place.devices.length) {
+		// 		place.checkAll = false;
+		// 		return;
+		// 	}
+		// 	for (let val of place.devices) {
+		// 		val.check = place.checkAll;
+		// 	}
+		// 	if (place.checkAll) {
+		// 		// 如果全选场所设备
+		// 		for (let val of place.devices) {
+		// 			let find = false;
+		// 			for (let val2 of this.device_selected) {
+		// 				if (val.id === val2.id) {
+		// 					find = true;
+		// 					break;
+		// 				}
+		// 			}
+		// 			if (!find) {
+		// 				this.device_selected.push(val);
+		// 			}
+		// 		}
+		// 	}
+		// 	// 全选场所设备时不需要统计场所
+		// 	this.select_device();
+		// },
+		//#endregion
 		// 勾选单个设备 并统计
-		select_device(device, place, type) {
-			if (device && !type) {
-				device.check = !device.check;
-			}
-			// device可能是null、undefined、对象
-			if (device.check) {
-				this.device_selected.push(device);
-			} else {
-				let index = 0;
-				for (let val of this.device_selected) {
-					if (val.id === device.id) {
-						this.device_selected.splice(index, 1);
-						break;
-					}
-					index++;
-				}
-			}
-			// 统计 场所是否全选
-			if (place) {
-				let dtotal = 0;
-				let dcheck = 0;
-				for (let val of place.devices) {
-					dtotal++;
-					if (val.check) {
-						dcheck++;
-					}
-				}
-				place.checkAll = dtotal === dcheck;
-				place.isIndeterminate = dcheck > 0 && dcheck < dtotal;
-			}
-			// 统计 设备是否全选
-			let dcheck = 0;
-			for (let val of this.devices.list) {
-				for (let val2 of val.devices) {
-					if (val2.check) {
-						dcheck++;
-					}
-				}
-			}
-			this.devices.checkAll = dcheck === this.device_total;
-			this.devices.isIndeterminate = dcheck > 0 && dcheck < this.device_total;
-		},
+		//#region
+		// select_device(device, place, type) {
+		// 	if (device && !type) {
+		// 		device.check = !device.check;
+		// 	}
+		// 	// device可能是null、undefined、对象
+		// 	if (device.check) {
+		// 		this.device_selected.push(device);
+		// 	} else {
+		// 		let index = 0;
+		// 		for (let val of this.device_selected) {
+		// 			if (val.id === device.id) {
+		// 				this.device_selected.splice(index, 1);
+		// 				break;
+		// 			}
+		// 			index++;
+		// 		}
+		// 	}
+		// 	// 统计 场所是否全选
+		// 	if (place) {
+		// 		let dtotal = 0;
+		// 		let dcheck = 0;
+		// 		for (let val of place.devices) {
+		// 			dtotal++;
+		// 			if (val.check) {
+		// 				dcheck++;
+		// 			}
+		// 		}
+		// 		place.checkAll = dtotal === dcheck;
+		// 		place.isIndeterminate = dcheck > 0 && dcheck < dtotal;
+		// 	}
+		// 	// 统计 设备是否全选
+		// 	let dcheck = 0;
+		// 	for (let val of this.devices.list) {
+		// 		for (let val2 of val.devices) {
+		// 			if (val2.check) {
+		// 				dcheck++;
+		// 			}
+		// 		}
+		// 	}
+		// 	this.devices.checkAll = dcheck === this.device_total;
+		// 	this.devices.isIndeterminate = dcheck > 0 && dcheck < this.device_total;
+		// },
+		//#endregion
 		// 配置按钮
 		set_config(device, place) {
 			this.devices.loading = true;
@@ -594,21 +620,23 @@ new Vue({
 				}
 				this.servers.list = res.data.data;
 				// 回显 统计
-				let scount = 0;
-				for (let val of this.server_selected) {
-					for (let val2 of this.servers.list) {
-						// 场所设备id相同只能说明勾选服务属于设备总服务列表
-						// 还需要唯一标识才能确定修改哪一个的值
-						if (val.placeId === val2.placeId && val.deviceId === val2.deviceId && val.serviceIdentifier === val2.serviceIdentifier) {
-							scount++;
-							val2.serviceInputParam = val.serviceInputParam;
-							val2.check = true;
-							break;
-						}
-					}
-				}
-				this.servers.checkAll = this.servers.list.length === scount;
-				this.servers.isIndeterminate = scount > 0 && scount < this.servers.list.length;
+				//#region
+				// let scount = 0;
+				// for (let val of this.server_selected) {
+				// 	for (let val2 of this.servers.list) {
+				// 		// 场所设备id相同只能说明勾选服务属于设备总服务列表
+				// 		// 还需要唯一标识才能确定修改哪一个的值
+				// 		if (val.placeId === val2.placeId && val.deviceId === val2.deviceId && val.serviceIdentifier === val2.serviceIdentifier) {
+				// 			scount++;
+				// 			val2.serviceInputParam = val.serviceInputParam;
+				// 			val2.check = true;
+				// 			break;
+				// 		}
+				// 	}
+				// }
+				// this.servers.checkAll = this.servers.list.length === scount;
+				// this.servers.isIndeterminate = scount > 0 && scount < this.servers.list.length;
+				//#endregion
 			});
 		},
 		// 点击展开折叠场所

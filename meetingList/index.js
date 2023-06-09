@@ -5,6 +5,7 @@ let delay_meeting_url = `${url}api-portal/meeting/delay`;
 let user_url = `${url}api-auth/oauth/userinfo`; //获取当前登录用户信息
 let cancel_url = `${url}api-portal/meeting/cancel`;
 let limits_url = `${url}api-user/menus/current`; //获取菜单权限
+let remind_url = `${url}api-portal/meeting/urge`; //提醒审核
 
 new Vue({
 	el: '#index',
@@ -56,6 +57,7 @@ new Vue({
 			],
 			size: 20, //一页显示条数
 			delay_set_show: false, // 延迟弹窗显示
+			count_down: 0, // 点击倒计时 限制点击频率及显示
 		},
 		total_size: 0, //总条数
 		tableData: [], //表格数据
@@ -71,6 +73,7 @@ new Vue({
 			recall_show: false,
 			detail_show: false,
 			rebook_show: false,
+			remind_show: true,
 		},
 	},
 	async mounted() {
@@ -113,6 +116,7 @@ new Vue({
 		this.config.recall_show = this.is_element_show(limits, '撤回');
 		this.config.detail_show = this.is_element_show(limits, '详情');
 		this.config.rebook_show = this.is_element_show(limits, '重新预定');
+		// this.config.remind_show = this.is_element_show(limits, '提醒审核');
 
 		if (localStorage.hushanwebuserinfo) {
 			let obj = JSON.parse(localStorage.hushanwebuserinfo);
@@ -260,24 +264,35 @@ new Vue({
 			switch (tag) {
 				case '延迟':
 					if (meeting_obj.auditStatus == 2 && (meeting_obj.status === 0 || meeting_obj.status == 1)) {
+						// 审核通过 会议未开始或进行中
 						return false;
 					} else {
 						return true;
 					}
 				case '撤回':
 					if (meeting_obj.auditStatus == 1 && meeting_obj.status === 0) {
+						// 审核中 未开始的会议
 						return false;
 					} else {
 						return true;
 					}
 				case '取消会议':
 					if (this.current_user == meeting_obj.createUser && meeting_obj.auditStatus == 2 && meeting_obj.status === 0) {
+						// 创建人 审核状态通过 会议未开始
 						return false;
 					} else {
 						return true;
 					}
 				case '重新预定':
 					if (this.current_user == meeting_obj.createUser && meeting_obj.status === -1 && (meeting_obj.auditStatus === 0 || meeting_obj.auditStatus == -1 || meeting_obj.auditStatus == 2)) {
+						// 创建人 取消的会议 审核状态撤回 驳回 通过的
+						return false;
+					} else {
+						return true;
+					}
+				case '提醒审核':
+					if (meeting_obj.auditStatus == 1 && this.current_user == meeting_obj.createUser && !this.html.count_down) {
+						// 审核状态 待审核 且为 创建人 倒计时为0
 						return false;
 					} else {
 						return true;
@@ -313,6 +328,28 @@ new Vue({
 				}
 				this.get_data();
 			});
+		},
+		// 提醒管理员审核
+		remind(row_obj) {
+			if (this.html.count_down) {
+				return;
+			} else {
+				this.request('put', remind_url, this.token, [row_obj.id], (res) => {
+					if (res.data.head.code !== 200) {
+						this.$message('提醒失败');
+						return;
+					}
+					this.$message.success('提醒失败');
+					// 发送请求后开始倒计时
+					this.html.count_down = 60;
+					let timer = setInterval(() => {
+						--this.html.count_down;
+						if (!this.html.count_down) {
+							clearInterval(timer);
+						}
+					}, 1000);
+				});
+			}
 		},
 	},
 });

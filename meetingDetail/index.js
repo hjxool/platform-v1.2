@@ -106,7 +106,7 @@ new Vue({
 					if (!val.signIn) {
 						sign_out++;
 						sign_out2.push(val);
-					} else if (val.signIn == 1) {
+					} else if (val.signIn == 1 || val.signIn == 2) {
 						sign_in++;
 						sign_in2.push(val);
 					} else if (val.signIn == 2) {

@@ -188,7 +188,7 @@
             </div>
             <el-collapse-transition>
               <div class="box2" v-show="status.user_id==item.tenantId">
-                <div v-for="item2 in status.place_list" class="box2_box" @click="status.place_id=item2.id">
+                <div v-for="item2 in status.place_list" class="box2_box" @click="select_place(item2,item)">
                   <div class="icon">
                     <i class="el-icon-check icon2" v-show="status.place_id==item2.id"></i>
                   </div>

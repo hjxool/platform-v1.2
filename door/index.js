@@ -523,9 +523,20 @@ new Vue({
 				this.html.popover_loading = false;
 				if (res.data.head.code == 200) {
 					this.html.distribute_place_display = false;
-					this.get_all_user_devices();
+					// this.get_all_user_devices();
+					for (let val of this.devices.select_list) {
+						val.companyName = this.userName_log;
+						val.placeName = this.place_log.placeName;
+						val.placeTypeValue = this.place_log.placeTypeValue;
+					}
 				}
 			});
+		},
+		// 选中租户下场所 记录所选租户和场所
+		select_place(place, user) {
+			this.status.place_id = place.id;
+			this.userName_log = user.companyName;
+			this.place_log = place;
 		},
 		// 修改设备名称
 		edit_device_name(row_data) {
