@@ -108,14 +108,14 @@ new Vue({
 		// 解析权限树
 		let limits, limits2, limits3;
 		for (let val of JSON.parse(sessionStorage.hushanwebmenuTree)) {
-			if (val.name === '运维中心') {
+			if (val.path === '运维中心') {
 				limits = val.subMenus;
 				for (let val2 of val.subMenus) {
-					if (val2.name === '设备管理') {
+					if (val2.path === '运维中心_设备管理') {
 						limits2 = val2.subMenus;
 						continue;
 					}
-					if (val2.name === '设备监控') {
+					if (val2.path === '运维中心_设备监控') {
 						limits3 = val2.subMenus;
 						continue;
 					}
@@ -159,7 +159,8 @@ new Vue({
 		// 解析权限树
 		is_element_show(source, key) {
 			for (let val of source) {
-				if (val.name === key) {
+				let t = val.path.split('_');
+				if (t[t.length - 1] === key) {
 					return true;
 				}
 			}
@@ -546,7 +547,8 @@ new Vue({
 			}).then(({ value }) => {
 				this.request('put', edit_device_url, this.token, { deviceName: value, id: row_data.id, productId: row_data.productId }, (res) => {
 					if (res.data.head.code == 200) {
-						this.get_all_user_devices();
+						// this.get_all_user_devices();
+						row_data.deviceName = value;
 					}
 				});
 			});

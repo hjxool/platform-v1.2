@@ -86,3 +86,31 @@
 #editor_input {
 	height: 500px;
 }
+.popover {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	> .form {
+		background: #fff;
+		border-radius: 10px;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+		> .head {
+			padding: 20px;
+		}
+	}
+	> .vote_box {
+		width: 50%;
+		height: 80%;
+		> .box {
+			flex-grow: 1;
+			overflow: auto;
+			padding-right: 20px;
+		}
+	}
+	> .start_box {
+		width: 25%;
+		height: 60%;
+	}
+}

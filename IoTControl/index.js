@@ -106,11 +106,11 @@ new Vue({
 		// 解析权限树
 		let limits;
 		for (let val of JSON.parse(sessionStorage.hushanwebmenuTree)) {
-			if (val.name === '湖山云会管平台') {
+			if (val.path === '云会管平台') {
 				for (let val2 of val.subMenus) {
-					if (val2.name === '物联管控') {
+					if (val2.path === '云会管平台_物联管控') {
 						for (let val3 of val2.subMenus) {
-							if (val3.name === '设备监控') {
+							if (val3.path === '云会管平台_物联管控_设备监控') {
 								limits = val3.subMenus;
 								break;
 							}
@@ -131,7 +131,8 @@ new Vue({
 		// 解析权限树
 		is_element_show(source, key) {
 			for (let val of source) {
-				if (val.name === key) {
+				let t = val.path.split('_');
+				if (t[t.length - 1] === key) {
 					return true;
 				}
 			}

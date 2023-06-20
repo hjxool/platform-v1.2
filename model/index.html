@@ -21,9 +21,10 @@
           :disabled="history_list.length == 0">添加自定义功能</el-button>
         <div class="history_layout">
           <span style="margin-right: 20px;">历史版本</span>
-          <el-select style="width:200px;" v-model="history_selected" placeholder="无历史版本"
+          <el-select style="width:300px;" v-model="history_selected" placeholder="无历史版本"
             @change="model_select(history_selected)" :disabled="history_list.length == 0">
-            <el-option v-for="ver,index in history_list" :key="index" :label="ver.profile.version" :value="index">
+            <el-option v-for="ver,index in history_list" :key="index"
+              :label="`${ver.profile.versionAlias||'默认'}(${ver.profile.version})`" :value="index">
             </el-option>
           </el-select>
         </div>

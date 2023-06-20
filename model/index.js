@@ -151,11 +151,11 @@ new Vue({
 		// 解析权限树
 		let limits;
 		for (let val of JSON.parse(sessionStorage.hushanwebmenuTree)) {
-			if (val.name === '开发者中心') {
+			if (val.path === '开发者中心') {
 				for (let val2 of val.subMenus) {
-					if (val2.name === '产品列表') {
+					if (val2.path === '开发者中心_产品列表') {
 						for (let val3 of val2.subMenus) {
-							if (val3.name === '物模型配置') {
+							if (val3.path === '开发者中心_产品列表_物模型配置') {
 								limits = val3.subMenus;
 								break;
 							}
@@ -181,7 +181,8 @@ new Vue({
 		// 解析权限树
 		is_element_show(source, key) {
 			for (let val of source) {
-				if (val.name === key) {
+				let t = val.path.split('_');
+				if (t[t.length - 1] === key) {
 					return true;
 				}
 			}
@@ -272,16 +273,66 @@ new Vue({
 			});
 		},
 		// 新建物模型
-		new_ver_model() {
-			this.$confirm('确认以当前所选物模型版本新建物模型？', '提示', {
+		async new_ver_model() {
+			//#region
+			// then实现
+			// this.$prompt('请输入新物模型版本号', '提示', {
+			// 	confirmButtonText: '确定',
+			// 	cancelButtonText: '取消',
+			// 	inputPattern: /.{1,16}/,
+			// 	inputErrorMessage: '不能为空且最多16个字符！',
+			// })
+			// 	.then((res) => {
+			// 		return this.$confirm('确认以当前所选物模型版本新建物模型？', '提示', {
+			// 			confirmButtonText: '确定',
+			// 			cancelButtonText: '取消',
+			// 			type: 'info',
+			// 			center: true,
+			// 		}).catch(() => false);
+			// 	})
+			// 	.then(({ value }) => {
+			// 		let data = this.history_list[this.history_selected];
+			// 		data.profile.versionAlias = value;
+			// 		this.request('post', protocol_newVersion, this.token, data, (res) => {
+			// 			if (res.data.head.code !== 200) {
+			// 				this.$message.error('新建物模型失败');
+			// 				return;
+			// 			}
+			// 			this.request('post', protocol_list, this.token, { condition: this.id, pageNum: 1, pageSize: 999 }, this.res_history_model(0));
+			// 		});
+			// 	})
+			// 	.catch(() => false);
+			//#endregion
+			// await实现
+			let r1 = await this.$prompt('请输入新物模型版本号', '提示', {
+				confirmButtonText: '确定',
+				cancelButtonText: '取消',
+				inputPattern: /.{1,16}/,
+				inputErrorMessage: '不能为空且最多16个字符！',
+			}).catch(() => false);
+			if (!r1) {
+				return;
+			}
+			let r2 = await this.$confirm('确认以当前所选物模型版本新建物模型？', '提示', {
 				confirmButtonText: '确定',
 				cancelButtonText: '取消',
 				type: 'info',
 				center: true,
-			}).then(() => {
-				this.request('post', protocol_newVersion, this.token, this.history_list[this.history_selected], () => {
-					this.request('post', protocol_list, this.token, { condition: this.id, pageNum: 1, pageSize: 999 }, this.res_history_model(0));
-				});
+			}).then(
+				() => true,
+				() => false
+			);
+			if (!r2) {
+				return;
+			}
+			let data = this.history_list[this.history_selected];
+			data.profile.versionAlias = r1.value;
+			this.request('post', protocol_newVersion, this.token, data, (res) => {
+				if (res.data.head.code !== 200) {
+					this.$message.error('新建物模型失败');
+					return;
+				}
+				this.request('post', protocol_list, this.token, { condition: this.id, pageNum: 1, pageSize: 999 }, this.res_history_model(0));
 			});
 		},
 		// 编辑查看模型中单条数据
@@ -1226,7 +1277,7 @@ new Vue({
 			let flag = false;
 			for (let val of this.history_list) {
 				if (val.profile.isCurrentVersion == '1') {
-					this.static_params.current_version = val.profile.version;
+					this.static_params.current_version = `${val.profile.versionAlias || '默认'}(${val.profile.version})`;
 					this.current_model = JSON.stringify(val, null, 4);
 					flag = true;
 					break;
@@ -1314,7 +1365,7 @@ new Vue({
 			document.body.removeChild(a);
 			URL.revokeObjectURL(url);
 		},
-		// 点击导入
+		// 导入
 		import_click() {
 			import_file.click();
 		},
@@ -1324,9 +1375,24 @@ new Vue({
 			let reader = new FileReader();
 			reader.readAsText(file);
 			document.querySelector('#import_file').value = '';
-			reader.onload = (data) => {
+			reader.onload = async (data) => {
 				let body = JSON.parse(data.target.result);
+				if (!body?.profile?.productId) {
+					// 避免导入错误的文件
+					this.$message.error('不是物模型文件！');
+					return;
+				}
+				let r1 = await this.$prompt('请输入新物模型版本号', '提示', {
+					confirmButtonText: '确定',
+					cancelButtonText: '取消',
+					inputPattern: /.{1,16}/,
+					inputErrorMessage: '不能为空且最多16个字符！',
+				}).catch(() => false);
+				if (!r1) {
+					return;
+				}
 				body.profile.productId = this.history_list[0].profile.productId;
+				body.profile.versionAlias = r1;
 				this.request('post', protocol_newVersion, this.token, body, () => {
 					this.request('post', protocol_list, this.token, { condition: this.id, pageNum: 1, pageSize: 999 }, this.res_history_model(0));
 				});

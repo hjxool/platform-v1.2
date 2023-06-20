@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../module/element-ui.css">
   <link rel="stylesheet" href="../module/wangeditor.css">
   <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="../../dlc2/components/style/common.css">
   <link rel="stylesheet" href="./index.css">
 </head>
 
@@ -91,6 +92,21 @@
             </el-table-column>
           </el-table>
         </el-card>
+        <!-- 投票 -->
+        <el-card class="box2" shadow="never" :body-style="{padding:'0 20px'}">
+          <div slot="header" class="row_layout">
+            <i class="el-icon-thumb title_icon" style="color: #00CD41;"></i>
+            <span class="title">会议投票</span>
+
+            <div class="row_layout flex_shrink" style="margin-left: auto;">
+              <el-button @click="edit_vote_show()" type="primary" round size="mini">新增投票</el-button>
+              <el-button @click="export_result" type="primary" round size="mini">导出投票结果</el-button>
+            </div>
+          </div>
+
+          <component_meeting-vote-list :max-height="300" :vote-list="vote.list"
+            :meeting-id="id"></component_meeting-vote-list>
+        </el-card>
         <!-- 会议纪要 -->
         <el-card class="box2" v-show="meeting_detail.save" shadow="never">
           <div slot="header" class="row_layout">
@@ -132,6 +148,54 @@
         </el-card>
       </div>
     </div>
+
+    <!-- 弹窗 -->
+    <!-- 投票弹窗 -->
+    <div class="popover" v-if="vote.show">
+      <div class="vote_box form">
+        <div class="head flex_shrink row_layout">
+          <span>{{vote.detail?'编辑':'新增'}}投票</span>
+        </div>
+
+        <component_meeting-vote-config class="box" :vote-info-form="vote.detail" :meeting-users="user_list[0]"
+          :meeting-id="id"></component_meeting-vote-config>
+
+        <div class="row_layout" style="align-self:end;padding: 20px;">
+          <el-button @click="close_vote_detail" size="small">取消</el-button>
+          <el-button @click="vote_submit" type="primary" size="small">确认</el-button>
+        </div>
+      </div>
+    </div>
+    <!-- 开始投票窗口 -->
+    <div class="popover" v-if="vote.start_show">
+      <div class="start_box form">
+        <div class="head flex_shrink row_layout">
+          <span>开始投票</span>
+          <el-button @click="close_vote_start" type="text" icon="el-icon-close" style="margin-left:auto;"></el-button>
+        </div>
+
+        <component_meeting-voting :vote-start="vote.start"
+          style="flex-grow:1;overflow:auto;"></component_meeting-voting>
+
+        <div class="row_layout" style="align-self:end;padding: 20px;">
+          <el-button @click="check_vote_result" type="primary" size="small">查看结果</el-button>
+          <el-button @click="end_vote" type="danger" size="small">立即结束</el-button>
+        </div>
+      </div>
+    </div>
+    <!-- 投票结果窗口 -->
+    <div class="popover" v-if="vote.result_show">
+      <div class="vote_box form">
+        <div class="head flex_shrink row_layout">
+          <span>投票结果</span>
+          <el-button @click="vote.result_show=false" type="text" icon="el-icon-close"
+            style="margin-left:auto;"></el-button>
+        </div>
+
+        <component_meeting-vote-result :max-height="400" :vote-result="vote.result"
+          style="flex-grow:1;overflow:auto;"></component_meeting-vote-result>
+      </div>
+    </div>
   </div>
 
   <script src="../../运维人员部署请修改我.js"></script>
@@ -141,6 +205,8 @@
   <script src="../module/axios.min.js"></script>
   <script src="../module/echarts.min.js"></script>
   <script src="../module/common_function.js"></script>
+  <script src="../../dlc2/components/worker.js"></script>
+  <script src="../../dlc2/components/components.js"></script>
   <script src="./index.js"></script>
 </body>
 

@@ -96,11 +96,11 @@ new Vue({
 		// 解析权限树
 		let limits;
 		for (let val of JSON.parse(sessionStorage.hushanwebmenuTree)) {
-			if (val.name === '湖山云会管平台') {
+			if (val.path === '云会管平台') {
 				for (let val2 of val.subMenus) {
-					if (val2.name === '会议管理') {
+					if (val2.path === '云会管平台_会议管理') {
 						for (let val3 of val2.subMenus) {
-							if (val3.name === '我的会议') {
+							if (val3.path === '云会管平台_会议管理_我的会议') {
 								limits = val3.subMenus;
 								break;
 							}
@@ -116,7 +116,7 @@ new Vue({
 		this.config.recall_show = this.is_element_show(limits, '撤回');
 		this.config.detail_show = this.is_element_show(limits, '详情');
 		this.config.rebook_show = this.is_element_show(limits, '重新预定');
-		// this.config.remind_show = this.is_element_show(limits, '提醒审核');
+		this.config.remind_show = this.is_element_show(limits, '提醒审核');
 
 		if (localStorage.hushanwebuserinfo) {
 			let obj = JSON.parse(localStorage.hushanwebuserinfo);
@@ -131,7 +131,8 @@ new Vue({
 		// 解析权限树
 		is_element_show(source, key) {
 			for (let val of source) {
-				if (val.name === key) {
+				let t = val.path.split('_');
+				if (t[t.length - 1] === key) {
 					return true;
 				}
 			}
@@ -330,11 +331,11 @@ new Vue({
 			});
 		},
 		// 提醒管理员审核
-		remind(row_obj) {
+		remind(id) {
 			if (this.html.count_down) {
 				return;
 			} else {
-				this.request('put', remind_url, this.token, [row_obj.id], (res) => {
+				this.request('put', remind_url, this.token, [id], (res) => {
 					if (res.data.head.code !== 200) {
 						this.$message('提醒失败');
 						return;

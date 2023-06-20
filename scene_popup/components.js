@@ -172,7 +172,7 @@ let selector2 = {
 					t = val.label;
 				}
 			}
-			this.$emit('text', t);
+			this.item.inputParamDesc = t;
 		},
 	},
 };

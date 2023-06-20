@@ -87,9 +87,9 @@ new Vue({
 		// 解析权限树
 		let limits;
 		for (let val of JSON.parse(sessionStorage.hushanwebmenuTree)) {
-			if (val.name === '开发者中心') {
+			if (val.path === '开发者中心') {
 				for (let val2 of val.subMenus) {
-					if (val2.name === '升级管理') {
+					if (val2.path === '开发者中心_升级管理') {
 						limits = val2.subMenus;
 						break;
 					}
@@ -113,7 +113,8 @@ new Vue({
 		// 解析权限树
 		is_element_show(source, key) {
 			for (let val of source) {
-				if (val.name === key) {
+				let t = val.path.split('_');
+				if (t[t.length - 1] === key) {
 					return true;
 				}
 			}

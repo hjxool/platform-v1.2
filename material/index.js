@@ -64,11 +64,11 @@ new Vue({
 		// 解析权限树
 		let limits;
 		for (let val of JSON.parse(sessionStorage.hushanwebmenuTree)) {
-			if (val.name === '智慧信息发布' && this.source === 'info_publish') {
+			if (val.path === '智慧信息发布' && this.source === 'info_publish') {
 				for (let val2 of val.subMenus) {
-					if (val2.name === '内容管理') {
+					if (val2.path === '智慧信息发布_内容管理') {
 						for (let val3 of val2.subMenus) {
-							if (val3.name === '素材管理') {
+							if (val3.path === '智慧信息发布_内容管理_素材管理') {
 								limits = val3.subMenus;
 								break;
 							}
@@ -77,25 +77,25 @@ new Vue({
 					}
 				}
 				break;
-			} else if (val.name === '开发者中心' && this.source === 'developer') {
+			} else if (val.path === '开发者中心' && this.source === 'developer') {
 				for (let val2 of val.subMenus) {
-					if (val2.name === '素材管理') {
+					if (val2.path === '开发者中心_素材管理') {
 						limits = val2.subMenus;
 						break;
 					}
 				}
 				break;
-			} else if (val.name === '资源中心' && this.source === 'resource_center') {
+			} else if (val.path === '资源中心' && this.source === 'resource_center') {
 				for (let val2 of val.subMenus) {
-					if (val2.name === '公共素材') {
+					if (val2.path === '资源中心_公共素材') {
 						limits = val2.subMenus;
 						break;
 					}
 				}
 				break;
-			} else if (val.name === '智慧音视频广播' && this.source === 'broadcast') {
+			} else if (val.path === '智慧音视频广播' && this.source === 'broadcast') {
 				for (let val2 of val.subMenus) {
-					if (val2.name === '媒体库') {
+					if (val2.path === '智慧音视频广播_媒体库') {
 						limits = val2.subMenus;
 						break;
 					}
@@ -153,7 +153,8 @@ new Vue({
 		// 解析权限树
 		is_element_show(source, key) {
 			for (let val of source) {
-				if (val.name === key) {
+				let t = val.path.split('_');
+				if (t[t.length - 1] === key) {
 					return true;
 				}
 			}
