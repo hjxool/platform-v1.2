@@ -92,6 +92,11 @@ const fn = {
 									if (typeof value !== 'string') {
 										return;
 									}
+									// 长度不够补零
+									let l = this.obj.nh * this.obj.mw - value.length;
+									for (let i = 0; i < l; i++) {
+										value += '0';
+									}
 									// 传入的是字符串 根据行和列截断
 									let arr = [];
 									for (let index = 0; index < this.obj.nh; index++) {

@@ -1428,6 +1428,10 @@ new Vue({
 			}
 			this.scroll = true;
 		},
+		// 鼠标悬浮显示审核人信息
+		auditor_title(obj) {
+			return `${obj.approveUserickName || '空'}(${obj.approveUserPhone || '空'})`;
+		},
 	},
 	//#region
 	// computed: {

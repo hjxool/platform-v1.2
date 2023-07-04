@@ -28,7 +28,8 @@ new Vue({
 			files: [], //附件
 			// download: 0, //0表示不能导出会议纪要
 			save: 0, //0表示不能显示和修改会议纪要
-			qr_src: '', //
+			qr_src: '', //签到二维码
+			status: -1, //会议状态
 		},
 		user_list: [], //参会人员列表
 		id: '', //会议id
@@ -124,6 +125,7 @@ new Vue({
 					this.meeting_detail.place = this.meeting_obj.roomName;
 					this.meeting_detail.user = this.meeting_obj.moderatorName;
 					this.meeting_detail.files = this.meeting_obj.meetingFiles.length ? this.meeting_obj.meetingFiles : [];
+					this.meeting_detail.status = this.meeting_obj.status;
 					// 统计信息
 					let reject = 0,
 						join = 0,
@@ -143,8 +145,9 @@ new Vue({
 						} else if (val.signIn == 1 || val.signIn == 2) {
 							sign_in++;
 							sign_in2.push(val);
-						} else if (val.signIn == 2) {
-							late++;
+							if (val.signIn == 2) {
+								late++;
+							}
 						} else {
 							no_late++;
 						}
@@ -440,7 +443,7 @@ new Vue({
 			} else {
 				this.vote.detail = {
 					title: '',
-					duration: 2,
+					duration: 0,
 					isMultiSelect: false,
 					isAnonymous: false,
 					selections: [{ key: Date.now(), value: '' }],
@@ -459,6 +462,7 @@ new Vue({
 		},
 		// 查看投票结果
 		check_vote_result() {
+			this.get_vote_list();
 			this.request('get', `${get_vote_result_url}/${this.vote.start.id}`, this.token, (res) => {
 				if (res.data.head.code !== 200) {
 					return;
@@ -474,6 +478,7 @@ new Vue({
 					return;
 				}
 				this.vote.start_show = false;
+				this.get_vote_list();
 			});
 		},
 		// 导出投票结果

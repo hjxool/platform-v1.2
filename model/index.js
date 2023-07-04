@@ -1392,7 +1392,7 @@ new Vue({
 					return;
 				}
 				body.profile.productId = this.history_list[0].profile.productId;
-				body.profile.versionAlias = r1;
+				body.profile.versionAlias = r1.value;
 				this.request('post', protocol_newVersion, this.token, body, () => {
 					this.request('post', protocol_list, this.token, { condition: this.id, pageNum: 1, pageSize: 999 }, this.res_history_model(0));
 				});

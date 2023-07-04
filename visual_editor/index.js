@@ -1,5 +1,5 @@
 let url = `${我是接口地址}/`;
-let components_url = `${url}api-device/product/controlPanel/PC`;
+let components_url = `${url}api-device/device/controlPanel/PC`; //根据设备id查询可视化面板
 let get_data_url = url + 'api-device/device/status'; //查询数据
 let sendCmdtoDevice = url + 'api-device/device/panel/operation'; // 下发指令
 let user_info_url = `${url}api-auth/oauth/userinfo`; //获取用户信息
@@ -38,7 +38,8 @@ new Vue({
 		if (!location.search) {
 			this.token = sessionStorage.token;
 			this.device_id = sessionStorage.device_id;
-			this.product_id = sessionStorage.product_id;
+			// this.product_id = sessionStorage.product_id;
+			this.device_id = sessionStorage.device_id;
 			document.title = decodeURIComponent(window.sessionStorage.device_name);
 		} else {
 			this.get_token();
@@ -77,7 +78,7 @@ new Vue({
 	methods: {
 		// 获取组件布局
 		get_components() {
-			this.request('get', `${components_url}/${this.product_id}`, this.token, (res) => {
+			this.request('get', `${components_url}/${this.device_id}`, this.token, (res) => {
 				console.log('组件数据', res);
 				if (res.data.head.code != 200 || !res.data.data) {
 					this.$message('未配置产品可视化界面');

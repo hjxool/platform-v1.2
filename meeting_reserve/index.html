@@ -61,10 +61,18 @@
                 <el-tag type="warning" size="mini" v-if="item.approve==1">需审批</el-tag>
                 <el-tag size="mini" v-if="item.approve==0">无需审批</el-tag>
               </div>
-              <span class="type">{{item.type==0?'视频':item.type==1?'综合':'无纸化'}}</span>
+
+              <div class="row_layout" style="justify-content:space-between;">
+                <span class="type">{{item.type==0?'视频':item.type==1?'综合':'无纸化'}}</span>
+                <span v-if="item.approve==1" class="type" style="margin-right:40px;">审核人</span>
+              </div>
+
               <div class="box2">
                 <img src="./img/icon1.png" class="icon" draggable="false">
-                <span class="type"> {{item.num}}</span>
+                <span class="type" style="margin-right:auto;"> {{item.num}}</span>
+
+                <span v-if="item.approve==1" class="type text_ellipsis" style="max-width:150px;"
+                  :title="auditor_title(item)">{{item.approveUserickName||'空'}}({{item.approveUserPhone||'空'}})</span>
               </div>
             </div>
             <!-- <div class="center">

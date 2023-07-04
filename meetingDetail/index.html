@@ -100,11 +100,12 @@
 
             <div class="row_layout flex_shrink" style="margin-left: auto;">
               <el-button @click="edit_vote_show()" type="primary" round size="mini">新增投票</el-button>
-              <el-button @click="export_result" type="primary" round size="mini">导出投票结果</el-button>
+              <el-button v-show="vote.list.length" @click="export_result" type="primary" round
+                size="mini">导出投票结果</el-button>
             </div>
           </div>
 
-          <component_meeting-vote-list :max-height="300" :vote-list="vote.list"
+          <component_meeting-vote-list :max-height="300" :vote-list="vote.list" :meeting-status="meeting_detail.status"
             :meeting-id="id"></component_meeting-vote-list>
         </el-card>
         <!-- 会议纪要 -->

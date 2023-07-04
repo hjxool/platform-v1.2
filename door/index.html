@@ -134,6 +134,7 @@
             </div>
             <!-- 卡片容器 -->
             <div class="box2">
+              <!-- :style="{zIndex:status.device_hover===index?'20':''}" -->
               <div v-for="item,index in status.place_devices" class="card" draggable="true"
                 @dragstart="drag_device(item)">
                 <img v-show="item.statusValue==1" src="./img/deviceBg.png" class="bg_img">
@@ -158,8 +159,16 @@
                       :style="{color:item.statusValue==1?'#00FFA2':'#F6B63C'}">{{item.statusValue==1?'在线':item.statusValue?'离线':'未注册'}}</span>
                   </div>
                 </div>
+                <!-- @mouseenter="status.device_hover=index" @mouseleave="status.device_hover=-1" -->
                 <div v-show="config.control_device_show" class="button2" @click="turn_to_device(item)">
                   <img src="./img/button.png" class="bg_img" draggable="false">
+
+                  <!-- <div v-show="status.device_hover===index" class="box2_2">
+                    <div class="box2_2_1" @click="turn_to_device(item)">
+                      <img src="./img/icon.png" class="icon">
+                      <span>设备详情</span>
+                    </div>
+                  </div> -->
                 </div>
               </div>
             </div>
@@ -237,6 +246,25 @@
         <div class="head">
           <h2 class="title">{{html.device_name}}</h2>
           <div class="box1">
+            <div v-for="item in status.visual_exclusive_config" style="margin-right:16px;">
+              <el-switch v-model="item.value" @change="exclusive_visual_save(item,$event)" style="margin-right:10px;"
+                :active-value="1" :inactive-value="0"></el-switch>
+              <span>{{item.label}}</span>
+            </div>
+
+            <el-dropdown v-show="html.visualizedFlag&&!status.open_visual_edit" @command="turn_to_visual_edit"
+              :disabled="!status.visual_exclusive_config[0]?.value" style="margin: 0 10px;">
+              <el-button type="primary" size="small">
+                设备可视化编辑<i class="el-icon-arrow-down el-icon--right"></i>
+              </el-button>
+              <el-dropdown-menu slot="dropdown">
+                <el-dropdown-item command="PC">PC</el-dropdown-item>
+                <el-dropdown-item command="PHONE">移动端</el-dropdown-item>
+              </el-dropdown-menu>
+            </el-dropdown>
+            <el-button v-show="html.visualizedFlag&&status.open_visual_edit" @click="close_visual_edit" type="danger"
+              size="small">关闭</el-button>
+
             <el-button @click="iconize_device_window" type="warning" icon="el-icon-minus" circle
               size="mini"></el-button>
             <el-button @click="close_device_window" style="margin-left: 10px;" type="danger" icon="el-icon-close" circle

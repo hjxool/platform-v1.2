@@ -8,13 +8,14 @@ let set_place_url = `${url}api-portal/place/set`;
 let curent_user_name_url = `${url}api-auth/oauth/user/tenant`;
 let unbind_device_url = `${url}api-portal/place/delete`;
 let devices_status_info_url = `${url}api-portal/deviceAnalyse/ops/search/devices`;
-let edit_device_url = `${url}api-device/device`;
+let edit_device_url = `${url}api-device/device`; // 设备信息相关
 let device_alert_url = `${url}api-portal/device-alarm/search`;
 let handle_alert_url = `${url}api-portal/device-alarm/deal`;
 let limits_url = `${url}api-user/menus/current`; //获取菜单权限
+let visual_config_url = `${url}api-device/device/controlPanel/switch`; //专属可视化开关
 
 Vue.config.productionTip = false;
-new Vue({
+let vm = new Vue({
 	el: '#index',
 	mixins: [common_functions],
 	data: {
@@ -37,6 +38,8 @@ new Vue({
 			device_url: '', //设备跳转路径
 			iconize_device: false, //最小化弹窗
 			alert_detail_display: false, //告警详情弹窗
+			visualizedFlag: false, //是否显示可视化编辑按钮
+			click_frequence: false, //限制点击频率
 		},
 		place_type_list: [], //场所类型
 		edit_place_form: {
@@ -75,6 +78,9 @@ new Vue({
 			page_size: 20, //一页最大显示条数
 			alert_table_h: 0,
 			alert_list: [], //告警列表
+			// device_hover: -1, // 鼠标悬浮的设备卡片
+			visual_exclusive_config: [], // 设备专属可视化页面参数
+			open_visual_edit: false, // 没打开可视化编辑时区分显示
 		},
 		config: {
 			device_manage_show: false,
@@ -187,12 +193,12 @@ new Vue({
 		req_place_list() {
 			this.request('post', `${place_list}/${this.status.user_id}/findAll`, this.token, (res) => {
 				console.log('场所', res);
-				if (res.data.data != null && typeof res.data.data == 'object' && res.data.data.length > 0) {
-					this.status.place_list = res.data.data;
-					this.get_place_devices(res.data.data[0].id);
-				} else {
+				this.status.place_list = res.data.data;
+				if (res.data.head.code !== 200 || !this.status.place_list.length) {
 					this.$message.info('该租户下无场所');
+					return;
 				}
+				this.get_place_devices(res.data.data[0].id);
 			});
 		},
 		// 场所类型获取
@@ -334,36 +340,27 @@ new Vue({
 			}
 		},
 		// 跳转到设备页面
-		turn_to_device(device_obj) {
+		async turn_to_device(device_obj) {
 			// if (device_obj.statusValue == 2) {
 			// 	this.$message('设备不在线！');
 			// 	return;
 			// }
-			//#region
-			// if (type == 0) {
-			// 	if (device_obj.visualizedFlag) {
-			// 		window.open(`../index.html?type=Visual_Preview&token=${this.token}&deviceId=${device_obj.id}&productId=${device_obj.productId}`);
-			// 	} else {
-			// 		this.$message('请配置产品可视化界面后再试');
-			// 	}
-			// } else {
-			// 	if (device_obj.productUrl) {
-			// 		let name = encodeURIComponent(device_obj.deviceName);
-			// 		window.open(`../index.html?type=${device_obj.productUrl}&token=${this.token}&id=${device_obj.id}&device_name=${name}`);
-			// 	} else {
-			// 		this.$message('请配置产品调控页面前端标识后再试');
-			// 	}
-			// }
-			//#endregion
 			// 保存下当前操作的对象
 			this.device_obj = device_obj;
 			this.html.iconize_device = false;
+			// 保存设备id、产品id、以及是否可视化 用于回显及传参
+			this.html.visualizedFlag = device_obj.visualizedFlag;
+			this.status.open_visual_edit = false;
 			if (device_obj.visualizedFlag) {
+				// 先查专属可视化参数 再显示设备弹窗
+				await this.exclusive_visual(device_obj);
+				this.device_id = device_obj.id;
+				this.product_id = device_obj.productId;
 				this.html.turn_to_device = true;
 				let name = encodeURIComponent(device_obj.deviceName);
 				this.html.device_name = device_obj.deviceName;
-				// window.open(`../index.html?type=Visual_Preview&token=${this.token}&deviceId=${device_obj.id}&productId=${device_obj.productId}&device_name=${name}`);
 				this.html.device_url = `../index.html?type=Visual_Preview&token=${this.token}&deviceId=${device_obj.id}&productId=${device_obj.productId}&device_name=${name}`;
+				this.device_url = this.html.device_url;
 			} else {
 				if (device_obj.productUrl) {
 					this.html.turn_to_device = true;
@@ -376,24 +373,28 @@ new Vue({
 				}
 			}
 		},
+		// 跳转设备可视化编辑
+		turn_to_visual_edit(type) {
+			this.status.open_visual_edit = true;
+			this.html.device_url = `../index.html?type=visual_edit&id=${this.product_id}&token=${this.token}&platform=${type}&sbid=${this.device_id}`;
+		},
+		// 关闭可视化编辑返回之前设备页面
+		close_visual_edit() {
+			this.status.open_visual_edit = false;
+			this.html.device_url = this.device_url;
+		},
 		// 切换选项查看场所信息
 		option_switch(index) {
 			this.html.option_focus = index;
 			this.req_user_list();
 			if (this.html.option[index].name === '设备管理') {
 				this.get_all_user_devices();
-				this.request('get', user_list, this.token, (res) => {
-					console.log('租户', res);
-					if (typeof res.data.data == 'object' && res.data.data != null) {
-						this.status.user_list = res.data.data;
-					}
-				});
 				this.$nextTick(() => {
 					let dom = document.querySelector('.all_device');
 					this.devices.table_h = dom.offsetHeight - 20;
 				});
 			} else if (this.html.option[index].name == '设备监控') {
-				this.req_user_list();
+				// this.req_user_list();
 			}
 		},
 		// 查询所有租户设备
@@ -582,7 +583,8 @@ new Vue({
 		},
 		// 最大化设备窗口
 		full_size() {
-			this.turn_to_device(this.device_obj);
+			this.html.turn_to_device = true;
+			this.html.iconize_device = false;
 		},
 		// 关闭设备窗口
 		close_device_window() {
@@ -629,5 +631,63 @@ new Vue({
 			}
 			this.html.alert_detail_display = false;
 		},
+		// 编辑设备的专属可视化选项
+		exclusive_visual(device) {
+			this.status.visual_exclusive_config = [];
+			return new Promise((resolve, reject) => {
+				this.request('get', `${edit_device_url}/${device.id}`, this.token, (res) => {
+					resolve();
+					if (res.data.head.code !== 200) {
+						return;
+					}
+					// this.html.exclusive_visual_show = true;
+					// this.device_id = device.id;
+					let data = res.data.data.controlPanelInfo;
+					let pc = {
+						label: 'PC',
+						value: data.pc,
+					};
+					let app = {
+						label: 'App',
+						value: data.app,
+					};
+					let wechat = {
+						label: 'WeChat',
+						value: data.wechat,
+					};
+					this.status.visual_exclusive_config.push(pc, app, wechat);
+				});
+			});
+		},
+		// 开关专属可视化
+		exclusive_visual_save(obj, value) {
+			if (this.html.click_frequence) {
+				this.$message('点的太快啦！');
+				return;
+			}
+			this.html.click_frequence = true;
+			let pn;
+			switch (obj.label) {
+				case 'PC':
+					pn = 'PC';
+					break;
+				case 'App':
+					pn = 'PHONE';
+					break;
+				case 'WeChat':
+					pn = 'WECHAT';
+					break;
+			}
+			this.request('put', `${visual_config_url}/${pn}/${this.device_id}/${value}`, this.token, (res) => {
+				this.html.click_frequence = false;
+				if (res.data.head.code !== 200) {
+					obj.value = value ? 0 : 1;
+				}
+			});
+		},
 	},
 });
+// 设备可视化编辑保存后触发方法
+function bjqifbc() {
+	vm.turn_to_device(vm.device_obj);
+}

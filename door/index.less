@@ -320,8 +320,9 @@
 						cursor: pointer;
 						.box2_2 {
 							position: absolute;
-							left: calc(100% + 10px);
-							width: 110px;
+							left: 100%;
+							padding-left: 10px;
+							width: 150px;
 							.box2_2_1 {
 								padding: 10px 0;
 								display: flex;
@@ -330,6 +331,7 @@
 								color: #fff;
 								background: #1c2740;
 								border: 1px solid #637094;
+								cursor: pointer;
 								&:hover {
 									color: #13a4ff;
 								}
@@ -444,21 +446,21 @@
 	flex-direction: column;
 	> .head {
 		padding: 10px 0;
-		position: relative;
 		display: flex;
 		align-items: center;
-		justify-content: center;
+		justify-content: space-between;
 		.title {
 			color: #fff;
 			margin: 0;
 		}
 		.box1 {
-			position: absolute;
-			right: 10px;
+			display: flex;
+			align-items: center;
+			color: #fff;
 		}
 	}
 	> .body {
-		margin: 20px;
+		// margin: 20px;
 		flex-grow: 1;
 	}
 }
@@ -491,6 +493,39 @@
 	.paging {
 		align-self: center;
 		padding: 20px 0;
+	}
+}
+.visual_config_window {
+	width: 30%;
+	height: 130px;
+	background: rgb(36, 38, 50);
+	border-radius: 10px;
+	display: flex;
+	flex-direction: column;
+	color: #fff;
+	> .head {
+		padding: 10px 20px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+	> .body {
+		flex-grow: 1;
+		padding: 0 20px;
+		> .row_layout {
+			display: flex;
+			align-items: center;
+			> .margin {
+				margin-right: 16px;
+			}
+			.margin2 {
+				margin-right: 10px;
+			}
+		}
+	}
+	> .foot {
+		padding: 10px;
+		align-self: end;
 	}
 }
 

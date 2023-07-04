@@ -55,6 +55,9 @@ new Vue({
 				case 'power_supply2':
 					location.href = `../湖山智慧设备/电源设备2/index.html${location.search}`;
 					return;
+				case 'visual_edit':
+					location.href = `../后台管理系统/设备可视化编辑器/index.html${location.search}`;
+					return;
 				case 'UpgradeManagement':
 					path = 'upgradeManager';
 					break;

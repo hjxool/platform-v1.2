@@ -116,7 +116,7 @@ new Vue({
 		this.config.recall_show = this.is_element_show(limits, '撤回');
 		this.config.detail_show = this.is_element_show(limits, '详情');
 		this.config.rebook_show = this.is_element_show(limits, '重新预定');
-		this.config.remind_show = this.is_element_show(limits, '提醒审核');
+		this.config.remind_show = this.is_element_show(limits, '催办');
 
 		if (localStorage.hushanwebuserinfo) {
 			let obj = JSON.parse(localStorage.hushanwebuserinfo);
