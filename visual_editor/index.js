@@ -81,6 +81,7 @@ new Vue({
 			this.request('get', `${components_url}/${this.device_id}`, this.token, (res) => {
 				console.log('组件数据', res);
 				if (res.data.head.code != 200 || !res.data.data) {
+					this.html.page_loading = false;
 					this.$message('未配置产品可视化界面');
 					return;
 				}

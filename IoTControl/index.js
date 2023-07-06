@@ -166,7 +166,7 @@ new Vue({
 			this.html.page_loading = true;
 			let applicationId;
 			switch (this.application) {
-				case '湖山云会管平台':
+				case '云会管平台':
 					applicationId = '7';
 					break;
 				case '智慧音视频广播':

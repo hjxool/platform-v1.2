@@ -682,6 +682,13 @@ let vm = new Vue({
 				this.html.click_frequence = false;
 				if (res.data.head.code !== 200) {
 					obj.value = value ? 0 : 1;
+					return;
+				}
+				if (pn === 'PC') {
+					this.html.device_url = '';
+					this.$nextTick(() => {
+						this.turn_to_device(this.device_obj);
+					});
 				}
 			});
 		},

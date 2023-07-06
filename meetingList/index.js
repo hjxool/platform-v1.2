@@ -57,7 +57,6 @@ new Vue({
 			],
 			size: 20, //一页显示条数
 			delay_set_show: false, // 延迟弹窗显示
-			count_down: 0, // 点击倒计时 限制点击频率及显示
 		},
 		total_size: 0, //总条数
 		tableData: [], //表格数据
@@ -183,7 +182,11 @@ new Vue({
 					return;
 				}
 				this.total_size = res.data.data.total;
-				this.tableData = res.data.data.data;
+				let data = res.data.data.data;
+				for (let val of data) {
+					val.count_down = 0; // 点击倒计时 限制点击频率及显示
+				}
+				this.tableData = data;
 			});
 		},
 		// 撤销会议
@@ -292,7 +295,7 @@ new Vue({
 						return true;
 					}
 				case '提醒审核':
-					if (meeting_obj.auditStatus == 1 && this.current_user == meeting_obj.createUser && !this.html.count_down) {
+					if (meeting_obj.auditStatus == 1 && this.current_user == meeting_obj.createUser && !meeting_obj.count_down) {
 						// 审核状态 待审核 且为 创建人 倒计时为0
 						return false;
 					} else {
@@ -331,21 +334,23 @@ new Vue({
 			});
 		},
 		// 提醒管理员审核
-		remind(id) {
-			if (this.html.count_down) {
+		remind(obj) {
+			if (obj.count_down) {
 				return;
 			} else {
-				this.request('put', remind_url, this.token, [id], (res) => {
+				obj.count_down = 60; // 以防频繁发起请求
+				this.request('put', remind_url, this.token, [obj.id], (res) => {
 					if (res.data.head.code !== 200) {
-						this.$message('提醒失败');
+						this.$message('提醒失败，原因：' + res.data.head.message);
+						obj.count_down = 0;
 						return;
 					}
-					this.$message.success('提醒失败');
+					this.$message.success('提醒成功');
 					// 发送请求后开始倒计时
-					this.html.count_down = 60;
+					obj.count_down = 60;
 					let timer = setInterval(() => {
-						--this.html.count_down;
-						if (!this.html.count_down) {
+						--obj.count_down;
+						if (!obj.count_down) {
 							clearInterval(timer);
 						}
 					}, 1000);

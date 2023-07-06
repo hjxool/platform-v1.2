@@ -246,10 +246,12 @@
         <div class="head">
           <h2 class="title">{{html.device_name}}</h2>
           <div class="box1">
-            <div v-for="item in status.visual_exclusive_config" style="margin-right:16px;">
-              <el-switch v-model="item.value" @change="exclusive_visual_save(item,$event)" style="margin-right:10px;"
-                :active-value="1" :inactive-value="0"></el-switch>
-              <span>{{item.label}}</span>
+            <div v-show="html.visualizedFlag" style="display:flex;align-items:center;">
+              <div v-for="item in status.visual_exclusive_config" style="margin-right:16px;">
+                <el-switch v-model="item.value" @change="exclusive_visual_save(item,$event)" style="margin-right:10px;"
+                  :active-value="1" :inactive-value="0"></el-switch>
+                <span>{{item.label}}</span>
+              </div>
             </div>
 
             <el-dropdown v-show="html.visualizedFlag&&!status.open_visual_edit" @command="turn_to_visual_edit"

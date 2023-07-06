@@ -82,8 +82,8 @@
                 <el-button v-show="config.rebook_show" :disabled="meeting_button_ban('重新预定',scope.row)"
                   @click="turn_to_rebook(scope.row.id)" type="text" size="medium">重新预定</el-button>
                 <el-button v-show="config.remind_show" :disabled="meeting_button_ban('提醒审核',scope.row)"
-                  @click="remind(scope.row.id)" type="text"
-                  size="medium">{{html.count_down?`${html.count_down}s`:'提醒审核'}}</el-button>
+                  @click="remind(scope.row)" type="text"
+                  size="medium">{{scope.row.count_down?`${scope.row.count_down}s`:'提醒审核'}}</el-button>
               </div>
             </div>
           </template>
