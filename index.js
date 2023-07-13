@@ -87,6 +87,7 @@ new Vue({
 					break;
 				case 'role_add_user':
 				case 'department_add_user':
+				case 'search_user':
 					path = 'add_person';
 					break;
 				case 'ResourceCenter':

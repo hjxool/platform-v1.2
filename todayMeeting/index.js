@@ -1,8 +1,9 @@
 let url = `${我是接口地址}/`;
-let search_meeting_url = `${url}api-portal/meeting/list`;
+let search_meeting_url = `${url}api-portal/meeting/list`; //查询会议列表
 let user_url = `${url}api-auth/oauth/userinfo`; //获取当前登录用户信息
-let cancel_url = `${url}api-portal/meeting/cancel`;
+let cancel_url = `${url}api-portal/meeting/cancel`; //取消会议
 let limits_url = `${url}api-user/menus/current`; //获取菜单权限
+let meeting_pass_url = `${url}api-portal/meeting/transfer`; //转交会议
 
 new Vue({
 	el: '#index',
@@ -10,6 +11,7 @@ new Vue({
 	data: {
 		html: {
 			loading: true, //页面加载
+			pop_loading: false, //弹窗加载
 		},
 		total_size: 0, //总条目
 		current_user: '', //当前用户id
@@ -31,9 +33,16 @@ new Vue({
 			cur_op: '0,1,2', // 当前所选项
 			list: [], // 会议列表
 		},
+		pass: {
+			show: false, // 转交弹窗
+			all_show: false, // 总人员弹窗
+			list: [], //转交人员列表 只能保留一个
+			url: '', // 跳转人员列表地址
+		},
 		config: {
 			cancel_show: false,
 			check_show: false,
+			pass_on_show: true,
 		},
 	},
 	async mounted() {
@@ -90,6 +99,16 @@ new Vue({
 		this.get_data(1);
 		this.resize();
 		window.addEventListener('resize', this.resize);
+		this.pass.url = `../index.html?type=search_user&token=${this.token}&theme=light`;
+		window.onmessage = (data) => {
+			console.log('子页面消息', data);
+			if (data?.data?.type === 'Close popup') {
+				this.pass.all_show = false;
+			}
+			if (Array.isArray(data?.data)) {
+				this.pass.list = data.data;
+			}
+		};
 	},
 	methods: {
 		// 解析权限树
@@ -191,7 +210,7 @@ new Vue({
 				'post',
 				search_meeting_url,
 				this.token,
-				{ condition: { startTime: s, endTime: e, meetingStatus: this.body.cur_op, auditStatus: 2 }, pageNum: current, pageSize: this.body.size },
+				{ condition: { startTime: s, endTime: e, meetingStatus: this.body.cur_op, auditStatus: 2, isTransferFlag: 1 }, pageNum: current, pageSize: this.body.size },
 				(res) => {
 					console.log('会议列表', res);
 					this.html.loading = false;
@@ -236,16 +255,61 @@ new Vue({
 			});
 		},
 		// 取消会议按钮是否显示
-		cancel_meeting_show(row_obj) {
-			if ((this.current_user == row_obj.createUser || this.current_user == row_obj.moderatorId) && this.config.cancel_show) {
-				if (row_obj.auditStatus == 2 && row_obj.status === 0) {
-					return true;
-				} else {
-					return false;
-				}
-			} else {
-				return false;
+		button_show(row_obj, type) {
+			switch (type) {
+				case '取消':
+					if ((this.current_user == row_obj.createUser || this.current_user == row_obj.moderatorId) && this.config.cancel_show && row_obj.auditStatus == 2 && row_obj.status === 0) {
+						return true;
+					} else {
+						return false;
+					}
+				case '转交':
+					if (this.config.pass_on_show && row_obj.status === 0) {
+						return true;
+					} else {
+						return false;
+					}
 			}
+		},
+		// 显示转交弹窗
+		pass_on_meeting(id) {
+			this.meeting_id = id;
+			this.pass.show = true;
+			this.pass.list = [];
+		},
+		// 删除转交人员
+		del_person(index) {
+			this.pass.list.splice(index, 1);
+		},
+		// 显示总人员列表
+		add_person() {
+			this.pass.all_show = true;
+			let dom = document.querySelector('.user_list');
+			for (let val of this.pass.list) {
+				val.name = val.username;
+				val.type = 'person';
+			}
+			dom.contentWindow.postMessage(this.pass.list);
+		},
+		// 提交转交
+		pass_submit() {
+			if (!this.pass.list.length) {
+				this.$message.error('必须选一个转交人');
+				return;
+			}
+			if (this.pass.list.length > 1) {
+				this.$message.error('转交人只能选一个');
+				return;
+			}
+			this.html.pop_loading = true;
+			this.request('put', `${meeting_pass_url}/${this.meeting_id}?transferUserId=${this.pass.list[0].id}`, this.token, (res) => {
+				this.html.pop_loading = false;
+				if (res.data.head.code !== 200) {
+					return;
+				}
+				this.pass.show = false;
+				this.get_data(1);
+			});
 		},
 	},
 });

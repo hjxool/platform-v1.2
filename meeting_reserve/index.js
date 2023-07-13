@@ -1006,20 +1006,29 @@ new Vue({
 		},
 		// 下载excel模板
 		download() {
-			axios({
-				method: 'get',
-				url: `${url}api-file/files/view/9ECD2E6B3A604EC5ADBD1A9852CFA67D.xlsx`,
-				responseType: 'blob',
-			}).then((res) => {
-				// let b = new Blob([res.data], { type: 'application/vnd.ms-excel' });
-				let a = document.createElement('a');
-				a.href = URL.createObjectURL(res.data);
-				a.target = '_blank';
-				a.download = '模板.xlsx';
-				document.body.appendChild(a);
-				a.click();
-				document.body.removeChild(a);
-			});
+			//#region
+			// axios({
+			// 	method: 'get',
+			// 	url: `${url}api-file/files/view/9ECD2E6B3A604EC5ADBD1A9852CFA67D.xlsx`,
+			// 	responseType: 'blob',
+			// }).then((res) => {
+			// 	// let b = new Blob([res.data], { type: 'application/vnd.ms-excel' });
+			// 	let a = document.createElement('a');
+			// 	a.href = URL.createObjectURL(res.data);
+			// 	a.target = '_blank';
+			// 	a.download = '模板.xlsx';
+			// 	document.body.appendChild(a);
+			// 	a.click();
+			// 	document.body.removeChild(a);
+			// });
+			//#endregion
+			let a = document.createElement('a');
+			a.href = '../../系统下载模板/会管来宾模板.xlsx';
+			a.target = '_blank';
+			a.download = '模板.xlsx';
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
 		},
 		// 表单卡片样式
 		form_style() {

@@ -151,6 +151,13 @@ const fn = {
 									}
 									this.value = value;
 									break;
+								case 'text':
+									// 除了对象都能接收
+									if (typeof value === 'object') {
+										return;
+									}
+									this.value = value;
+									break;
 							}
 						} else {
 							// 否则继续递归

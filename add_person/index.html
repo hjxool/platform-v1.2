@@ -20,52 +20,54 @@
       </el-input>
       <div class="options" v-show="form.option_select==0">
         <div class="box flex_shrink button" v-for="index in 2" @click="get_person_data(index)">
-          <div class="bg center">
-            <i v-show="index==1" class="el-icon-user"></i>
-            <i v-show="index==2" class="el-icon-office-building"></i>
+          <div class="bg center" :style="theme_color('icon_bg')">
+            <i v-show="index==1" class="el-icon-user" :style="theme_color('font')"></i>
+            <i v-show="index==2" class="el-icon-office-building" :style="theme_color('font')"></i>
           </div>
-          <span style="font-size:14px;">{{index==1?'按人员选':'按架构选'}}</span>
+          <span class="font_size1" :style="theme_color('font')">{{index==1?'按人员选':'按架构选'}}</span>
         </div>
       </div>
       <div class="list_box" v-show="form.option_select!==0">
         <div v-show="form.stru_path.length==1||form.option_select==1" class="box1 flex_shrink">
-          <i class="el-icon-arrow-left icon button" @click="form.option_select=0"></i>
-          <span class="icon text">{{form.option_select==1?'按人员选':'按架构选'}}</span>
+          <i class="el-icon-arrow-left icon button" @click="form.option_select=0" :style="theme_color('font')"></i>
+          <span class="icon text" :style="theme_color('font')">{{form.option_select==1?'按人员选':'按架构选'}}</span>
         </div>
         <div v-if="form.option_select==2" class="box2 flex_shrink">
           <div class="text2" v-for="path,index in form.stru_path">
-            <span @click="path_back(path,index)" class="text button">{{path.name}}</span>
-            <i v-show="index!=form.stru_path.length-1" class="el-icon-arrow-right"></i>
+            <span @click="path_back(path,index)" class="text button" :style="theme_color('font')">{{path.name}}</span>
+            <i v-show="index!=form.stru_path.length-1" class="el-icon-arrow-right" :style="theme_color('font')"></i>
           </div>
         </div>
         <!-- 人员形式 -->
         <div class="scroll" v-if="form.option_select==1">
-          <div class="person" v-for="person,index in form.list3" @click="select_person(person)">
-            <div v-show="!person.check" class="icon1 flex_shrink"></div>
+          <div class="person" v-for="person,index in form.list2" @click="select_person(person)">
+            <div v-show="!person.check" class="icon1 flex_shrink" :style="theme_color('font')"></div>
             <div v-show="person.check" class="icon2 flex_shrink center">
               <i class="el-icon-check icon3"></i>
             </div>
-            <div class="name text_ellipsis" :title="person.name">{{person.name}}</div>
+            <div class="name text_ellipsis" :title="person.name" :style="theme_color('font')">{{person.name}}</div>
           </div>
         </div>
         <!-- 组织形式 -->
         <div class="scroll" v-if="form.option_select==2">
           <div class="person" v-for="de,index in form.list1">
-            <div v-show="!de.check" @click="select_person(de)" class="icon1 flex_shrink"></div>
+            <div v-show="!de.check" @click="select_person(de)" class="icon1 flex_shrink" :style="theme_color('font')">
+            </div>
             <div v-show="de.check" @click="select_person(de)" class="icon2 flex_shrink center">
               <i class="el-icon-check icon3"></i>
             </div>
-            <div class="name text_ellipsis" @click="select_person(de)" :title="de.name">{{de.name}}</div>
+            <div class="name text_ellipsis" @click="select_person(de)" :title="de.name" :style="theme_color('font')">
+              {{de.name}}</div>
             <el-button :disabled="de.check" @click.stop="get_person_data(form.option_select,de)" class="button"
               style="margin:0 10px;" type="text">下级</el-button>
           </div>
-          <div v-if="form.list2.length" class="line_between"></div>
+          <div v-if="form.list2.length && form.list1.length" class="line_between"></div>
           <div class="person" v-for="person,index in form.list2" @click="select_person(person)">
-            <div v-show="!person.check" class="icon1 flex_shrink"></div>
+            <div v-show="!person.check" class="icon1 flex_shrink" :style="theme_color('font')"></div>
             <div v-show="person.check" class="icon2 flex_shrink center">
               <i class="el-icon-check icon3"></i>
             </div>
-            <div class="name text_ellipsis" :title="person.name">{{person.name}}</div>
+            <div class="name text_ellipsis" :title="person.name" :style="theme_color('font')">{{person.name}}</div>
           </div>
         </div>
 
@@ -74,11 +76,11 @@
       </div>
     </div>
     <div class="right">
-      <span style="margin-bottom:10px;">已选择（ {{form.select_list.length}}/10000 ）</span>
+      <span class="margin1" :style="theme_color('font')">已选择（ {{form.select_list.length}}/10000 ）</span>
       <div class="scroll">
-        <div class="person flex_shrink" v-for="item,index in form.select_list">
-          <span class="name text_ellipsis" :title="item.name">{{item.name}}</span>
-          <i class="el-icon-close" @click="del_select(index)"></i>
+        <div class="person flex_shrink" v-for="item,index in form.select_list" :style="theme_color('icon_bg')">
+          <span class="name text_ellipsis" :title="item.name" :style="theme_color('font')">{{item.name}}</span>
+          <i class="el-icon-close" @click="del_select(index)" :style="theme_color('font')"></i>
         </div>
       </div>
       <div class="submit">

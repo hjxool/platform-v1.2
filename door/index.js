@@ -516,6 +516,10 @@ let vm = new Vue({
 		},
 		// 分配未绑定设备到场所 提交按钮
 		distribute_sub() {
+			if (!this.status.place_id) {
+				this.$message.error('请选择要绑定的场所');
+				return;
+			}
 			this.html.popover_loading = true;
 			let array = [];
 			for (let val of this.devices.select_list) {

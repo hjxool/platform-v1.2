@@ -1,9 +1,11 @@
 let url = `${我是接口地址}/`;
-let roles_list_url = `${url}api-user/roles/users/assignable`;
-let dep_list_url = `${url}api-user/department/users/assignable`;
-let remove_dup_url = `${url}api-portal/user/distinct`;
-let role_user_url = `${url}api-user/roles`;
-let dep_user_url = `${url}api-user/department`;
+let roles_list_url = `${url}api-user/roles/users/assignable`; // 根据角色id查询可分配列表
+let dep_list_url = `${url}api-user/department/users/assignable`; // 根据部门id查询可分配列表
+let remove_dup_url = `${url}api-portal/user/distinct`; //用户去重
+let role_user_url = `${url}api-user/roles`; //管理给角色分配用户
+let dep_user_url = `${url}api-user/department`; //管理给部门分配用户
+let all_user_url = `${url}api-portal/users`; //分页查询用户列表
+let all_layer_url = `${url}api-user/department/getSubDeptAndCurrentDeptUser`; //获取层级列表
 
 new Vue({
 	el: '#index',
@@ -13,7 +15,6 @@ new Vue({
 			search: '', // 搜索框
 			list1: [], // 组织数组
 			list2: [], // 人员数组
-			list3: [], //纯人员列表
 			stru_path: [], //组织结构路径 存储名字和索引id
 			select_list: [], //勾选的组织及人员列表
 			cur_path_id: '', //当前路径
@@ -24,20 +25,27 @@ new Vue({
 		html: {
 			page_loading: false,
 		},
+		theme: '',
 	},
 	mounted() {
-		if (!location.search) {
-			this.token = sessionStorage.token;
-			this.id = sessionStorage.id; //角色id
-			this.router = sessionStorage.router;
-		} else {
-			this.get_token();
+		this.get_token();
+		if (this.theme === 'light') {
+			let dom = document.getElementsByTagName('link');
+			dom[0].href = '../module/element-ui.css';
 		}
-		// this.get_person_data();
+		// 监听调用页面传入数据 用于回显
+		window.onmessage = (data) => {
+			console.log('父页面消息', data);
+			this.form.option_select = 0;
+			this.form.search = '';
+			if (Array.isArray(data?.data)) {
+				this.form.select_list = data.data;
+			}
+		};
 	},
 	methods: {
 		// 获取组织列表
-		get_person_data(index, params) {
+		get_person_data(index, params, params2) {
 			this.html.page_loading = true;
 			if (index == 1) {
 				let page;
@@ -48,11 +56,17 @@ new Vue({
 				}
 				let c;
 				if (this.router === 'role_add_user') {
+					// 角色分配入口
 					url = `${roles_list_url}/list`;
 					c = { targetRoleId: this.id };
 				} else if (this.router === 'department_add_user') {
+					// 部门分配入口
 					url = `${dep_list_url}/list`;
 					c = { targetDeptId: this.id };
+				} else if (this.router === 'search_user') {
+					// 没有this.id普通查询
+					url = all_user_url;
+					c = {};
 				}
 				this.request('post', url, this.token, { pageNum: page, pageSize: this.form.page_size, condition: c, keyword: this.form.search }, (res) => {
 					console.log('检索结果', res);
@@ -63,7 +77,7 @@ new Vue({
 					this.form.option_select = index;
 					let data = res.data.data;
 					this.form.total_person = data.total;
-					this.form.list3 = [];
+					this.form.list2 = [];
 					for (let val of data.data) {
 						let t = {
 							name: val.username,
@@ -71,9 +85,9 @@ new Vue({
 							check: false,
 							type: 'person', //不同类型显示样式不同
 						};
-						this.form.list3.push(t);
+						this.form.list2.push(t);
 					}
-					for (let val of this.form.list3) {
+					for (let val of this.form.list2) {
 						for (let val2 of this.form.select_list) {
 							if (val.id === val2.id) {
 								val.check = true;
@@ -106,6 +120,9 @@ new Vue({
 				} else if (this.router === 'department_add_user') {
 					url = dep_list_url;
 					c = { targetDeptId: this.id, currentDeptId: id };
+				} else if (this.router === 'search_user') {
+					url = all_layer_url;
+					c = { currentDeptId: id };
 				}
 				this.request('post', url, this.token, { pageNum: page, pageSize: this.form.page_size, condition: c }, (res) => {
 					console.log('检索结果', res);
@@ -158,9 +175,14 @@ new Vue({
 							}
 						}
 					}
-					if (id !== 1 && typeof params !== 'number') {
-						// 不是根节点 并且 不是切页时执行
-						this.form.stru_path.push(params);
+					// 判断是路径回退还是下级
+					if (typeof params2 === 'number') {
+						this.form.stru_path.splice(params2 + 1);
+					} else {
+						if (id !== 1 && typeof params !== 'number') {
+							// 不是根节点 并且 不是切页时执行
+							this.form.stru_path.push(params);
+						}
 					}
 					this.form.total_person = data.userPageResult.total; // 只分人员的页
 				});
@@ -170,68 +192,7 @@ new Vue({
 		path_back(obj, index) {
 			// 如果是当前展示的组织 则不能再查
 			if (this.form.cur_path_id !== obj.id) {
-				this.html.page_loading = true;
-				let c;
-				if (this.router === 'role_add_user') {
-					url = roles_list_url;
-					c = { targetRoleId: this.id, currentDeptId: obj.id };
-				} else if (this.router === 'department_add_user') {
-					url = dep_list_url;
-					c = { targetDeptId: this.id, currentDeptId: obj.id };
-				}
-				this.request('post', url, this.token, { pageNum: 1, pageSize: this.form.page_size, condition: c }, (res) => {
-					console.log('检索结果', res);
-					this.html.page_loading = false;
-					if (res.data.head.code != 200) {
-						return;
-					}
-					this.form.stru_path.splice(index + 1);
-					this.form.cur_path_id = obj.id;
-					let data = res.data.data;
-					this.form.list1 = [];
-					for (let val of data.sysDeptVOList) {
-						let t = {
-							name: val.deptName,
-							id: val.deptId,
-							check: false,
-							type: 'stru',
-						};
-						this.form.list1.push(t);
-					}
-					this.form.list2 = [];
-					if (data.userPageResult.data) {
-						for (let val of data.userPageResult.data) {
-							let t = {
-								name: val.username,
-								id: val.id,
-								check: false,
-								type: 'person',
-							};
-							this.form.list2.push(t);
-						}
-					}
-					for (let val of this.form.select_list) {
-						let find = false;
-						// 勾选列表是公用的 如果在部门列表中找到了 就break 否则去人员列表查
-						for (let val2 of this.form.list1) {
-							if (val.id === val2.id) {
-								find = true;
-								val.check = true;
-								break;
-							}
-						}
-						if (!find) {
-							for (let val2 of this.form.list2) {
-								if (val.id === val2.id) {
-									find = true;
-									val.check = true;
-									break;
-								}
-							}
-						}
-					}
-					this.form.total_person = data.userPageResult.total; // 只分人员的页
-				});
+				this.get_person_data(2, obj, index);
 			}
 		},
 		// 勾选或取消勾选人员和组织
@@ -250,19 +211,25 @@ new Vue({
 		},
 		// 删除勾选的组织或人员
 		del_select(index) {
-			for (let val of this.form.select_list) {
-				let find = false;
-				// 勾选列表是公用的 如果在部门列表中找到了 就break 否则去人员列表查
-				for (let val2 of this.form.list1) {
-					if (val.id === val2.id) {
-						find = true;
+			if (this.form.option_select == 1) {
+				for (let val of this.form.list2) {
+					if (val.id === this.form.select_list[index].id) {
 						val.check = false;
 						break;
 					}
 				}
+			} else if (this.form.option_select == 2) {
+				let find = false;
+				for (let val of this.form.list1) {
+					if (val.id === this.form.select_list[index].id) {
+						val.check = false;
+						find = true;
+						break;
+					}
+				}
 				if (!find) {
-					for (let val2 of this.form.list2) {
-						if (val.id === val2.id) {
+					for (let val of this.form.list2) {
+						if (val.id === this.form.select_list[index].id) {
 							val.check = false;
 							break;
 						}
@@ -313,6 +280,10 @@ new Vue({
 				} else if (this.router === 'department_add_user') {
 					url = dep_user_url;
 					jump = '部门管理';
+				} else if (this.router === 'search_user') {
+					window.parent.postMessage(res.data.data);
+					this.close_window();
+					return;
 				}
 				this.request('put', `${url}/${this.id}/users`, this.token, list, (res) => {
 					this.html.page_loading = false;
@@ -324,6 +295,19 @@ new Vue({
 					window.parent.postMessage({ type: 'jump', name: jump });
 				});
 			});
+		},
+		// 主题色
+		theme_color(type) {
+			switch (type) {
+				case 'font':
+					return {
+						color: this.theme == 'light' ? '' : '#fff',
+					};
+				case 'icon_bg':
+					return {
+						background: this.theme == 'light' ? 'rgba(105,105,105,0.2)' : '',
+					};
+			}
 		},
 	},
 });

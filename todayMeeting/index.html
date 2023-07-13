@@ -73,14 +73,52 @@
             </div>
           </div>
 
-          <div v-show="cancel_meeting_show(meeting)" class="box3 button" @click="cancel_meeting(meeting.id)">取消会议</div>
-          <div v-show="!cancel_meeting_show(meeting)" style="width:6.9rem;"></div>
+          <div v-show="button_show(meeting,'取消')" class="box3 button" @click="cancel_meeting(meeting.id)">取消会议</div>
+          <div v-show="button_show(meeting,'转交')" class="box3 button" @click="pass_on_meeting(meeting.id)">转交</div>
         </div>
       </div>
       <el-empty v-show="!body.list.length" style="flex-grow:1;" description="无会议"></el-empty>
 
       <el-pagination class="footer" @current-change="get_data" :page-size="html.size" background
         layout="total,prev,pager,next" :total="total_size"></el-pagination>
+    </div>
+    <!-- 弹窗 -->
+    <!-- 转交弹窗 -->
+    <div class="popover" v-if="pass.show">
+      <div class="pass_on pop_bg" v-loading="html.pop_loading">
+        <div class="head flex_shrink">会议转交</div>
+
+        <div class="box row_layout">
+          <span class="title">转交给</span>
+
+          <div class="user_box row_layout">
+            <div class="person button flex_shrink" @click="add_person">
+              <i class="el-icon-plus icon1"></i>
+              <span class="name">添加</span>
+            </div>
+
+            <div class="person flex_shrink" v-for="item,index in pass.list">
+              <span class="name text_ellipsis" :title="item.username">{{item.username}}</span>
+              <i class="el-icon-close" @click="del_person(index)"></i>
+            </div>
+
+            <div v-show="!pass.list.length" class="placeholder">转交人</div>
+          </div>
+        </div>
+
+        <div class="foot">
+          <el-button @click="pass.show=false" size="small">取消</el-button>
+          <el-button @click="pass_submit" type="primary" size="small">确认</el-button>
+        </div>
+      </div>
+    </div>
+    <!-- 总人员弹窗 -->
+    <div class="popover" v-show="pass.all_show">
+      <div class="all_user pop_bg">
+        <div class="head">人员列表</div>
+
+        <iframe class="user_list" :src="pass.url" frameborder="0" scrolling="no"></iframe>
+      </div>
     </div>
   </div>
 
