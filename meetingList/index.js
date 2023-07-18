@@ -6,6 +6,7 @@ let user_url = `${url}api-auth/oauth/userinfo`; //获取当前登录用户信息
 let cancel_url = `${url}api-portal/meeting/cancel`;
 let limits_url = `${url}api-user/menus/current`; //获取菜单权限
 let remind_url = `${url}api-portal/meeting/urge`; //提醒审核
+let meeting_pass_url = `${url}api-portal/meeting/transfer`; //转交会议
 
 new Vue({
 	el: '#index',
@@ -57,6 +58,8 @@ new Vue({
 			],
 			size: 20, //一页显示条数
 			delay_set_show: false, // 延迟弹窗显示
+			pop_loading: false, //弹窗遮罩
+			table_h: 0, // 表格高度
 		},
 		total_size: 0, //总条数
 		tableData: [], //表格数据
@@ -73,6 +76,13 @@ new Vue({
 			detail_show: false,
 			rebook_show: false,
 			remind_show: true,
+			pass_on_show: true, // 转交按钮
+		},
+		pass: {
+			show: false, //弹窗
+			all_show: false, // 总人员弹窗
+			list: [], //转交人
+			url: '', //总人员页
 		},
 	},
 	async mounted() {
@@ -123,8 +133,23 @@ new Vue({
 		} else {
 			this.get_current_user();
 		}
-		window.addEventListener('resize', this.table_height);
+		window.addEventListener('resize', () => {
+			this.table_height();
+		});
+		this.pass.url = `../index.html?type=search_user&token=${this.token}&theme=light`;
+		window.onmessage = (data) => {
+			console.log('子页面消息', data);
+			if (data?.data?.type === 'Close popup') {
+				this.pass.all_show = false;
+			}
+			if (Array.isArray(data?.data)) {
+				this.pass.list = data.data;
+			}
+		};
 		this.get_data();
+		this.$nextTick(() => {
+			this.table_height();
+		});
 	},
 	methods: {
 		// 解析权限树
@@ -151,7 +176,7 @@ new Vue({
 		// 计算表格最大高度
 		table_height() {
 			let dom = document.querySelector('.body');
-			return dom.offsetHeight;
+			this.html.table_h = dom.offsetHeight;
 		},
 		// 跳转详情页
 		turn_to(id) {
@@ -165,6 +190,7 @@ new Vue({
 			}
 			let c = {
 				// queryType: 0,
+				isTransferFlag: 1,
 			};
 			if (this.html.status !== 'all') {
 				c.auditStatus = this.html.status;
@@ -301,6 +327,13 @@ new Vue({
 					} else {
 						return true;
 					}
+				case '转交':
+					if (meeting_obj.status === 0 && meeting_obj.auditStatus === 2) {
+						// 会议未开始 审核通过
+						return false;
+					} else {
+						return true;
+					}
 			}
 		},
 		// 设置延后
@@ -356,6 +389,46 @@ new Vue({
 					}, 1000);
 				});
 			}
+		},
+		// 指定转交人弹窗
+		pass_on(obj) {
+			this.meeting_id = obj.id;
+			this.pass.show = true;
+			this.pass.list = [];
+		},
+		// 显示总人员列表
+		add_person() {
+			this.pass.all_show = true;
+			let dom = document.querySelector('.user_list');
+			for (let val of this.pass.list) {
+				val.name = val.username;
+				val.type = 'person';
+			}
+			dom.contentWindow.postMessage(this.pass.list);
+		},
+		// 删除转交人员
+		del_person(index) {
+			this.pass.list.splice(index, 1);
+		},
+		// 提交转交
+		pass_submit() {
+			if (!this.pass.list.length) {
+				this.$message.error('必须选一个转交人');
+				return;
+			}
+			if (this.pass.list.length > 1) {
+				this.$message.error('转交人只能选一个');
+				return;
+			}
+			this.html.pop_loading = true;
+			this.request('put', `${meeting_pass_url}/${this.meeting_id}?transferUserId=${this.pass.list[0].id}`, this.token, (res) => {
+				this.html.pop_loading = false;
+				if (res.data.head.code !== 200) {
+					return;
+				}
+				this.pass.show = false;
+				this.get_data();
+			});
 		},
 	},
 });

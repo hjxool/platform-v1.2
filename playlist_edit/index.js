@@ -20,6 +20,7 @@ new Vue({
 			list: [], // 添加到可选列表的
 			repeal_list: [], // 可撤销操作列表
 			renewal_list: [], // 可重做操作列表
+			name_ban: false, //播放列表名是否可修改
 		},
 		// 播放设置表单
 		play_form: {
@@ -70,6 +71,11 @@ new Vue({
 	},
 	mounted() {
 		this.get_token();
+		switch (this.prePage) {
+			case 'scene':
+				this.form.name_ban = true;
+				break;
+		}
 		this.get_data();
 		this.resize();
 		window.onresize = () => {
@@ -426,12 +432,17 @@ new Vue({
 		},
 		// 批量或者单个设置文件循环次数为2
 		loop_select() {
+			let flag = false;
 			for (let val of this.form.select_list) {
-				// 模板不能设置循环此时
+				// 模板不能设置循环次数
 				if (val.fileTypeString.indexOf('模板') !== -1) {
+					flag = true;
 					continue;
 				}
 				val.cycleNum = val.cycleNum === 1 ? 2 : val.cycleNum;
+			}
+			if (flag) {
+				this.$message('模板不能设置循环次数');
 			}
 		},
 		// 单个或批量播放设置

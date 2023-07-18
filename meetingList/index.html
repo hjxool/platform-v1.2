@@ -32,7 +32,7 @@
       </el-select>
     </div>
     <div class="body">
-      <el-table :data="tableData" :max-height="table_height()" stripe>
+      <el-table :data="tableData" :max-height="html.table_h" stripe>
         <el-table-column type="index" width="50"></el-table-column>
         <el-table-column prop="roomName" label="会议室"></el-table-column>
         <el-table-column prop="theme" label="会议主题"></el-table-column>
@@ -63,6 +63,11 @@
             <el-tag :type="scope.row.status==1?'':scope.row.status?'danger':'info'">{{scope.row.statusName}}</el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="转交状态" width="100">
+          <template slot-scope="scope">
+            <el-tag :type="scope.row.transferFlag?'warning':''">{{scope.row.transferFlag?'已转交':'未转交'}}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="300">
           <template slot-scope="scope">
             <div class="col_layout">
@@ -74,6 +79,8 @@
                 <!-- v-if="scope.row.auditStatus==1" -->
                 <el-button v-show="config.recall_show" :disabled="meeting_button_ban('撤回',scope.row)"
                   @click="revoke(scope.row)" type="text" size="medium">撤回</el-button>
+                <el-button v-show="config.pass_on_show" :disabled="meeting_button_ban('转交',scope.row)"
+                  @click="pass_on(scope.row)" type="text" size="medium">转交</el-button>
               </div>
 
               <div class="row_layout flex_shrink">
@@ -95,7 +102,7 @@
 
     <!-- 弹窗 -->
     <!-- 延迟弹窗 -->
-    <div v-if="html.delay_set_show" class="popover" style="align-items:center;">
+    <div v-if="html.delay_set_show" class="popover">
       <div class="delay_window">
         <div class="head row_layout">
           <span class="text">延后会议</span>
@@ -111,6 +118,43 @@
           <el-button @click="html.delay_set_show=false" size="small">取消</el-button>
           <el-button @click="delay_meeting" type="primary" size="small">确认</el-button>
         </div>
+      </div>
+    </div>
+    <!-- 转交弹窗 -->
+    <div class="popover" v-if="pass.show">
+      <div class="pass_on pop_bg" v-loading="html.pop_loading">
+        <div class="head flex_shrink">会议转交</div>
+
+        <div class="box row_layout">
+          <span class="title">转交给</span>
+
+          <div class="user_box row_layout">
+            <div class="person button flex_shrink" @click="add_person">
+              <i class="el-icon-plus icon1"></i>
+              <span class="name">添加</span>
+            </div>
+
+            <div class="person flex_shrink" v-for="item,index in pass.list">
+              <span class="name text_ellipsis" :title="item.username">{{item.username}}</span>
+              <i class="el-icon-close" @click="del_person(index)"></i>
+            </div>
+
+            <div v-show="!pass.list.length" class="placeholder">转交人</div>
+          </div>
+        </div>
+
+        <div class="foot">
+          <el-button @click="pass.show=false" size="small">取消</el-button>
+          <el-button @click="pass_submit" type="primary" size="small">确认</el-button>
+        </div>
+      </div>
+    </div>
+    <!-- 总人员弹窗 -->
+    <div class="popover" v-show="pass.all_show">
+      <div class="all_user pop_bg">
+        <div class="head">人员列表</div>
+
+        <iframe class="user_list" :src="pass.url" frameborder="0" scrolling="no"></iframe>
       </div>
     </div>
   </div>

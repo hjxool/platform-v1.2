@@ -210,7 +210,7 @@ new Vue({
 				'post',
 				search_meeting_url,
 				this.token,
-				{ condition: { startTime: s, endTime: e, meetingStatus: this.body.cur_op, auditStatus: 2, isTransferFlag: 1 }, pageNum: current, pageSize: this.body.size },
+				{ condition: { startTime: s, endTime: e, meetingStatus: this.body.cur_op, auditStatus: 2 }, pageNum: current, pageSize: this.body.size },
 				(res) => {
 					console.log('会议列表', res);
 					this.html.loading = false;

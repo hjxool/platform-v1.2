@@ -11,6 +11,7 @@ let get_vote_detail_url = `${url}api-portal/meeting-voting`; //查询投票详�
 let get_vote_result_url = `${url}api-portal/meeting-voting/result`; //查询投票结果
 let download_vote_result_url = `${url}api-portal/meeting-voting/download`; //下载投票结果
 let operate_vote_url = `${url}api-portal/meeting-voting/option`; //操作投票
+let pass_on_detail_url = `${url}api-portal/meeting/user/transfer`; //查询参会人员转交记录
 
 new Vue({
 	el: '#index',
@@ -41,6 +42,10 @@ new Vue({
 			start_show: false, //开始投票显示
 			result_show: false, // 投票结果显示
 			result: '',
+		},
+		pass: {
+			show: false, //弹窗
+			list: [],
 		},
 	},
 	beforeCreate() {
@@ -520,6 +525,17 @@ new Vue({
 		close_vote_start() {
 			this.vote.start_show = false;
 			this.get_vote_list();
+		},
+		// 查看转交详情
+		pass_on_detail(obj) {
+			this.request('get', `${pass_on_detail_url}?initiatorId=${obj.initiatorId}&meetingId=${obj.meetingId}`, this.token, (res) => {
+				if (res.data.head.code !== 200) {
+					this.$message.error('未查到相关记录');
+					return;
+				}
+				this.pass.show = true;
+				this.pass.list = res.data.data;
+			});
 		},
 	},
 });

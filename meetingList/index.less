@@ -36,29 +36,102 @@
 	flex-direction: column;
 	align-items: center;
 }
-.delay_window {
-	width: 50%;
-	min-width: 700px;
-	padding: 20px;
-	background: #fff;
-	border-radius: 10px;
-	display: flex;
-	flex-direction: column;
-	> .head {
-		justify-content: space-between;
-		> .text {
-			font-weight: bold;
-		}
-	}
-	> .body {
-		margin: 40px 0 20px 0;
+.popover {
+	align-items: center;
+	> .delay_window {
+		width: 50%;
+		min-width: 700px;
+		padding: 20px;
+		background: #fff;
+		border-radius: 10px;
 		display: flex;
 		flex-direction: column;
-		align-items: center;
-		> .text {
-			font-size: 20px;
+		> .head {
+			justify-content: space-between;
+			> .text {
+				font-weight: bold;
+			}
+		}
+		> .body {
+			margin: 40px 0 20px 0;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			> .text {
+				font-size: 20px;
+				font-weight: bold;
+				margin-top: 20px;
+			}
+		}
+	}
+	> .pop_bg {
+		background: #fff;
+		border-radius: 10px;
+		padding: 20px;
+		display: flex;
+		flex-direction: column;
+	}
+	> .pass_on {
+		width: 35rem;
+		min-width: 400px;
+		min-height: 160px;
+		> .head {
 			font-weight: bold;
-			margin-top: 20px;
+		}
+		> .box {
+			flex-grow: 1;
+			margin: 10px 0;
+			> .title {
+				margin-right: 20px;
+				font-size: 14px;
+				white-space: nowrap;
+			}
+			> .user_box {
+				border: 1px solid #eaebed;
+				border-radius: 6px;
+				flex-grow: 1;
+				flex-wrap: wrap;
+				align-content: start;
+				> .person {
+					background-color: #f2f2f7;
+					padding: 6px 10px;
+					width: 100px;
+					margin: 6px 0 6px 8px;
+					display: flex;
+					align-items: center;
+					overflow: hidden;
+					border-radius: 6px;
+					> .icon1 {
+						font-weight: bold;
+						font-size: 12px;
+						margin-right: 6px;
+					}
+					> .name {
+						flex-grow: 1;
+						font-size: 14px;
+						margin-right: auto;
+						line-height: initial; //element的行高会影响内部未设置行高的字体元素
+					}
+				}
+				> .placeholder {
+					color: #c0c4cc;
+					margin-left: 10px;
+					font-size: 0.7rem;
+				}
+			}
+		}
+		> .foot {
+			align-self: end;
+		}
+	}
+	> .all_user {
+		width: 33.5rem;
+		height: 29rem;
+		> .head {
+			font-weight: bold;
+		}
+		> .user_list {
+			flex-grow: 1;
 		}
 	}
 }

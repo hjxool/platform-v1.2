@@ -43,6 +43,8 @@ new Vue({
 				{ ban: './img/icon19.png', enable: './img/icon20.png' },
 			],
 			titles: ['服务名称', '设备名称', '场所名称', '参数值', '延迟(秒)'],
+			publish_show: false, // 发布任务弹窗
+			page_url: '', // 跳转地址
 		},
 		form: {
 			name: '', //场景名
@@ -89,30 +91,55 @@ new Vue({
 	},
 	beforeMount() {
 		window.onmessage = (e) => {
-			let data = JSON.parse(e.data);
-			console.log('父页面消息', data);
-			this.is_edit = true;
-			this.id = data.id;
-			this.form.name = data.sceneName;
-			this.form.type = data.sceneType;
-			if (this.form.type === 2) {
-				this.form.start_time = new Date(data.planDatetimeStart);
-				this.form.end_time = new Date(data.planDatetimeEnd);
-				// let year = this.form.end_time.split(' ')[0].replace(/-/gi, '/');
-				let year = data.planDatetimeEnd.split(' ')[0];
-				this.form.ex_time = new Date(`${year} ${data.executeTime}`);
-				this.form.ex_cycle = JSON.parse(data.executePeriodDays);
-			} else if (this.form.type === 3) {
-				let t = data.sceneConditionParamVOS[0];
-				this.form.condition_type = t.preTriggerEventTime ? 0 : 1;
-				this.form.pre_after_time = t.preTriggerEventTime || t.afterTriggerEventTime;
-				this.form.time_unit = t.triggerEvenTimeUnit;
-			}
-			if (data.deviceCommandVOS) {
-				for (let val of data.deviceCommandVOS) {
-					val.check = false; //添加勾选属性
+			console.log('页面消息', e);
+			if (e?.data?.type === '素材轮播编辑完成') {
+				this.html.publish_show = false;
+				let d = JSON.parse(window.sessionStorage.play_list_json);
+				// 往服务对象身上添加新属性 存json数据
+				let d2 = {
+					planName: this.form.name,
+					pullDeviceIds: [this.server_configing.deviceId],
+					publishRuleFiles: [],
+				};
+				for (let val of d.list) {
+					let find = false;
+					for (let val2 of d2.publishRuleFiles) {
+						if (val.fileId === val2.fileId) {
+							find = true; // 只要找到重复的就跳出查下一个
+							break;
+						}
+					}
+					if (!find) {
+						d2.publishRuleFiles.push(val);
+					}
 				}
-				this.form.servers = data.deviceCommandVOS;
+				this.server_configing.serviceInputParam['taskData'] = JSON.stringify(d2);
+				window.sessionStorage.removeItem('play_list_json');
+			} else {
+				let data = JSON.parse(e.data);
+				this.is_edit = true;
+				this.id = data.id;
+				this.form.name = data.sceneName;
+				this.form.type = data.sceneType;
+				if (this.form.type === 2) {
+					this.form.start_time = new Date(data.planDatetimeStart);
+					this.form.end_time = new Date(data.planDatetimeEnd);
+					// let year = this.form.end_time.split(' ')[0].replace(/-/gi, '/');
+					let year = data.planDatetimeEnd.split(' ')[0];
+					this.form.ex_time = new Date(`${year} ${data.executeTime}`);
+					this.form.ex_cycle = JSON.parse(data.executePeriodDays);
+				} else if (this.form.type === 3) {
+					let t = data.sceneConditionParamVOS[0];
+					this.form.condition_type = t.preTriggerEventTime ? 0 : 1;
+					this.form.pre_after_time = t.preTriggerEventTime || t.afterTriggerEventTime;
+					this.form.time_unit = t.triggerEvenTimeUnit;
+				}
+				if (data.deviceCommandVOS) {
+					for (let val of data.deviceCommandVOS) {
+						val.check = false; //添加勾选属性
+					}
+					this.form.servers = data.deviceCommandVOS;
+				}
 			}
 		};
 	},
@@ -664,8 +691,29 @@ new Vue({
 						}
 					}
 					break;
+				case 'config_button':
+					if (identifier === 'publishTask' && pid === '1559733901001211904') {
+						return true;
+					}
+					break;
 			}
 			return false;
+		},
+		// 跳转其他页面
+		turn_to_page(page, ...params) {
+			switch (page) {
+				case 'publish':
+					this.html.publish_show = true;
+					this.html.page_url = `../index.html?token=${this.token}&type=playlist_edit&source=all&prePage=scene`;
+					let data = {
+						name: this.form.name || '默认名称',
+						list: [], // 每次点开设备服务都是新的，不回显，因此不需要存值
+					};
+					window.sessionStorage.play_list_json = JSON.stringify(data);
+					// 保留配置的服务对象索引 在配置完后添加属性到对应服务对象上
+					this.server_configing = params[0];
+					return;
+			}
 		},
 	},
 });

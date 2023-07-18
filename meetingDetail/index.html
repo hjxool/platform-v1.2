@@ -75,6 +75,11 @@
                 <el-tag v-if="scope.row.signIn==2" type="warning" size="medium">迟到</el-tag>
               </template>
             </el-table-column>
+            <el-table-column label="转交记录" width="100">
+              <template slot-scope="scope">
+                <el-button @click="pass_on_detail(scope.row)" size="small">查看</el-button>
+              </template>
+            </el-table-column>
             <el-table-column label="回复状态及原因">
               <template slot-scope="scope">
                 <div class="row_layout">
@@ -195,6 +200,28 @@
 
         <component_meeting-vote-result :max-height="400" :vote-result="vote.result"
           style="flex-grow:1;overflow:auto;"></component_meeting-vote-result>
+      </div>
+    </div>
+    <!-- 转交记录窗口 -->
+    <div class="popover" v-if="pass.show">
+      <div class="pass_on_box form">
+        <div class="head flex_shrink row_layout">
+          <span>转交记录</span>
+          <el-button @click="pass.show=false" style="margin-left:auto;" type="danger" icon="el-icon-close" circle
+            size="small"></el-button>
+        </div>
+
+        <div class="scroll">
+          <div class="box row_layout" v-for="item in pass.list">
+            <span>参会人:<span class="margin">{{item.username || '空'}}</span></span>
+            <span>接收人:<span class="margin">{{item.recipientName || '空'}}</span></span>
+            <span>转交状态:
+              <el-tag size="small" class="margin" :type="item.transferFlag?'warning':''">
+                {{item.transferFlag?'已转交':'未转交'}}
+              </el-tag>
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   </div>

@@ -176,6 +176,10 @@
             <selector2 class="flex_shrink" v-if="components_show(server.serviceIdentifier,server.productId,'selector2')"
               :item="server">
             </selector2>
+
+            <el-button class="flex_shrink"
+              v-if="components_show(server.serviceIdentifier,server.productId,'config_button')"
+              @click="turn_to_page('publish',server)" round size="mini">配置</el-button>
           </div>
         </div>
 
@@ -227,6 +231,17 @@
           <el-button @click="delay_submit" type="primary" size="small">确定</el-button>
           <el-button @click="delay.show=false" size="small">取消</el-button>
         </div>
+      </div>
+    </div>
+    <!-- 发布任务编辑弹窗 -->
+    <div class="popover" v-if="html.publish_show">
+      <div class="publish_box">
+        <div class="head row_layout">
+          <el-button @click="html.publish_show=false" size="small" type="danger" icon="el-icon-close"
+            circle></el-button>
+        </div>
+
+        <iframe :src="html.page_url" frameborder="0" scrolling="no" style="flex-grow:1;"></iframe>
       </div>
     </div>
   </el-form>
