@@ -163,23 +163,7 @@
             <span class="text text_ellipsis" @click="select_server2(server)" :title="server.name"
               :style="theme_font()">{{server.name}}</span>
             <!-- 可选组件 -->
-            <selector class="flex_shrink" v-if="components_show(server.serviceIdentifier,server.productId,'selector')"
-              :input="server.serviceInputParam" @init_input="server.serviceInputParam=$event"
-              @text="server.inputParamDesc=$event">
-            </selector>
-
-            <order_control_relay class="flex_shrink"
-              v-if="components_show(server.serviceIdentifier,server.productId,'order_control_relay')"
-              :input="server.serviceInputParam" @init_input="server.serviceInputParam=$event"
-              @text="server.inputParamDesc=$event"></order_control_relay>
-
-            <selector2 class="flex_shrink" v-if="components_show(server.serviceIdentifier,server.productId,'selector2')"
-              :item="server">
-            </selector2>
-
-            <el-button class="flex_shrink"
-              v-if="components_show(server.serviceIdentifier,server.productId,'config_button')"
-              @click="turn_to_page('publish',server)" round size="mini">配置</el-button>
+            <all_components :server="server" :turn_to_page="turn_to_page"></all_components>
           </div>
         </div>
 
@@ -202,18 +186,7 @@
             <div class="setting_box">
               <!-- 可选组件 -->
               <div class="row_layout">
-                <selector v-if="components_show(server.serviceIdentifier,server.productId,'selector')"
-                  :input="server.serviceInputParam" @init_input="server.serviceInputParam=$event"
-                  @text="server.inputParamDesc=$event">
-                </selector>
-
-                <order_control_relay
-                  v-if="components_show(server.serviceIdentifier,server.productId,'order_control_relay')"
-                  :input="server.serviceInputParam" @init_input="server.serviceInputParam=$event"
-                  @text="server.inputParamDesc=$event"></order_control_relay>
-
-                <selector2 v-if="components_show(server.serviceIdentifier,server.productId,'selector2')" :item="server">
-                </selector2>
+                <all_components :server="server" :turn_to_page="turn_to_page"></all_components>
               </div>
               <!-- 延迟设置 -->
               <div class="row_layout" style="margin-top: 10px;">

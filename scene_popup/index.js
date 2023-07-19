@@ -6,11 +6,7 @@ let save_scene_url = `${url}api-portal/scene-rule/saveOrUpdate`; // 新增/更�
 new Vue({
 	el: '#index',
 	mixins: [common_functions],
-	components: {
-		selector,
-		selector2,
-		order_control_relay,
-	},
+	components: { all_components },
 	data: {
 		html: {
 			loading: false,
@@ -316,7 +312,7 @@ new Vue({
 							inputParamDesc: val.inputParamDesc || null,
 							placeId: val.placeId,
 							serviceIdentifier: val.serviceIdentifier,
-							serviceInputParam: val.serviceInputParam || null,
+							serviceInputParam: val.serviceInputParam,
 							serviceName: val.serviceName,
 						};
 						data.deviceCommandDTOS.push(t);
@@ -635,7 +631,7 @@ new Vue({
 				for (let val of res.data.data) {
 					val.check = false;
 					val.delayExecuteSeconds = 0; //默认延迟0
-					val.serviceInputParam = ''; //设备打开服务配置回显值
+					val.serviceInputParam = {}; //设备打开服务配置回显值
 					val.inputParamDesc = ''; //外层显示
 					val.deviceName = device.deviceName; //外层显示用
 					val.deviceId = device.id; //条件筛选
@@ -644,6 +640,7 @@ new Vue({
 					val.placeName = place.placeName; //外层显示
 					val.serviceIdentifier = val.identifier; //渲染组件
 					val.serviceName = val.name; //外层显示
+					val.keyword = ''; // 通用组件时需要设置属性名
 				}
 				this.servers.list = res.data.data;
 				// 回显 统计
@@ -669,35 +666,6 @@ new Vue({
 		// 点击展开折叠场所
 		select_place(place) {
 			this.devices.place_id = this.devices.place_id == place.id ? -1 : place.id;
-		},
-		// 条件渲染组件
-		components_show(identifier, pid, cname) {
-			switch (cname) {
-				case 'selector':
-					if (identifier === 'Relay_Set_State_Service' && pid === '1574321115531005952') {
-						return true;
-					}
-					break;
-				case 'order_control_relay':
-					if (identifier === 'Accord_Order_TO_Control_Relay_Service' && pid === '1574321115531005952') {
-						return true;
-					}
-					break;
-				case 'selector2':
-					if (pid === '1564171104871739392') {
-						let reg = /(^SEQ\d+SRV$)|(^SEQ[A-Z]SRV$)/;
-						if (reg.test(identifier)) {
-							return true;
-						}
-					}
-					break;
-				case 'config_button':
-					if (identifier === 'publishTask' && pid === '1559733901001211904') {
-						return true;
-					}
-					break;
-			}
-			return false;
 		},
 		// 跳转其他页面
 		turn_to_page(page, ...params) {
