@@ -537,5 +537,18 @@ new Vue({
 				this.pass.list = res.data.data;
 			});
 		},
+		// 刷新 重新获取数据
+		async refrash() {
+			if (this.refreshing) {
+				this.$message('点的太快了！');
+				return;
+			} else {
+				this.refreshing = true;
+			}
+			this.html.loading = true;
+			await this.get_vote_list();
+			await this.get_data();
+			this.refreshing = false;
+		},
 	},
 });

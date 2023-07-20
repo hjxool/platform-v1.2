@@ -1,18 +1,17 @@
-// let url = 'http://192.168.30.200:9201/';
-// let url = 'http://182.150.116.22:13001/';
 let url = `${我是接口地址}/`;
-let protocol_list = `${url}api-device/protocol/list`;
-let protocol_newVersion = `${url}api-device/protocol/newVersion`;
-let protocol_properties = `${url}api-device/protocol/properties`;
-let protocol_property = `${url}api-device/protocol/property`;
-let protocol_event = `${url}api-device/protocol/event`;
-let protocol_service = `${url}api-device/protocol/service`;
-let protocol_publish = `${url}api-device/protocol/publish`;
-let protocol_units = `${url}api-device/protocol/units`;
-let protocol_unit_add = `${url}api-device/protocol/unit`;
-let protocol_unit_delete = `${url}api-device/protocol/delete`;
-let product_model = `${url}api-device/product/model`;
-let default_property_url = `${url}api-device/protocol/property/default/list/`;
+let history_list_url = `${url}api-device/protocol/list/version`; // 获取历史版本列表
+let version_data_url = `${url}api-device/protocol/view`; // 查看对应版本的物模型数据
+let protocol_newVersion = `${url}api-device/protocol/newVersion`; // 新建物模型
+let protocol_properties = `${url}api-device/protocol/properties`; // 新增物模型属性
+let protocol_property = `${url}api-device/protocol/property`; // 修改物模型属性
+let protocol_event = `${url}api-device/protocol/event`; // 修改物模型事件
+let protocol_service = `${url}api-device/protocol/service`; // 新增修改物模型服务
+let protocol_publish = `${url}api-device/protocol/publish`; // 发布物模型
+let protocol_units = `${url}api-device/protocol/units`; // 查询单位
+let protocol_unit_add = `${url}api-device/protocol/unit`; // 新建编辑单位
+let protocol_unit_delete = `${url}api-device/protocol/delete`; // 删除单位
+let product_model = `${url}api-device/product/model`; // 启用物模型
+let default_property_url = `${url}api-device/protocol/property/default/list/`; // 查询默认属性列表
 let limits_url = `${url}api-user/menus/current`; //获取菜单权限
 
 Vue.config.productionTip = false;
@@ -79,6 +78,7 @@ new Vue({
 			//历史版本列表
 			history_list: [],
 			history_selected: '', //记录选择的是历史版本中的哪一个
+			model: {}, //当前版本
 			//物模型属性等列表——表格用
 			protocol_list: [],
 			//修改协议时的单行数据
@@ -190,15 +190,14 @@ new Vue({
 		},
 		// 页面加载时历史版本
 		res_history_model(index) {
-			this.request('post', protocol_list, this.token, { condition: this.id, pageNum: 1, pageSize: 999 }, (res) => {
-				console.log('历史版本', res);
+			this.request('get', `${history_list_url}?productId=${this.id}`, this.token, (res) => {
 				// 加载完毕后再显示底部卡片
-				if (res.data.data == null || res.data.data.data == null) {
+				if (res.data.head.code !== 200) {
 					this.$message.info('无历史数据');
 					return;
 				}
 				this.static_params.first_load = false;
-				this.history_list = res.data.data.data;
+				this.history_list = res.data.data;
 				this.search_current_model();
 				this.model_select(index);
 			});
@@ -209,67 +208,77 @@ new Vue({
 			this.protocol_list = [];
 			this.history_selected = index;
 			this.model_id = this.history_list[index].modelId;
-			// 不需要记录id等不展示的属性，只需要能点编辑时找到在数组中位置
-			this.history_list[index].events.forEach((e) => {
-				let table = {
-					id: e.eventId,
-					type: '事件',
-					name: e.name,
-					identifier: e.identifier,
-					dataType_text: `事件类型：${e.type == 'info' ? '信息' : e.type == 'alert' ? '告警' : '故障'}`,
-					dataType: e.type,
-					outputData: e.outputData == null ? [] : e.outputData,
-				};
-				this.protocol_list.push(table);
-			});
-			this.history_list[index].services.forEach((e) => {
-				let table = {
-					id: e.serviceId,
-					type: '服务',
-					name: e.name,
-					identifier: e.identifier,
-					dataType_text: `调用方式：${e.method == 'async' ? '异步调用' : '同步调用'}`,
-					dataType: e.method,
-					inputData: e.inputData == null ? [] : e.inputData,
-					outputData: e.outputData == null ? [] : e.outputData,
-				};
-				this.protocol_list.push(table);
-			});
-			this.history_list[index].properties.forEach((e) => {
-				let table = {
-					id: e.propertyId,
-					type: '属性',
-					name: e.name,
-					identifier: e.identifier,
-					dataType_text: `数据类型：${e.dataType.type}`,
-					dataType: e.dataType.type,
-				};
-				if (e.dataType.type == 'text') {
-					table.textLength = e.dataType.specs.length;
-				} else if (e.dataType.type == 'date') {
-				} else if (e.dataType.type == 'struct') {
-					// 这地方存的是源数据 在点编辑查看时要特殊处理 取值赋给展示数据
-					table.struct_array = e.dataType.properties;
-				} else if (e.dataType.type == 'array') {
-					table.itemType = e.dataType.specs.item.type;
-					table.size = e.dataType.specs.size;
-					if (table.itemType == 'struct') {
-						table.struct_array = e.dataType.specs.item.properties;
-					}
-				} else if (e.dataType.type == 'enum') {
-					table.enum_list = [];
-					table.enum_value_type = e.dataType.specs.enumType || 'text'; // 枚举类型的参数值类型
-					for (let key in e.dataType.specs.enumValue) {
-						let t = { value: key, label: e.dataType.specs.enumValue[key] };
-						table.enum_list.push(t);
-					}
-				} else {
-					table.min = e.dataType.specs.min;
-					table.max = e.dataType.specs.max;
-					table.step = e.dataType.specs.step;
-					table.unit = e.dataType.specs.unitName == null ? '' : `${e.dataType.specs.unitName} / ${e.dataType.specs.unit}`;
+			this.get_version_data();
+		},
+		// 根据版本查对应物模型
+		get_version_data() {
+			this.request('get', `${version_data_url}/${this.model_id}`, this.token, (res) => {
+				if (res.data.head.code !== 200) {
+					return;
 				}
-				this.protocol_list.push(table);
+				this.model = res.data.data;
+				// 不需要记录id等不展示的属性，只需要能点编辑时找到在数组中位置
+				this.model.events.forEach((e) => {
+					let table = {
+						id: e.eventId,
+						type: '事件',
+						name: e.name,
+						identifier: e.identifier,
+						dataType_text: `事件类型：${e.type == 'info' ? '信息' : e.type == 'alert' ? '告警' : '故障'}`,
+						dataType: e.type,
+						outputData: e.outputData == null ? [] : e.outputData,
+					};
+					this.protocol_list.push(table);
+				});
+				this.model.services.forEach((e) => {
+					let table = {
+						id: e.serviceId,
+						type: '服务',
+						name: e.name,
+						identifier: e.identifier,
+						dataType_text: `调用方式：${e.method == 'async' ? '异步调用' : '同步调用'}`,
+						dataType: e.method,
+						inputData: e.inputData == null ? [] : e.inputData,
+						outputData: e.outputData == null ? [] : e.outputData,
+					};
+					this.protocol_list.push(table);
+				});
+				this.model.properties.forEach((e) => {
+					let table = {
+						id: e.propertyId,
+						type: '属性',
+						name: e.name,
+						identifier: e.identifier,
+						dataType_text: `数据类型：${e.dataType.type}`,
+						dataType: e.dataType.type,
+					};
+					if (e.dataType.type == 'text') {
+						table.textLength = e.dataType.specs.length;
+					} else if (e.dataType.type == 'date') {
+					} else if (e.dataType.type == 'struct') {
+						// 这地方存的是源数据 在点编辑查看时要特殊处理 取值赋给展示数据
+						table.struct_array = e.dataType.properties;
+					} else if (e.dataType.type == 'array') {
+						table.itemType = e.dataType.specs.item.type;
+						table.size = e.dataType.specs.size;
+						if (table.itemType == 'struct') {
+							table.struct_array = e.dataType.specs.item.properties;
+						}
+					} else if (e.dataType.type == 'enum') {
+						table.enum_list = [];
+						table.enum_value_type = e.dataType.specs.enumType || 'text'; // 枚举类型的参数值类型
+						for (let key in e.dataType.specs.enumValue) {
+							let t = { value: key, label: e.dataType.specs.enumValue[key] };
+							table.enum_list.push(t);
+						}
+					} else {
+						table.min = e.dataType.specs.min;
+						table.max = e.dataType.specs.max;
+						table.step = e.dataType.specs.step;
+						table.unit = e.dataType.specs.unitName == null ? '' : `${e.dataType.specs.unitName} / ${e.dataType.specs.unit}`;
+					}
+					this.protocol_list.push(table);
+				});
 			});
 		},
 		// 新建物模型
@@ -291,14 +300,14 @@ new Vue({
 			// 		}).catch(() => false);
 			// 	})
 			// 	.then(({ value }) => {
-			// 		let data = this.history_list[this.history_selected];
+			// 		let data = model;
 			// 		data.profile.versionAlias = value;
 			// 		this.request('post', protocol_newVersion, this.token, data, (res) => {
 			// 			if (res.data.head.code !== 200) {
 			// 				this.$message.error('新建物模型失败');
 			// 				return;
 			// 			}
-			// 			this.request('post', protocol_list, this.token, { condition: this.id, pageNum: 1, pageSize: 999 }, this.res_history_model(0));
+			// 			this.res_history_model(0)
 			// 		});
 			// 	})
 			// 	.catch(() => false);
@@ -325,14 +334,14 @@ new Vue({
 			if (!r2) {
 				return;
 			}
-			let data = this.history_list[this.history_selected];
+			let data = model;
 			data.profile.versionAlias = r1.value;
 			this.request('post', protocol_newVersion, this.token, data, (res) => {
 				if (res.data.head.code !== 200) {
 					this.$message.error('新建物模型失败');
 					return;
 				}
-				this.request('post', protocol_list, this.token, { condition: this.id, pageNum: 1, pageSize: 999 }, this.res_history_model(0));
+				this.res_history_model(0);
 			});
 		},
 		// 编辑查看模型中单条数据
@@ -386,28 +395,28 @@ new Vue({
 				.then(() => {
 					switch (row_data.type) {
 						case '属性':
-							this.history_list[this.history_selected].properties.forEach((e) => {
+							this.model.properties.forEach((e) => {
 								if (e.propertyId == row_data.id) {
 									this.request('delete', `${protocol_property}/${e.propertyId}`, this.token, () => {
-										this.res_history_model(this.history_selected);
+										this.model_select(this.history_selected);
 									});
 								}
 							});
 							break;
 						case '事件':
-							this.history_list[this.history_selected].events.forEach((e) => {
+							this.model.events.forEach((e) => {
 								if (e.eventId == row_data.id) {
 									this.request('delete', `${protocol_event}/${this.model_id}/${e.eventId}`, this.token, () => {
-										this.res_history_model(this.history_selected);
+										this.model_select(this.history_selected);
 									});
 								}
 							});
 							break;
 						case '服务':
-							this.history_list[this.history_selected].services.forEach((e) => {
+							this.model.services.forEach((e) => {
 								if (e.serviceId == row_data.id) {
 									this.request('delete', `${protocol_service}/${this.model_id}/${e.serviceId}`, this.token, () => {
-										this.res_history_model(this.history_selected);
+										this.model_select(this.history_selected);
 									});
 								}
 							});
@@ -801,7 +810,7 @@ new Vue({
 									properties: [property],
 								};
 								this.request('post', protocol_properties, this.token, temp, () => {
-									this.res_history_model(this.history_selected);
+									this.model_select(this.history_selected);
 									this.form_list = [];
 									this.child_count_list.pop();
 								});
@@ -819,7 +828,7 @@ new Vue({
 									],
 								};
 								this.request('post', protocol_event, this.token, temp, () => {
-									this.res_history_model(this.history_selected);
+									this.model_select(this.history_selected);
 									this.form_list = [];
 									this.child_count_list.pop();
 								});
@@ -838,7 +847,7 @@ new Vue({
 									],
 								};
 								this.request('post', protocol_service, this.token, temp, () => {
-									this.res_history_model(this.history_selected);
+									this.model_select(this.history_selected);
 									this.form_list = [];
 									this.child_count_list.pop();
 								});
@@ -847,7 +856,7 @@ new Vue({
 					} else if (this.static_params.add_edit === 'edit') {
 						switch (obj.type) {
 							case '属性':
-								array = this.history_list[this.history_selected].properties;
+								array = this.model.properties;
 								array.forEach((e) => {
 									if (e.propertyId == obj.id) {
 										e.name = obj.name;
@@ -899,7 +908,7 @@ new Vue({
 												break;
 										}
 										this.request('put', protocol_property, this.token, e, () => {
-											this.res_history_model(this.history_selected);
+											this.model_select(this.history_selected);
 											this.form_list = [];
 											this.child_count_list.pop();
 										});
@@ -907,14 +916,14 @@ new Vue({
 								});
 								break;
 							case '事件':
-								this.history_list[this.history_selected].events.forEach((e) => {
+								this.model.events.forEach((e) => {
 									if (e.eventId == obj.id) {
 										e.identifier = obj.identifier;
 										e.name = obj.name;
 										e.type = obj.dataType;
 										e.outputData = obj.outputData || [];
 										this.request('put', `${protocol_event}/${this.model_id}`, this.token, e, () => {
-											this.res_history_model(this.history_selected);
+											this.model_select(this.history_selected);
 											this.form_list = [];
 											this.child_count_list.pop();
 										});
@@ -922,7 +931,7 @@ new Vue({
 								});
 								break;
 							case '服务':
-								this.history_list[this.history_selected].services.forEach((e) => {
+								this.model.services.forEach((e) => {
 									if (e.serviceId == obj.id) {
 										e.identifier = obj.identifier;
 										e.name = obj.name;
@@ -930,7 +939,7 @@ new Vue({
 										e.inputData = obj.inputData || [];
 										e.outputData = obj.outputData || [];
 										this.request('put', `${protocol_service}/${this.model_id}`, this.token, e, () => {
-											this.res_history_model(this.history_selected);
+											this.model_select(this.history_selected);
 											this.form_list = [];
 											this.child_count_list.pop();
 										});
@@ -1277,7 +1286,7 @@ new Vue({
 			let flag = false;
 			for (let val of this.history_list) {
 				if (val.profile.isCurrentVersion == '1') {
-					this.static_params.current_version = `${val.profile.versionAlias || '默认'}(${val.profile.version})`;
+					this.static_params.current_version = `${val.profile.versionAlias || '默认'} (${val.profile.version})`;
 					this.current_model = JSON.stringify(val, null, 4);
 					flag = true;
 					break;
@@ -1394,7 +1403,7 @@ new Vue({
 				body.profile.productId = this.history_list[0].profile.productId;
 				body.profile.versionAlias = r1.value;
 				this.request('post', protocol_newVersion, this.token, body, () => {
-					this.request('post', protocol_list, this.token, { condition: this.id, pageNum: 1, pageSize: 999 }, this.res_history_model(0));
+					this.res_history_model(0);
 				});
 			};
 		},

@@ -24,7 +24,7 @@
           <el-select style="width:300px;" v-model="history_selected" placeholder="无历史版本"
             @change="model_select(history_selected)" :disabled="history_list.length == 0">
             <el-option v-for="ver,index in history_list" :key="index"
-              :label="`${ver.profile.versionAlias||'默认'}(${ver.profile.version})`" :value="index">
+              :label="`${ver.profile.versionAlias||'默认'} (${ver.profile.version})`" :value="index">
             </el-option>
           </el-select>
         </div>
@@ -276,7 +276,7 @@
               <el-form-item label="输出参数" size="medium">
                 <el-select style="width: 200px;" v-model="card.outputData" :disabled="static_params.add_edit=='check'"
                   value-key="propertyId" placeholder="请选择属性" multiple clearable>
-                  <el-option v-for="item in history_list[history_selected].properties" :label="item.name" :value="item">
+                  <el-option v-for="item in model.properties" :label="item.name" :value="item">
                   </el-option>
                 </el-select>
               </el-form-item>
@@ -307,14 +307,14 @@
               <el-form-item label="输入参数" size="medium">
                 <el-select style="width: 200px;" v-model="card.inputData" :disabled="static_params.add_edit=='check'"
                   value-key="propertyId" placeholder="请选择输入属性" multiple clearable>
-                  <el-option v-for="item in history_list[history_selected].properties" :label="item.name" :value="item">
+                  <el-option v-for="item in model.properties" :label="item.name" :value="item">
                   </el-option>
                 </el-select>
               </el-form-item>
               <el-form-item label="输出参数" size="medium">
                 <el-select style="width: 200px;" v-model="card.outputData" :disabled="static_params.add_edit=='check'"
                   value-key="propertyId" placeholder="请选择输出属性" multiple clearable>
-                  <el-option v-for="item in history_list[history_selected].properties" :label="item.name" :value="item">
+                  <el-option v-for="item in model.properties" :label="item.name" :value="item">
                   </el-option>
                 </el-select>
               </el-form-item>
