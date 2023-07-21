@@ -97,6 +97,17 @@ new Vue({
 					pullDeviceIds: [this.server_configing.deviceId],
 					publishRuleFiles: [],
 				};
+				switch (d.list[0].fileTypeString) {
+					case '自定义模板':
+						d2.sourceType = 4;
+						break;
+					case '系统模板':
+						d2.sourceType = 3;
+						break;
+					default:
+						d2.sourceType = 5;
+						break;
+				}
 				for (let val of d.list) {
 					let find = false;
 					for (let val2 of d2.publishRuleFiles) {
@@ -257,7 +268,7 @@ new Vue({
 					break;
 				case 3:
 					this.delay.show = true;
-					this.delay_list = [];
+					this.delay_list = []; //保存服务列表中勾选项的索引
 					for (let val of this.form.servers) {
 						if (val.check) {
 							// 浅拷贝一份服务列表 用于记录勾选项和保持顺序 这样就不需要给服务添加id
@@ -673,13 +684,19 @@ new Vue({
 				case 'publish':
 					this.html.publish_show = true;
 					this.html.page_url = `../index.html?token=${this.token}&type=playlist_edit&source=all&prePage=scene`;
-					let data = {
-						name: this.form.name || '默认名称',
-						list: [], // 每次点开设备服务都是新的，不回显，因此不需要存值
-					};
-					window.sessionStorage.play_list_json = JSON.stringify(data);
 					// 保留配置的服务对象索引 在配置完后添加属性到对应服务对象上
 					this.server_configing = params[0];
+					let data = {
+						name: this.form.name || '默认名称',
+					};
+					// 读取当前编辑对象看是否回显值
+					let l = Object.entries(this.server_configing.serviceInputParam);
+					if (l.length) {
+						// 判断是否配置过 未关闭弹窗的情况下配置过就回显
+						let json_data = JSON.parse(l[0][1]);
+						data['list'] = json_data['publishRuleFiles'];
+					}
+					window.sessionStorage.play_list_json = JSON.stringify(data); // 通用 传递给iframe
 					return;
 			}
 		},

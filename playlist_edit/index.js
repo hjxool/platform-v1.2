@@ -107,7 +107,7 @@ new Vue({
 					let dtotal = 0;
 					let dcount = 0;
 					this.html.loading = true;
-					for (let val of data.list) {
+					for (let val of data.list || []) {
 						let find = false;
 						for (let val2 of list) {
 							if (val2.fileId === val.fileId) {
@@ -669,6 +669,7 @@ new Vue({
 								break;
 							default:
 								this.get_material(1, index);
+								break;
 						}
 					} else {
 						switch (index) {
@@ -710,6 +711,7 @@ new Vue({
 								break;
 							default:
 								this.get_material(page, this.material_form.type);
+								break;
 						}
 					} else {
 						switch (this.material_form.type) {
