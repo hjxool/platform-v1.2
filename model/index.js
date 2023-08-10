@@ -173,6 +173,8 @@ new Vue({
 		this.config.publish_show = this.is_element_show(limits, '发布上线');
 		this.config.edit_show = this.is_element_show(limits, '编辑');
 
+		// 页面第一次加载时要根据当前启用物模型查
+		this.first_load = true;
 		this.res_history_model(0);
 		this.get_unit();
 		this.get_default_property();
@@ -199,7 +201,8 @@ new Vue({
 				this.static_params.first_load = false;
 				this.history_list = res.data.data;
 				this.search_current_model();
-				this.model_select(index);
+				this.model_select(this.first_load ? this.history_selected : index);
+				this.first_load = false;
 			});
 		},
 		// 选择查看版本
@@ -217,6 +220,7 @@ new Vue({
 					return;
 				}
 				this.model = res.data.data;
+				this.current_model = JSON.stringify(this.model, null, 4);
 				// 不需要记录id等不展示的属性，只需要能点编辑时找到在数组中位置
 				this.model.events.forEach((e) => {
 					let table = {
@@ -341,7 +345,7 @@ new Vue({
 					this.$message.error('新建物模型失败');
 					return;
 				}
-				this.res_history_model(0);
+				this.res_history_model(this.history_selected);
 			});
 		},
 		// 编辑查看模型中单条数据
@@ -1284,13 +1288,15 @@ new Vue({
 		// 页面加载时查询启用物模型版本
 		search_current_model() {
 			let flag = false;
+			let index = 0;
 			for (let val of this.history_list) {
 				if (val.profile.isCurrentVersion == '1') {
+					this.history_selected = index;
 					this.static_params.current_version = `${val.profile.versionAlias || '默认'} (${val.profile.version})`;
-					this.current_model = JSON.stringify(val, null, 4);
 					flag = true;
 					break;
 				}
+				index++;
 			}
 			if (!flag) {
 				this.static_params.current_version = '未设置启用模型';
@@ -1403,7 +1409,7 @@ new Vue({
 				body.profile.productId = this.history_list[0].profile.productId;
 				body.profile.versionAlias = r1.value;
 				this.request('post', protocol_newVersion, this.token, body, () => {
-					this.res_history_model(0);
+					this.res_history_model(this.history_selected);
 				});
 			};
 		},

@@ -5,6 +5,7 @@ let get_tomorrow_url = `${url}api-portal/publish/device/getDeviceTimeSlot/tomorr
 let sendCmdtoDevice = url + 'api-device/device/operation'; // 下发指令
 let get_device_status_url = `${url}api-device/device/status`; // 获取设备状态
 let limits_url = `${url}api-user/menus/current`; //获取菜单权限
+let current_task_url = `${url}api-portal/video/rule/currentTask`; //根据设备ID获取拉流设备当前的任务
 
 new Vue({
 	el: '#index',
@@ -313,21 +314,38 @@ new Vue({
 			});
 		},
 		// 展示控制弹窗 显示当前播放任务
-		control_show(id) {
+		async control_show(id) {
 			this.html.control_show = true;
 			this.device_id = id;
 			this.html.control_loading = true;
 			this.cur_task_name = '空';
 			this.cur_play_source = '空';
-			this.request('get', `${get_device_status_url}/${id}`, this.token, (res) => {
-				console.log('设备状态', res);
-				this.html.control_loading = false;
-				if (res.data.head.code !== 200) {
-					return;
-				}
-				let data = res.data.data.properties.currentTask.propertyValue;
-				this.cur_task_name = data.taskName.propertyValue || '空';
-				this.cur_play_source = data.resName.propertyValue || '空';
+			await Promise.all([this.get_device_status()]);
+			this.html.control_loading = false;
+		},
+		// 获取设备状态
+		get_device_status() {
+			return new Promise((success) => {
+				this.request('get', `${get_device_status_url}/${id}`, this.token, (res) => {
+					success();
+					if (res.data.head.code !== 200) {
+						return;
+					}
+					let data = res.data.data.properties.currentTask.propertyValue;
+					this.cur_task_name = data.taskName.propertyValue || '空';
+					this.cur_play_source = data.resName.propertyValue || '空';
+				});
+			});
+		},
+		// 获取设备当前任务
+		get_current_task() {
+			return new Promise((success) => {
+				this.request('get', `${current_task_url}/${this.device_id}`, this.token, (res) => {
+					success();
+					if (res.data.head.code !== 200) {
+						return;
+					}
+				});
 			});
 		},
 		// 控制按钮点击频率

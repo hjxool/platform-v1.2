@@ -69,7 +69,13 @@ new Vue({
 			}
 		});
 		this.$bus.$on('current_group', (index) => {
-			this.current_group = index;
+			// 重复点击当前的不操作
+			if (this.current_group !== index) {
+				// 点击其他下拉框会丢失之前下拉框索引 导致之前的下拉框无法消失
+				// 所以先清除再改变当前索引
+				this.close_popup();
+				this.current_group = index;
+			}
 		});
 		this.$bus.$on('turn_to_page', (page_id) => {
 			this.page_id = page_id;

@@ -15,22 +15,8 @@ const fn = {
 			if (!this.path) {
 				return;
 			}
-			let path = this.path.split('.'); //以点分隔取层级 再看是否是数组下标的形式 再分隔层级
-			for (let key in path) {
-				let val = path[key];
-				if (val.indexOf('[') != -1) {
-					// 带数组下标的要 从当前位置删除当前元素 替换为两个新的元素
-					let t = val.split('[');
-					let t3 = [];
-					for (let key2 in t) {
-						let t2 = t[key2].replace(']', '');
-						t3.push(t2);
-					}
-					path.splice(Number(key), 1, ...t3);
-				}
-			}
 			let index = 0;
-			this.analysis_path(path, index, data);
+			this.analysis_path(this.path_list, index, data);
 		});
 		this.$bus.$on('common_params', (...val) => {
 			this.token = val[0];
@@ -39,7 +25,8 @@ const fn = {
 	},
 	methods: {
 		send_order(value) {
-			if (!this.path) {
+			if (typeof value !== 'undefined' && !this.path) {
+				// 值不为空 且 未绑定属性才不继续执行
 				return;
 			}
 			let body = {
@@ -79,10 +66,19 @@ const fn = {
 					if (path[path_index] == key) {
 						// 是自身属性才取值遍历
 						let value;
+						// 有两种形式的数据
+						// 一种是{ key: { propertyValue: value }, key2:[{xx:{propertyValue:value}}]}
+						// 另一种是{key:value}
 						if (Array.isArray(source)) {
 							value = source[key];
 						} else {
-							value = source[key].propertyValue;
+							if (source[key]?.propertyValue) {
+								value = source[key]?.propertyValue;
+							} else if (source[key]?.propertyValue === 0) {
+								value = source[key]?.propertyValue;
+							} else {
+								value = source[key];
+							}
 						}
 						if (path_index == path.length - 1) {
 							// 如果是path最后一层则取值
@@ -119,7 +115,13 @@ const fn = {
 									if (isNaN(Number(value))) {
 										return;
 									}
-									this.value = Number(value);
+									// 滑块上报数据根据组件设置的步长限制精度
+									let v = Number(value);
+									if (this.obj.type === 'progress') {
+										this.accuracy = 2;
+									}
+									let m = Math.pow(10, this.accuracy);
+									this.value = Math.round(v * m) / m;
 									break;
 								case 'switch':
 								case 'switch_button':
@@ -180,6 +182,23 @@ const fn = {
 				return null;
 			}
 		},
+		path_list() {
+			let path = this.path.split('.'); //以点分隔取层级 再看是否是数组下标的形式 再分隔层级
+			for (let key in path) {
+				let val = path[key];
+				if (val.indexOf('[') != -1) {
+					// 带数组下标的要 从当前位置删除当前元素 替换为两个新的元素
+					let t = val.split('[');
+					let t3 = [];
+					for (let key2 in t) {
+						let t2 = t[key2].replace(']', '');
+						t3.push(t2);
+					}
+					path.splice(Number(key), 1, ...t3);
+				}
+			}
+			return path;
+		},
 		data_type() {
 			let t = this.obj.attribute;
 			if (t && t.length > 0) {
@@ -210,7 +229,7 @@ let customSlider = {
 	template: `
     <div class="slider_box" :style="style(obj)">
       <img src="./img/icon6.png" class="bg_img">
-      <span class="text text_ellipsis flex_shrink" :title="value+' dB'">{{value}} dB</span>
+      <span class="text text_ellipsis flex_shrink" :title="value_text">{{value_text}}</span>
       <div class="box1">
         <img src="./img/icon5.png" class="bg_img">
         <el-slider v-model="value" @change="send_order($event)" vertical :show-tooltip="false" :min="obj.min" :max="obj.max" :step="step"></el-slider>
@@ -223,6 +242,20 @@ let customSlider = {
 			step: this.obj.step, //步长
 			value: 0,
 		};
+	},
+	computed: {
+		accuracy() {
+			let t = this.obj.step + '';
+			let t2 = t.split('.')[1];
+			if (t2) {
+				return t2.length;
+			} else {
+				return 0;
+			}
+		},
+		value_text() {
+			return `${this.value} ${this.obj.units || ''}`;
+		},
 	},
 };
 // 文本框
@@ -261,6 +294,7 @@ let customText = {
 				position: 'absolute',
 				width: obj_data.w * this.radio + 'px',
 				height: obj_data.h * this.radio + 'px',
+				lineHeight: obj_data.h * this.radio + 'px',
 				top: obj_data.y * this.radio + 'px',
 				left: obj_data.x * this.radio + 'px',
 				zIndex: obj_data.z_index,
@@ -512,12 +546,13 @@ let customSelector = {
 	},
 	watch: {
 		value(newvalue, oldvalue) {
-			if (newvalue != oldvalue) {
-				for (let val of this.options) {
-					if (val.value == newvalue) {
-						this.label = val.label;
-						break;
-					}
+			if (isNaN(newvalue)) {
+				return;
+			}
+			for (let val of this.options) {
+				if (val.value == newvalue) {
+					this.label = val.label;
+					break;
 				}
 			}
 		},
