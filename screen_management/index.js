@@ -22,6 +22,7 @@ new Vue({
 			control_show: false, // 控制弹窗显示
 			control_loading: false, // 控制下发遮罩
 			control_button: false, // 控制按钮点击频率
+			play_ctrl_show: false, //单个资源且只有音视频和文档才显示
 		},
 		cur_task_name: '', //当前任务名
 		cur_play_source: '', //当前播放资源
@@ -52,6 +53,11 @@ new Vue({
 			schedule_show: false,
 			control_show: false,
 		},
+		play_ctrl: {
+			total: 0, // 播放总长
+			current: 0, //音视频的alreadyPlaySeconds表示当前播放进度 文档的alreadyPlaySeconds表示正在播放的图片的时间
+			status: 'pause', //播放暂停按钮状态显示
+		},
 	},
 	async mounted() {
 		if (!location.search) {
@@ -60,14 +66,11 @@ new Vue({
 			this.get_token();
 		}
 		if (!sessionStorage.hushanwebmenuTree) {
-			await new Promise((success) => {
-				this.request('get', limits_url, this.token, (res) => {
-					success();
-					if (res.data.head.code !== 200) {
-						return;
-					}
-					sessionStorage.hushanwebmenuTree = JSON.stringify(res.data.data.menuTree);
-				});
+			await this.request('get', limits_url, this.token, (res) => {
+				if (res.data.head.code !== 200) {
+					return;
+				}
+				sessionStorage.hushanwebmenuTree = JSON.stringify(res.data.data.menuTree);
 			});
 		}
 		// 解析权限树
@@ -320,36 +323,66 @@ new Vue({
 			this.html.control_loading = true;
 			this.cur_task_name = '空';
 			this.cur_play_source = '空';
-			await Promise.all([this.get_device_status()]);
+			await Promise.all([this.get_device_status(), this.get_current_task()]);
+			// 如果设备当前在播放状态 则设置定时器
+			if (this.play_ctrl.status === 'play') {
+				this.add_cur_play_time();
+			}
 			this.html.control_loading = false;
+		},
+		// 定时器 间隔1秒增加当前播放时间
+		add_cur_play_time() {
+			this.play_timer = setInterval(() => {
+				if (this.play_ctrl.current < this.play_ctrl.total) {
+					this.play_ctrl.current++;
+				} else {
+					// 播放结束 从头开始播放
+					this.play_ctrl.current = 0;
+					this.send_order('seekTo', this.play_ctrl.current);
+				}
+			}, 1000);
 		},
 		// 获取设备状态
 		get_device_status() {
-			return new Promise((success) => {
-				this.request('get', `${get_device_status_url}/${id}`, this.token, (res) => {
-					success();
-					if (res.data.head.code !== 200) {
-						return;
-					}
-					let data = res.data.data.properties.currentTask.propertyValue;
-					this.cur_task_name = data.taskName.propertyValue || '空';
-					this.cur_play_source = data.resName.propertyValue || '空';
-				});
+			return this.request('get', `${get_device_status_url}/${this.device_id}`, this.token, (res) => {
+				if (res.data.head.code !== 200) {
+					return;
+				}
+				let data = res.data.data.properties.currentTask.propertyValue;
+				this.cur_task_name = data.taskName.propertyValue || '空';
+				this.cur_play_source = data.resName.propertyValue || '空';
+				// 0播放 1暂停
+				let data2 = res.data.data.properties.pause.propertyValue;
+				this.play_ctrl.status = data2 ? 'pause' : 'play';
 			});
 		},
 		// 获取设备当前任务
 		get_current_task() {
-			return new Promise((success) => {
-				this.request('get', `${current_task_url}/${this.device_id}`, this.token, (res) => {
-					success();
-					if (res.data.head.code !== 200) {
-						return;
+			this.html.play_ctrl_show = false;
+			return this.request('get', `${current_task_url}/${this.device_id}`, this.token, (res) => {
+				if (res.data.head.code !== 200 || res.data.data === null) {
+					return;
+				}
+				let data = res.data.data;
+				if (data.taskType === 4 && data.taskMap.playList?.length === 1) {
+					// 只有类型4的才可以控制 且播放列表长度为1
+					let task = data.taskMap.playList[0];
+					if (task.fileType !== 4) {
+						// 4是图片 除此以外都可以播放
+						this.html.play_ctrl_show = true;
+						this.play_ctrl.total = parseInt(task.oneCycleDuration);
+						if (task.fileTypeString === '文档') {
+							// 文档 duration表示单个图片停留时长 docCurrentPlayIndex表示当前播放图片索引(从0开始) alreadyPlaySeconds表示当前索引播放时长
+							this.play_ctrl.current = parseInt(task.docCurrentPlayIndex) * parseInt(task.duration) + parseInt(task.alreadyPlaySeconds);
+						} else {
+							this.play_ctrl.current = parseInt(task.alreadyPlaySeconds);
+						}
 					}
-				});
+				}
 			});
 		},
 		// 控制按钮点击频率
-		debounce(key, ...params) {
+		throttle(key, ...params) {
 			if (this.html.control_button) {
 				this.$message('点的太快啦！');
 				return;
@@ -375,6 +408,71 @@ new Vue({
 					return;
 				}
 			});
+		},
+		// 关闭控制弹窗 并清除定时器
+		close_ctrl() {
+			this.html.control_show = false;
+			clearInterval(this.play_timer);
+		},
+		// 控制播放
+		ctrl_play() {
+			// 先变状态再判断
+			this.play_ctrl.status = this.play_ctrl.status === 'play' ? 'pause' : 'play';
+			if (this.play_ctrl.status === 'pause') {
+				clearInterval(this.play_timer);
+			} else {
+				this.add_cur_play_time();
+			}
+			this.send_order('pause', this.play_ctrl.status === 'play' ? 0 : 1);
+		},
+		// 鼠标按下就跳到对应百分比 并在鼠标任意位置抬起时发送请求
+		process_change(e) {
+			let dom = this.$refs.play_process;
+			let clickP = e.clientX; // 记录点击坐标 计算移动距离
+			let startP = e.clientX - dom.getBoundingClientRect().left;
+			// 因为只会在可点击范围触发事件所以不用判断点击边界
+			let per = Math.round((startP / dom.offsetWidth) * 1000) / 10;
+			// 只修改百分比 定时器累加的秒数就会对不上
+			this.play_ctrl.current = (per / 100) * this.play_ctrl.total;
+			document.onmousemove = (me) => {
+				let offset = clickP - me.clientX;
+				let moveP = startP - offset;
+				if (moveP > dom.offsetWidth) {
+					moveP = dom.offsetWidth;
+				}
+				if (moveP < 0) {
+					moveP = 0;
+				}
+				let per2 = Math.round((startP / dom.offsetWidth) * 1000) / 10;
+				this.play_ctrl.current = (per2 / 100) * this.play_ctrl.total;
+			};
+			document.onmouseup = (ue) => {
+				document.onmousemove = null;
+				document.onmouseup = null;
+				this.send_order('seekTo', this.play_ctrl.current);
+			};
+		},
+	},
+	computed: {
+		// 分钟(补零):秒(补零)
+		play_cur_text() {
+			let m = Math.floor(this.play_ctrl.current / 60);
+			m = m < 10 ? '0' + m : m;
+			let s = this.play_ctrl.current % 60;
+			s = s < 10 ? '0' + s : s;
+			return `${m}:${s}`;
+		},
+		play_total_text() {
+			let m = Math.floor(this.play_ctrl.total / 60);
+			m = m < 10 ? '0' + m : m;
+			let s = this.play_ctrl.total % 60;
+			s = s < 10 ? '0' + s : s;
+			return `${m}:${s}`;
+		},
+		// 进度条百分比
+		play_percent() {
+			let per = Math.round((this.play_ctrl.current / this.play_ctrl.total) * 1000) / 10;
+			return per;
 		},
 	},
 });

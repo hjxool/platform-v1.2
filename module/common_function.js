@@ -35,7 +35,7 @@ const common_functions = {
 		},
 		//封装的请求方法
 		request(method, url, token, data, func) {
-			axios({
+			return axios({
 				method: method,
 				url: url,
 				data: typeof data === 'object' ? data : typeof data === 'function' ? ((func = data), null) : null,
@@ -60,6 +60,7 @@ const common_functions = {
 						},
 					});
 				}
+				return res;
 			});
 		},
 		// 获取任意节点到视窗顶的距离

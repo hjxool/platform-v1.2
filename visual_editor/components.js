@@ -45,7 +45,7 @@ const fn = {
 			body.attributeMap = this.custom;
 			// 有topic才能下发指令
 			if (this.topic) {
-				this.request('put', `${sendCmdtoDevice}/${this.topic}`, this.token, body);
+				return this.request('put', `${sendCmdtoDevice}/${this.topic}`, this.token, body);
 			}
 		},
 		// 设置组件样式
@@ -154,11 +154,11 @@ const fn = {
 									this.value = value;
 									break;
 								case 'text':
-									// 除了对象都能接收
-									if (typeof value === 'object') {
-										return;
-									}
-									this.value = value;
+									// // 除了对象都能接收
+									// if (typeof value === 'object') {
+									// 	return;
+									// }
+									this.value = value + '';
 									break;
 							}
 						} else {
@@ -353,7 +353,12 @@ let customButton = {
 		// 按钮分下发指令和切换页面两种
 		distinguish_operation() {
 			// 有跳转id 的不触发下发指令
-			this.obj.url ? this.$bus.$emit('turn_to_page', this.obj.url) : this.send_order(undefined);
+			// this.obj.url ? this.$bus.$emit('turn_to_page', this.obj.url) : this.send_order(undefined);
+			// 有没有跳转都检测有命令就下发
+			this.send_order(undefined);
+			if (this.obj.url) {
+				this.$bus.$emit('turn_to_page', this.obj.url);
+			}
 		},
 	},
 };
@@ -509,8 +514,14 @@ let customSelector = {
 	methods: {
 		// 字体样式
 		font_size(obj_data) {
-			let t = (203 / 22) * 16; //计算多少容器大小下 字体是16px
+			let t = (203 / 16) * 16; //计算多少容器大小下 字体是16px
 			let fz = (obj_data.w * this.radio) / t;
+			// 计算字体大小(px) 如果超过组件高度 则字体大小设为组件高度 小于组件高度则正常显示
+			let fpx = ((obj_data.w * this.radio) / 203) * 16;
+			if (fpx >= obj_data.h - 8) {
+				// 上下各留4px间距 默认根节点字体大小16px
+				fz = (obj_data.h - 8) / 16;
+			}
 			return {
 				color: '#fff',
 				fontSize: fz + 'rem',

@@ -111,20 +111,20 @@
       <div class="control_box" v-loading="html.control_loading">
         <div class="head row_layout flex_shrink">
           <span class="title">控制</span>
-          <el-button @click="html.control_show=false" size="mini" type="danger" circle icon="el-icon-close"></el-button>
+          <el-button @click="close_ctrl" size="mini" type="danger" circle icon="el-icon-close"></el-button>
         </div>
 
         <div class="grid_box">
-          <el-button @click="debounce('clearCache',1)" class="left" size="medium">清除应用缓存</el-button>
+          <el-button @click="throttle('clearCache',1)" class="left" size="medium">清除应用缓存</el-button>
           <div class="line"></div>
-          <el-button @click="debounce('restart',1)" class="right" size="medium">重启应用</el-button>
+          <el-button @click="throttle('restart',1)" class="right" size="medium">重启应用</el-button>
         </div>
 
         <div class="grid_box">
-          <el-button @click="debounce('volumeUp',1)" class="left" size="medium">音量
+          <el-button @click="throttle('volumeUp',1)" class="left" size="medium">音量
             +</el-button>
           <div class="line"></div>
-          <el-button @click="debounce('volumeDown',1)" class="right" size="medium">音量
+          <el-button @click="throttle('volumeDown',1)" class="right" size="medium">音量
             -</el-button>
         </div>
 
@@ -135,6 +135,25 @@
         <div class="row_layout margin">
           <span class="label flex_shrink">当前播放:</span>
           <span class="text_ellipsis" :title="cur_play_source">{{cur_play_source}}</span>
+        </div>
+
+        <div class="row_layout margin" v-if="html.play_ctrl_show">
+          <span class="label flex_shrink">播放控制:</span>
+          <!-- 播放器样式 -->
+          <div class="player row_layout">
+            <div class="ctrl_box flex_shrink" @click="ctrl_play">
+              <span v-show="play_ctrl.status==='pause'" class="icon">&#9654</span>
+              <span v-show="play_ctrl.status==='play'" class="icon">||</span>
+            </div>
+
+            <span class="flex_shrink">{{play_cur_text}}</span>
+
+            <div class="process" @mousedown="process_change" ref="play_process">
+              <div class="cur" :style="{width:`${play_percent}%`}"></div>
+            </div>
+
+            <span class="flex_shrink">{{play_total_text}}</span>
+          </div>
         </div>
       </div>
     </div>

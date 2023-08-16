@@ -153,12 +153,12 @@
 	}
 }
 .control_box {
-	width: 22%;
+	width: 27%;
 	min-width: 330px;
 	overflow: hidden;
 	background-color: #fff;
 	border-radius: 14px;
-	padding: 1rem;
+	padding: 1rem 1rem 0 1rem;
 	display: flex;
 	flex-direction: column;
 	margin: auto;
@@ -193,7 +193,46 @@
 	}
 	.label {
 		width: 4rem;
-		margin-right: 20px;
+		// margin-right: 20px;
 		font-size: 0.8rem;
+	}
+	.player {
+		flex-grow: 1;
+		background: #e8e8e8;
+		border-radius: 900px; // px使角变圆
+		// 进度条要动态拉伸 就需要其他元素撑开
+		padding: 0.7rem;
+		> .ctrl_box {
+			width: 2rem;
+			height: 2rem;
+			background: #fff;
+			border-radius: 50%; // %使整体变圆/椭圆
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			line-height: 2rem;
+			margin-right: 0.5rem;
+			cursor: pointer;
+			> .icon {
+				font-size: 0.8rem;
+				font-weight: bold;
+			}
+		}
+		> .process {
+			margin: 0 0.5rem;
+			flex-grow: 1;
+			background: #c2c7ca;
+			border-radius: 900px;
+			position: relative;
+			overflow: hidden;
+			height: 14px;
+			cursor: pointer;
+			> .cur {
+				background: #409eff;
+				position: absolute;
+				left: 0;
+				height: 100%;
+			}
+		}
 	}
 }
