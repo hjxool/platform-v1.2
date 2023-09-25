@@ -109,6 +109,9 @@ new Vue({
 				case 'scene_popup':
 					path = 'scene_popup';
 					break;
+				case 'app_add_person':
+					location.href = `./移动端/add_person/index.html${location.search}`;
+					return;
 				default:
 					location.href = `${this.path}${location.search}`;
 					return;

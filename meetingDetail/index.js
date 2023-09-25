@@ -152,9 +152,9 @@ new Vue({
 							sign_in2.push(val);
 							if (val.signIn == 2) {
 								late++;
+							} else {
+								no_late++;
 							}
-						} else {
-							no_late++;
 						}
 						if (!val.reply) {
 							no_reply.push(val);

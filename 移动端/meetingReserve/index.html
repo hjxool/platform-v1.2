@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <link rel="stylesheet" href="https://unpkg.com/vant@2.12/lib/index.css">
+  <link rel="stylesheet" href="../../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index" class="col_layout" v-cloak v-my_loading="loading">
+    <!-- 内容框 -->
+    <div class="form flex_grow" v-show="step.cur===0">
+      <div class="title">会议名称</div>
+      <input class="input" v-model="form.theme" placeholder="请输入会议名称" type="text">
+
+      <div class="title">会议室</div>
+      <div class="select row_layout" @click="show_picker('room')">
+        <span class="holder" v-show="!form.room">请选择会议室</span>
+        <span v-if="form.room">{{form.room.text}}</span>
+      </div>
+
+      <div class="title">请选择会议类型</div>
+      <div class="radio_box">
+        <div class="radio row_layout" v-for="t in meeting_type" @click="form.type=t.id">
+          <span>{{t.name}}</span>
+
+          <div class="select flex_shrink" v-show="form.type===t.id"></div>
+          <div class="not_select flex_shrink" v-show="form.type!==t.id"></div>
+        </div>
+      </div>
+
+      <div class="title">会议时间</div>
+      <div class="select time_box">
+        <span class="align">开始时间</span>
+        <span class="align center" @click="show_picker('start_date')">{{form.start_date||'空'}}</span>
+        <span class="align center" @click="show_picker('start_time')">{{form.start_time||'空'}}</span>
+        <div class="line"></div>
+      </div>
+      <div class="select time_box">
+        <span class="align">结束时间</span>
+        <span class="align center" @click="show_picker('end_date')">{{form.end_date||'空'}}</span>
+        <span class="align center" @click="show_picker('end_time')">{{form.end_time||'空'}}</span>
+        <div class="line"></div>
+      </div>
+    </div>
+
+    <div class="form flex_grow" v-show="step.cur===1">
+      <div class="row_layout row1" @click="show_picker('add_person')">
+        <div class="title">主持人</div>
+        <div class="text1">添加 ></div>
+      </div>
+      <div class="select person_box">
+        <div class="tag row_layout row1" v-for="p in 5">
+          <span class="text_ellipsis">啊实打实</span>
+          <span>x</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form flex_grow" v-show="step.cur===2"></div>
+    <!-- 步骤条 -->
+    <van-steps class="step_style" :active="step.cur">
+      <van-step v-for="s,index in step.steps">{{step_name(s,index)}}</van-step>
+    </van-steps>
+    <!-- 按钮 -->
+    <div class="buttons row_layout">
+      <div class="box pre" v-show="step.cur" @click="step.cur--">上一步</div>
+      <div class="box" @click="next_step">下一步</div>
+    </div>
+
+    <!-- 弹窗 -->
+    <van-popup v-model="picker.show" round position="bottom"
+      :style="{height:picker.type=='add_person'?'90%':'',overflow:'hidden'}">
+      <van-picker v-if="picker.type=='room'" :columns="picker.options" @cancel="picker.show=false"
+        @confirm="picker_confirm" :title="picker.title" show-toolbar></van-picker>
+
+      <van-datetime-picker v-if="picker.type=='start_date'||picker.type=='end_date'" v-model="picker.date" type="date"
+        @confirm="picker_confirm" @cancel="picker.show=false" title="选择年月日"
+        :min-date="picker.min_date"></van-datetime-picker>
+
+      <van-datetime-picker v-if="picker.type=='start_time'||picker.type=='end_time'" v-model="picker.date" type="time"
+        @confirm="picker_confirm" @cancel="picker.show=false" title="选择时间"></van-datetime-picker>
+      <!-- iframe嵌入页面 -->
+      <iframe v-show="picker.type=='add_person'" id="pop_window" :src="picker.url" frameborder="0"
+        scrolling="no"></iframe>
+    </van-popup>
+    <!--  -->
+  </div>
+
+  <!-- <script src="../../../运维人员部署请修改我.js"></script> -->
+  <script src="../../module/vue.js"></script>
+  <script src="https://unpkg.com/vant@2.12/lib/vant.min.js"></script>
+  <script src="../../module/axios.min.js"></script>
+  <script src="../../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

@@ -2,13 +2,15 @@ let url = `${我是接口地址}/`;
 // let room_list = `${url}api-portal/room/search/time`;
 let room_list = `${url}api-portal/room/search/date`;
 let meeting_reserve = `${url}api-portal/meeting`;
-let user_list = `${url}api-portal/users`;
+// let user_list = `${url}api-portal/users`;
 let upload_files = `${url}api-portal/meeting/upload/files`;
 let cur_user_url = `${url}api-auth/oauth/userinfo`;
-let stru_list_url = `${url}api-portal/department/getsubDeptAndCurrentDeptUser`;
-let remove_dup_url = `${url}api-portal/user/distinct`;
+// let stru_list_url = `${url}api-portal/department/getsubDeptAndCurrentDeptUser`;
+// let remove_dup_url = `${url}api-portal/user/distinct`;
 let limits_url = `${url}api-user/menus/current`; //获取菜单权限
 let get_scene_url = `${url}api-portal/scene-rule/available`; //查询场所可用场景
+let meeting_type_url = `${url}api-portal/meeting-type/search`; // 查询会议类型列表
+let get_template_list_url = `${url}api-portal/displayBoard/template/list`; //获取模板列表
 
 Vue.config.productionTip = false;
 new Vue({
@@ -39,6 +41,7 @@ new Vue({
 			add_person_display: false, //添加人员弹窗
 			add_person_loading: false, //添加人员表单加载
 			time_num: 68, //一行时间间隔方块
+			add_person_url: '', //添加人员页面
 		},
 		place_list: [], // 会议室及会议列表
 		// 新建会议表单
@@ -63,6 +66,20 @@ new Vue({
 			is_rebook: false, //当从其他页面跳转而来时 需要禁用预约方式
 			reminds: ['开始时', '开始前15分钟', '开始前30分钟', '开始前1小时', '开始前2小时', '开始前1天', '开始前2天', '自定义'],
 			emcee: [], // 主持人
+			step: 0, // 步骤条 0未开始 1~3对应步骤完成
+			step_list: [
+				{ title: '基本配置', value: 0 },
+				{ title: '通知配置', value: 1 },
+				{ title: '模板配置', value: 2 },
+			],
+			type: '1', // 会议类型
+			type_list: [], // 类型列表
+			template: '', // 选择的模板
+			//模板列表 整合了系统模板和自定义模板
+			template_list: [
+				{ label: '系统模板', options: [] },
+				{ label: '自定义模板', options: [] },
+			],
 		},
 		// 当前用户信息
 		user: {
@@ -105,16 +122,6 @@ new Vue({
 		},
 		// 添加参会人表单
 		add_person_form: {
-			search: '', //从总列表检索
-			option_select: 0, //0显示选项元素 1显示全部人员列表 2显示按架构分的列表
-			total_list: [], //总人员列表
-			// stru_list: [], //组织结构列表
-			stru_path: [], //组织结构路径 存储名字和索引id
-			select_list: [], //勾选的组织及人员列表
-			total_person: 0, //人员总数
-			page_size: 20, //查询人员一页最大数量
-			cur_path_id: '', //当前路径
-			stru_index: 0, //记录部门数组长度 以此分隔人员和部门
 			title: '', // 标题
 			add_type: '', // 添加主持人或是普通参会人
 		},
@@ -128,15 +135,15 @@ new Vue({
 		} else {
 			this.get_token();
 		}
+		this.get_meeting_type();
+		this.get_template_list();
+		this.html.add_person_url = `../index.html?type=search_user&token=${this.token}&theme=light`;
 		if (!sessionStorage.hushanwebmenuTree) {
-			await new Promise((success) => {
-				this.request('get', limits_url, this.token, (res) => {
-					success();
-					if (res.data.head.code !== 200) {
-						return;
-					}
-					sessionStorage.hushanwebmenuTree = JSON.stringify(res.data.data.menuTree);
-				});
+			await this.request('get', limits_url, this.token, (res) => {
+				if (res.data.head.code !== 200) {
+					return;
+				}
+				sessionStorage.hushanwebmenuTree = JSON.stringify(res.data.data.menuTree);
 			});
 		}
 		// 解析权限树
@@ -157,7 +164,11 @@ new Vue({
 				break;
 			}
 		}
-		this.config.reserve_show = this.is_element_show(limits, '新建会议');
+		try {
+			this.config.reserve_show = this.is_element_show(limits, '新建会议');
+		} catch (error) {
+			this.$message.error(error);
+		}
 
 		if (localStorage.hushanwebuserinfo) {
 			let obj = JSON.parse(localStorage.hushanwebuserinfo);
@@ -172,7 +183,6 @@ new Vue({
 		} else {
 			this.get_user_info();
 		}
-		this.get_user_info();
 		let time = new Date().toString().split(' ')[4];
 		let time_list = time.split(':');
 		let hour = +time_list[0];
@@ -203,12 +213,155 @@ new Vue({
 		};
 		setInterval(() => {
 			this.get_boundary();
-		}, 600000);
+		}, 60000);
 		// 横向滚动条相关参数
 		this.meeting_boxs = document.querySelector('.meeting_boxs');
 		this.scroll = false;
+		window.onmessage = (data) => {
+			console.log('页面消息', data);
+			if (Array.isArray(data?.data)) {
+				if (this.add_person_form.add_type === 'holder') {
+					this.new_meeting_form.emcee = [];
+					for (let val of data.data) {
+						let t = {
+							name: val.username,
+							id: val.id,
+						};
+						this.new_meeting_form.emcee.push(t);
+					}
+				} else if (this.add_person_form.add_type === 'join') {
+					this.new_meeting_form.search_person = [];
+					for (let val of data.data) {
+						let t = {
+							name: val.username,
+							id: val.id,
+						};
+						this.new_meeting_form.search_person.push(t);
+					}
+				}
+			} else {
+				if (data.data.type === 'Close popup') {
+					this.html.add_person_display = false;
+				}
+			}
+		};
 	},
 	methods: {
+		// 获取模板列表
+		async get_template_list() {
+			// industryType 1表示会议模板
+			let body = { pageNum: 1, pageSize: 900, condition: { industryType: 1, sysTemp: true } };
+			let sys = await this.request('post', get_template_list_url, this.token, body);
+			body.condition.sysTemp = false;
+			let cus = await this.request('post', get_template_list_url, this.token, body);
+			if (sys.data.head.code !== 200 || !sys.data.data?.data) {
+				sys = [];
+			} else {
+				sys = sys.data.data.data;
+			}
+			if (cus.data.head.code !== 200 || !cus.data.data?.data) {
+				cus = [];
+			} else {
+				cus = cus.data.data.data;
+			}
+			let a1 = this.new_meeting_form.template_list[0];
+			for (let val of sys) {
+				a1.options.push(val);
+			}
+			let a2 = this.new_meeting_form.template_list[1];
+			for (let val of cus) {
+				a2.options.push(val);
+			}
+		},
+		// 获取会议类型列表
+		get_meeting_type() {
+			return this.request('post', meeting_type_url, this.token, { condition: { status: true }, pageNum: 1, pageSize: 900 }, (res) => {
+				if (res.data.head.code !== 200) {
+					return;
+				}
+				let find = false;
+				for (let val of res.data.data.data) {
+					if (val.isDefault) {
+						this.default_meeting_type = val.id;
+						find = true;
+					}
+					this.new_meeting_form.type_list.push(val);
+				}
+				if (!find) {
+					this.default_meeting_type = this.new_meeting_form.type_list[0].id;
+				}
+			});
+		},
+		// 步骤显示文字
+		step_text(step) {
+			switch (true) {
+				case this.new_meeting_form.step < step.value:
+					return step.title;
+				case this.new_meeting_form.step === step.value:
+					return '进行中';
+				case this.new_meeting_form.step > step.value:
+					return '已完成';
+			}
+		},
+		// 区分点击下一步还是完成 完成时提交
+		step_pass(form) {
+			if (form.step === 2) {
+				this.new_submit(form);
+			} else {
+				// 没进行一步验证 通过才能进入下一步
+				this.$refs.new_meeting.validate(async (result) => {
+					let result2 = true;
+					if (!form.step) {
+						if (!form.emcee.length) {
+							this.$message.error('主持人不能为空！');
+							result2 = false;
+						}
+						if (form.emcee.length > 1) {
+							this.$message.error('主持人只能有一个');
+							result2 = false;
+						}
+						if (!form.search_person.length) {
+							this.$message.error('参会人人不能为空！');
+							result2 = false;
+						}
+					} else if (form.step === 1) {
+						if (form.sendMessage == 1) {
+							if (form.meetingReminds.length == 0) {
+								result2 = false;
+								this.$message.error('请添加提醒时间');
+							} else {
+								for (let i = 0; i < form.meetingReminds.length; i++) {
+									if (!form.meetingReminds[i].alert_time) {
+										this.$message.error('提醒时间不能为空');
+										result2 = false;
+										break;
+									} else {
+										for (let k = i + 1; k < form.meetingReminds.length; k++) {
+											if (form.meetingReminds[i].alert_time == form.meetingReminds[k].alert_time) {
+												this.$message.error('提醒时间不能重复');
+												result2 = false;
+												break;
+											}
+										}
+										if (!result2) {
+											break;
+										}
+									}
+								}
+							}
+						}
+					}
+					if (!result || !result2) {
+						return;
+					}
+					if (form.step === 2) {
+						this.new_submit(form);
+						return;
+					}
+					form.step++;
+				});
+			}
+		},
 		// 解析权限树
 		is_element_show(source, key) {
 			for (let val of source) {
@@ -366,6 +519,28 @@ new Vue({
 				this.mouse.top = dom2.getBoundingClientRect().top + 'px';
 				// this.mouse.height = dom.style.height = dom2.clientHeight + 'px';
 				this.mouse.height = dom2.clientHeight + 'px';
+				// 修改this.boundary 这是控制格子过期的关键
+				switch (true) {
+					case minute >= 15 && minute < 30:
+						boundary = boundary + 1;
+						break;
+					case minute >= 30 && minute < 45:
+						boundary = boundary + 2;
+						break;
+					case minute >= 45:
+						boundary = boundary + 3;
+						break;
+				}
+				this.boundary = boundary;
+				for (let i = 0; i < this.html.block_list.length; i++) {
+					let list = this.html.block_list[i];
+					for (let k = 0; k < list.length; k++) {
+						if (k < this.boundary && list[k] === 0) {
+							// 当天 格子索引小于时间线 格子是0(白色) 改为灰色
+							list.splice(k, 1, 1);
+						}
+					}
+				}
 			}
 		},
 		// 获取选中时间
@@ -579,14 +754,21 @@ new Vue({
 				this.new_meeting_form.guest_show = false;
 				this.new_meeting_form.is_rebook = false; //手动触发表单显示时不需要禁用预约方式
 				this.roomId = null; // 将外部跳转过来的数据置为空 不然会填入上一次的会议室id
+				this.new_meeting_form.step = 0;
+				this.new_meeting_form.type = this.default_meeting_type;
+				this.new_meeting_form.template = '';
 			}
 			this.start_move = false;
 		},
 		// 每次修改日期修改预定方式里的列表
 		change_reserve_type() {
+			if (!this.new_meeting_form.date) {
+				// 清除日期时也会触发change事件
+				return;
+			}
 			// 获取选择的时间、星期和几号 并填入
 			let curr_week;
-			switch (this.new_meeting_form.date.getDay()) {
+			switch (this.new_meeting_form.date?.getDay()) {
 				case 0:
 					curr_week = '天';
 					break;
@@ -619,145 +801,116 @@ new Vue({
 			];
 		},
 		// 提交新建会议表单 并刷新数据 关闭弹窗
-		new_submit(form) {
-			this.$refs.new_meeting.validate(async (result) => {
-				let result2 = true;
-				if (form.sendMessage == 1) {
-					if (form.meetingReminds.length == 0) {
-						result2 = false;
-						this.$message.error('请添加提醒时间');
-					} else {
-						for (let i = 0; i < form.meetingReminds.length; i++) {
-							if (!form.meetingReminds[i].alert_time) {
-								this.$message.error('提醒时间不能为空');
-								result2 = false;
-								break;
-							} else {
-								for (let k = i + 1; k < form.meetingReminds.length; k++) {
-									if (form.meetingReminds[i].alert_time == form.meetingReminds[k].alert_time) {
-										this.$message.error('提醒时间不能重复');
-										result2 = false;
-										break;
-									}
-								}
-								if (!result2) {
-									break;
-								}
-							}
-						}
-					}
-				}
-				if (!form.emcee.length) {
-					this.$message.error('主持人不能为空！');
-					result2 = false;
-				}
-				if (result && result2) {
-					// 开始结束时间
-					let m = form.date.getMonth() + 1 < 10 ? '0' + (form.date.getMonth() + 1) : form.date.getMonth() + 1;
-					let d = form.date.getDate() < 10 ? '0' + form.date.getDate() : form.date.getDate();
-					et = `${form.date.getFullYear()}-${m}-${d} ${form.time_end}:00`;
-					st = `${form.date.getFullYear()}-${m}-${d} ${form.time_start}:00`;
-					// 提示是否有场景执行 而后提交请求
-					this.html.form_loading = true;
-					let text = await new Promise((success) => {
-						this.request('get', `${get_scene_url}/${this.roomId || this.place_list[this.row_index].id}?placeStartDate=${st}&placeEndDate=${et}`, this.token, (res) => {
-							this.html.form_loading = false;
-							if (res.data.head.code !== 200) {
-								success('error');
-								return;
-							}
-							let t = '';
-							for (let val of res.data.data) {
-								t += `${val.sceneName}、`;
-							}
-							success(t);
-						});
-					});
-					// 如果接口报错 不显示提示 且 不继续执行
-					if (text === 'error') {
+		async new_submit(form) {
+			// 开始结束时间
+			let m = form.date.getMonth() + 1 < 10 ? '0' + (form.date.getMonth() + 1) : form.date.getMonth() + 1;
+			let d = form.date.getDate() < 10 ? '0' + form.date.getDate() : form.date.getDate();
+			et = `${form.date.getFullYear()}-${m}-${d} ${form.time_end}:00`;
+			st = `${form.date.getFullYear()}-${m}-${d} ${form.time_start}:00`;
+			// 提示是否有场景执行 而后提交请求
+			this.html.form_loading = true;
+			let text = await new Promise((success) => {
+				this.request('get', `${get_scene_url}/${this.roomId || this.place_list[this.row_index].id}?placeStartDate=${st}&placeEndDate=${et}`, this.token, (res) => {
+					this.html.form_loading = false;
+					if (res.data.head.code !== 200) {
+						success('error');
 						return;
 					}
-					if (text) {
-						// 文本有内容说明有场景 就提示，否则直接发起请求
-						let result3 = await this.$confirm(
-							`
-              <div class="col_layout">
-                <div>该会议将执行以下自动或条件场景——${text}</div>
-                <div style="font-size:14px;">如果对此会议有影响，请及时处理</div>
-              </div>
-            `,
-							'提示',
-							{
-								confirmButtonText: '创建',
-								cancelButtonText: '取消',
-								dangerouslyUseHTMLString: true,
-								center: true,
-							}
-						)
-							.then(() => {
-								return true;
-							})
-							.catch(() => {
-								return false;
-							});
-						if (!result3) {
-							// 点取消则不发请求
-							return;
-						}
+					let t = '';
+					for (let val of res.data.data) {
+						t += `${val.sceneName}、`;
 					}
-					let data = {
-						appointmentMode: form.method,
-						reply: form.reply,
-						roomId: this.roomId || this.place_list[this.row_index].id,
-						sendMessage: form.sendMessage,
-						signIn: form.signIn,
-						summary: form.summary,
-						theme: form.name,
-						userIds: [],
-						meetingFiles: form.files,
-						meetingReminds: [],
-						guestList: this.new_meeting_form.guestList,
-						description: form.description,
-						moderatorId: this.new_meeting_form.emcee[0].id,
-					};
-					for (let val of form.search_person) {
-						data.userIds.push(val.id);
+					success(t);
+				});
+			});
+			// 如果接口报错 不显示提示 且 不继续执行
+			if (text === 'error') {
+				return;
+			}
+			if (text) {
+				// 文本有内容说明有场景 就提示，否则直接发起请求
+				let result3 = await this.$confirm(
+					`
+                    <div class="col_layout">
+                      <div>该会议将执行以下自动或条件场景——${text}</div>
+                      <div style="font-size:14px;">如果对此会议有影响，请及时处理</div>
+                    </div>
+                  `,
+					'提示',
+					{
+						confirmButtonText: '创建',
+						cancelButtonText: '取消',
+						dangerouslyUseHTMLString: true,
+						center: true,
 					}
-					if (form.method != 0) {
-						// 周期截止
-						let y = form.cycle_deadline.getFullYear();
-						let m = form.cycle_deadline.getMonth() + 1 < 10 ? '0' + (form.cycle_deadline.getMonth() + 1) : form.cycle_deadline.getMonth() + 1;
-						let d = form.cycle_deadline.getDate() < 10 ? '0' + form.cycle_deadline.getDate() : form.cycle_deadline.getDate();
-						data.appointmentEndTime = `${y}-${m}-${d} 23:00:00`;
-					}
-					if (form.method == 5) {
-						// 自定义周
-						let t = form.cus_week.toString();
-						data.appointmentPeriod = `${t}`;
-					}
-					// 开始结束时间
-					data.endTime = et;
-					data.startTime = st;
-					// 提醒时间
-					for (let i = 0; i < form.meetingReminds.length; i++) {
-						let t2 = {
-							type: form.meetingReminds[i].type,
-							remindTime: form.meetingReminds[i].alert_time,
-						};
-						data.meetingReminds.push(t2);
-					}
-					this.html.form_loading = true;
-					this.request('post', meeting_reserve, this.token, data, (res) => {
-						this.html.form_loading = false;
-						if (res.data.head.code != 200) {
-							return;
-						}
-						this.close_new();
-						// this.col_index_start = this.col_index_end = null;
-						this.req_room_list();
-						// this.html.new_meeting = false;
+				)
+					.then(() => {
+						return true;
+					})
+					.catch(() => {
+						return false;
 					});
+				if (!result3) {
+					// 点取消则不发请求
+					return;
 				}
+			}
+			let data = {
+				appointmentMode: form.method,
+				reply: form.reply,
+				roomId: this.roomId || this.place_list[this.row_index].id,
+				sendMessage: form.sendMessage,
+				signIn: form.signIn,
+				summary: form.summary,
+				theme: form.name,
+				userIds: [],
+				meetingFiles: form.files,
+				meetingReminds: [],
+				guestList: this.new_meeting_form.guestList,
+				description: form.description,
+				moderatorId: this.new_meeting_form.emcee[0].id,
+				meetingType: form.type,
+			};
+			for (let val of form.search_person) {
+				data.userIds.push(val.id);
+			}
+			if (form.method != 0) {
+				// 周期截止
+				let y = form.cycle_deadline.getFullYear();
+				let m = form.cycle_deadline.getMonth() + 1 < 10 ? '0' + (form.cycle_deadline.getMonth() + 1) : form.cycle_deadline.getMonth() + 1;
+				let d = form.cycle_deadline.getDate() < 10 ? '0' + form.cycle_deadline.getDate() : form.cycle_deadline.getDate();
+				data.appointmentEndTime = `${y}-${m}-${d} 23:00:00`;
+			}
+			if (form.method == 5) {
+				// 自定义周
+				let t = form.cus_week.toString();
+				data.appointmentPeriod = `${t}`;
+			}
+			// 开始结束时间
+			data.endTime = et;
+			data.startTime = st;
+			// 提醒时间
+			for (let i = 0; i < form.meetingReminds.length; i++) {
+				let t2 = {
+					type: form.meetingReminds[i].type,
+					remindTime: form.meetingReminds[i].alert_time,
+				};
+				data.meetingReminds.push(t2);
+			}
+			// 会议模板
+			if (form.template) {
+				data.templateId = form.template;
+			}
+			this.html.form_loading = true;
+			this.request('post', meeting_reserve, this.token, data, (res) => {
+				this.html.form_loading = false;
+				if (res.data.head.code != 200) {
+					return;
+				}
+				this.close_new();
+				// this.col_index_start = this.col_index_end = null;
+				this.req_room_list();
+				// this.html.new_meeting = false;
 			});
 		},
 		close_new() {
@@ -986,24 +1139,6 @@ new Vue({
 		del_person(index, type) {
 			this.new_meeting_form[type === 'join' ? 'search_person' : 'emcee'].splice(index, 1);
 		},
-		// 添加参会人 已选列表 是否显示删除按钮
-		add_del_show(index) {
-			if (this.add_person_form.add_type === 'join') {
-				return index;
-			} else {
-				return true;
-			}
-		},
-		// 删除勾选的组织或人员
-		del_select(index) {
-			for (let val of this.add_person_form.total_list) {
-				if (val.id === this.add_person_form.select_list[index].id) {
-					val.check = false;
-					break;
-				}
-			}
-			this.add_person_form.select_list.splice(index, 1);
-		},
 		// 下载excel模板
 		download() {
 			//#region
@@ -1029,15 +1164,6 @@ new Vue({
 			document.body.appendChild(a);
 			a.click();
 			document.body.removeChild(a);
-		},
-		// 表单卡片样式
-		form_style() {
-			return {
-				display: 'flex',
-				flexDirection: 'column',
-				overflow: 'hidden',
-				maxHeight: '86vh',
-			};
 		},
 		// 鼠标焦点样式显示
 		mouse_focus(event, top) {
@@ -1134,243 +1260,23 @@ new Vue({
 		// 获取列表 初始化 展示添加人员弹窗
 		add_person_display(type) {
 			this.html.add_person_display = true;
-			this.add_person_form.search = '';
-			this.add_person_form.option_select = 0;
-			this.add_person_form.total_list = [];
-			this.add_person_form.stru_path = [];
-			this.add_person_form.select_list = [];
 			this.add_person_form.add_type = type; // 标识 用于区别条件
 			// 不同类别 从不同数组灌入数据
+			let list = [];
 			for (let val of this.new_meeting_form[type === 'join' ? 'search_person' : 'emcee']) {
 				let t = {
 					id: val.id,
 					name: val.name,
 					type: 'person',
 				};
-				this.add_person_form.select_list.push(t);
+				list.push(t);
 			}
+			document.querySelector('#add_person').contentWindow.postMessage(list); //给子页面发送消息回显
 			if (type === 'join') {
 				this.add_person_form.title = '添加参会人';
 			} else {
 				this.add_person_form.title = '指定主持人';
 			}
-		},
-		// 获取人员或组织列表
-		get_person_data(index, page) {
-			this.html.add_person_loading = true;
-			if (index == 1) {
-				let p;
-				if (typeof page == 'number') {
-					p = page;
-				} else {
-					p = 1;
-				}
-				this.request('post', user_list, this.token, { condition: {}, pageNum: p, pageSize: this.add_person_form.page_size, keyword: this.add_person_form.search }, (res) => {
-					console.log('人员检索', res);
-					this.html.add_person_loading = false;
-					if (res.data.head.code != 200) {
-						return;
-					}
-					this.add_person_form.option_select = index;
-					let data = res.data.data;
-					this.add_person_form.total_person = data.total;
-					this.add_person_form.total_list = [];
-					for (let val of data.data) {
-						let t = {
-							name: val.username,
-							id: val.id,
-							check: false,
-							type: 'person', //不同类型显示样式不同
-						};
-						this.add_person_form.total_list.push(t);
-					}
-					// 每次查询返回数据都要对比右侧勾选id 将check属性回显
-					for (let val of this.add_person_form.total_list) {
-						for (let val2 of this.add_person_form.select_list) {
-							if (val.id === val2.id) {
-								val.check = true;
-								break; //跳出检查后面的人员
-							}
-						}
-					}
-				});
-			} else {
-				let id;
-				if (typeof page == 'object') {
-					id = page.id;
-				} else {
-					id = 1;
-					this.add_person_form.stru_path = [{ name: '总公司', id: 1 }];
-				}
-				this.request('post', `${stru_list_url}/${id}`, this.token, (res) => {
-					console.log('架构检索', res);
-					this.html.add_person_loading = false;
-					if (res.data.head.code != 200) {
-						return;
-					}
-					this.add_person_form.cur_path_id = id;
-					this.add_person_form.option_select = index;
-					let data = res.data.data;
-					this.add_person_form.total_list = [];
-					this.add_person_form.stru_index = data.sysDeptVOList.length - 1; //记录部门数组长度
-					for (let val of data.sysDeptVOList) {
-						let t = {
-							name: val.deptName,
-							id: val.deptId,
-							check: false,
-							type: 'stru',
-						};
-						this.add_person_form.total_list.push(t);
-					}
-					for (let val of data.sysUserVOList) {
-						let t = {
-							name: val.username,
-							id: val.id,
-							check: false,
-							type: 'person',
-						};
-						this.add_person_form.total_list.push(t);
-					}
-					for (let val of this.add_person_form.total_list) {
-						for (let val2 of this.add_person_form.select_list) {
-							if (val.id === val2.id) {
-								val.check = true;
-								break;
-							}
-						}
-					}
-					if (id !== 1) {
-						// 这个条件只能作用于点击下级和刚进入按组织查询
-						this.add_person_form.stru_path.push(page);
-					}
-				});
-			}
-		},
-		// 勾选或取消勾选人员和组织
-		select_person(obj) {
-			if (obj.id === this.user.id) {
-				return;
-			}
-			if (obj.check) {
-				for (let index = 0; index < this.add_person_form.select_list.length; index++) {
-					if (this.add_person_form.select_list[index].id === obj.id) {
-						this.add_person_form.select_list.splice(index, 1);
-						break;
-					}
-				}
-			} else {
-				this.add_person_form.select_list.push(obj);
-			}
-			obj.check = !obj.check;
-		},
-		// 路径回退
-		path_back(obj, index) {
-			// 如果是当前展示的组织 则不能再查
-			if (this.add_person_form.cur_path_id !== obj.id) {
-				this.html.add_person_loading = true;
-				this.request('post', `${stru_list_url}/${obj.id}`, this.token, (res) => {
-					console.log('架构检索', res);
-					this.html.add_person_loading = false;
-					if (res.data.head.code != 200) {
-						return;
-					}
-					// for (let index = 0; index < this.add_person_form.stru_path.length; index++) {
-					// 	if (this.add_person_form.stru_path[index].id === obj.id) {
-					// 		// 找到索引后 删除后面所有路径
-					// 		this.add_person_form.stru_path.splice(index + 1);
-					// 	}
-					// }
-					this.add_person_form.stru_path.splice(index + 1);
-					this.add_person_form.cur_path_id = obj.id;
-					let data = res.data.data;
-					this.add_person_form.total_list = [];
-					this.add_person_form.stru_index = data.sysDeptVOList.length - 1; //记录部门数组长度
-					for (let val of data.sysDeptVOList) {
-						let t = {
-							name: val.deptName,
-							id: val.deptId,
-							check: false,
-							type: 'stru',
-						};
-						this.add_person_form.total_list.push(t);
-					}
-					for (let val of data.sysUserVOList) {
-						let t = {
-							name: val.username,
-							id: val.id,
-							check: false,
-							type: 'person',
-						};
-						this.add_person_form.total_list.push(t);
-					}
-					for (let val of this.add_person_form.total_list) {
-						for (let val2 of this.add_person_form.select_list) {
-							if (val.id === val2.id) {
-								val.check = true;
-								break;
-							}
-						}
-					}
-				});
-			}
-		},
-		// 参会人员提交
-		add_person_sub() {
-			this.html.add_person_loading = true;
-			let dep = [];
-			let user = [];
-			for (let val of this.add_person_form.select_list) {
-				if (val.type === 'person') {
-					let t = {
-						id: val.id,
-						username: val.name,
-					};
-					user.push(t);
-				} else {
-					let t = {
-						deptId: val.id,
-						deptName: val.name,
-					};
-					dep.push(t);
-				}
-			}
-			this.request('post', remove_dup_url, this.token, { sysDeptVOList: dep, sysUserVOList: user }, (res) => {
-				console.log('去重结果', res);
-				this.html.add_person_loading = false;
-				if (res.data.head.code != 200) {
-					this.$message('去重失败');
-					return;
-				}
-				if (this.add_person_form.add_type === 'join') {
-					this.html.add_person_display = false;
-					this.new_meeting_form.search_person = [this.user];
-					for (let val of res.data.data) {
-						if (val.id !== this.user.id) {
-							// 已经把当前用户添加到第一位 后面只需要把其余的加进来
-							let t = {
-								id: val.id,
-								name: val.username,
-							};
-							this.new_meeting_form.search_person.push(t);
-						}
-					}
-				} else {
-					// 去重结果不能大于一人
-					if (res.data.data.length > 1) {
-						this.$message.error('主持人只能选1个！');
-						return;
-					}
-					this.html.add_person_display = false;
-					this.new_meeting_form.emcee = [];
-					for (let val of res.data.data) {
-						let t = {
-							id: val.id,
-							name: val.username,
-						};
-						this.new_meeting_form.emcee.push(t);
-					}
-				}
-			});
 		},
 		// 重新预约会议
 		rebook_meeting(data) {
@@ -1390,6 +1296,7 @@ new Vue({
 			this.new_meeting_form.summary = data.summary;
 			this.new_meeting_form.description = data.description;
 			this.new_meeting_form.is_rebook = true;
+			this.new_meeting_form.emcee = data.emcee; // 主持人
 			// 提醒时间列表回显
 			this.new_meeting_form.meetingReminds = [];
 			if (!data.meetingReminds || !data.meetingReminds.length) {
@@ -1422,6 +1329,9 @@ new Vue({
 				};
 				this.new_meeting_form.guestList.push(visitor);
 			}
+			this.new_meeting_form.type = data.type; // 会议类型
+			this.new_meeting_form.step = 0; //重置步骤
+			this.new_meeting_form.template = data.template; //临时 暂无存模板字段
 		},
 		// 拖动下方横向滚动条 会连带上边的滚动条移动
 		link_scroll() {
@@ -1442,24 +1352,20 @@ new Vue({
 			return `${obj.approveUserickName || '空'}(${obj.approveUserPhone || '空'})`;
 		},
 	},
-	//#region
-	// computed: {
-	// 	// 由表单获取的来宾列表计算生成的文本
-	// 	guestList() {
-	// 		let text = '';
-	// 		let count = 0;
-	// 		for (let val of this.new_meeting_form.guestList) {
-	// 			count++;
-	// 			let t;
-	// 			if (count == this.new_meeting_form.guestList.length) {
-	// 				t = '';
-	// 			} else {
-	// 				t = '、';
-	// 			}
-	// 			text += `${val.guestName}(${val.guestPhone})${t}`;
-	// 		}
-	// 		return text;
-	// 	},
-	// },
-	//#endregion
+	computed: {
+		// 模板图片
+		template_img() {
+			if (this.new_meeting_form.template) {
+				for (let val of this.new_meeting_form.template_list) {
+					for (let val2 of val.options) {
+						if (val2.id === this.new_meeting_form.template) {
+							return val2.thumbnails[0];
+						}
+					}
+				}
+			} else {
+				return '';
+			}
+		},
+	},
 });

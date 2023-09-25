@@ -38,7 +38,7 @@
 	}
 	> .body {
 		flex-grow: 1;
-		padding: 0 4rem;
+		padding: 0 4rem 1rem;
 		overflow: hidden;
 		display: grid;
 		grid-template-rows: repeat(6, 1fr);
@@ -67,4 +67,54 @@
 .scroll_box {
 	flex-grow: 1;
 	overflow-x: hidden;
+	margin-bottom: 1rem;
+	padding: 0 2rem;
+	> .metting_box {
+		margin-bottom: 3rem;
+		position: relative;
+		height: 16rem;
+		display: grid;
+		grid-template-columns: 19% auto;
+		grid-template-rows: 94%;
+		z-index: 10;
+		> .time {
+			align-items: center;
+			justify-content: center;
+			> .tag {
+				margin-bottom: 16px;
+			}
+			> .text {
+				font-size: 2rem;
+			}
+		}
+		> .content {
+			justify-content: space-between;
+			padding: 0 3rem;
+			overflow: hidden;
+			> .box {
+				flex-grow: 1;
+				overflow: hidden;
+				padding-right: 2rem;
+				> .title {
+					font-size: 2.4rem;
+				}
+				> .margin {
+					margin-bottom: 2rem;
+				}
+				> .row_layout {
+					font-size: 1.6rem;
+					color: #697077;
+					> .icon {
+						width: 2rem;
+						height: 2rem;
+						margin-right: 14px;
+					}
+				}
+			}
+			> .icon {
+				width: 6rem;
+				height: 6rem;
+			}
+		}
+	}
 }

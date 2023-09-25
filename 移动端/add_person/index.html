@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <link rel="stylesheet" href="https://unpkg.com/vant@2.12/lib/index.css">
+  <link rel="stylesheet" href="../../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index" class="col_layout" v-cloak v-my_loading="loading">
+    <div class="search_box row_layout">
+      <!-- 搜索 -->
+      <div class="search">
+        <van-search class="box" v-model="search" @search="search" placeholder="搜索"
+          background="transparent"></van-search>
+        <div class="button1" @click="search">搜索</div>
+      </div>
+      <!-- 条件筛选 -->
+      <van-dropdown-menu class="type">
+        <van-dropdown-item v-model="type" :options="types"></van-dropdown-item>
+      </van-dropdown-menu>
+    </div>
+    <!-- 列表 -->
+    <div class="scroll_box flex_grow">
+      <div class="row row_layout" v-for="layer in list" v-show="is_show(layer)">
+        <!-- 勾选 -->
+        <img v-show="!layer.check" src="./img/icon2.png" class="icon" @click="layer.check=!layer.check">
+        <img v-show="layer.check" src="./img/icon3.png" class="icon" @click="layer.check=!layer.check">
+        <!-- 名 -->
+        <span :style="{paddingLeft:`${layer.row*4}rem`}" @click="layer.check=!layer.check">{{layer.title}}</span>
+        <!-- 展开按钮 -->
+        <img v-show="layer.type!=='person'" :src="unfold_row(layer)?'./img/icon1.png':'./img/icon4.png'" class="icon2"
+          @click="unfold(layer.path)">
+      </div>
+    </div>
+    <!-- 已选 -->
+    <div class="foot row_layout flex_shrink">
+      <span class="text">已选择({{select_list.length}}/1000)</span>
+      <div class="button1">确定</div>
+    </div>
+  </div>
+
+  <!-- <script src="../../../运维人员部署请修改我.js"></script> -->
+  <script src="../../module/vue.js"></script>
+  <script src="https://unpkg.com/vant@2.12/lib/vant.min.js"></script>
+  <script src="../../module/axios.min.js"></script>
+  <script src="../../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

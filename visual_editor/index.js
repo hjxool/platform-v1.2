@@ -21,6 +21,7 @@ new Vue({
 		customRadioGroup,
 		customCheckBox,
 		customTable,
+		customInput,
 	},
 	data: {
 		html: {
@@ -39,7 +40,6 @@ new Vue({
 			this.token = sessionStorage.token;
 			this.device_id = sessionStorage.device_id;
 			// this.product_id = sessionStorage.product_id;
-			this.device_id = sessionStorage.device_id;
 			document.title = decodeURIComponent(window.sessionStorage.device_name);
 		} else {
 			this.get_token();

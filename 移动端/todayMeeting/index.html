@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title></title>
-  <link rel="stylesheet" href="../../module/element-ui.css">
+  <link rel="stylesheet" href="https://unpkg.com/vant@2.12/lib/index.css">
   <link rel="stylesheet" href="../../module/common_style.css">
   <link rel="stylesheet" href="./index.css">
 </head>
@@ -33,12 +33,41 @@
       </div>
     </div>
     <!-- 会议列表 -->
-    <div class="scroll_box"></div>
+    <div class="scroll_box">
+      <div class="metting_box" v-for="m in body.list">
+        <img src="./img/icon1.png" class="bg_img">
+
+        <div class="time col_layout">
+          <van-tag class="tag" plain :type="m.status==-1?'warning':''" size="large">{{m.status==-1?'已结束':''}}</van-tag>
+          <div class="text">{{m.start}}</div>
+          <div class="text">-</div>
+          <div class="text">{{m.end}}</div>
+        </div>
+
+        <div class="content row_layout">
+          <div class="box">
+            <div class="title margin text_ellipsis">{{m.title}}</div>
+
+            <div class="row_layout margin">
+              <img src="./img/icon3.png" class="icon">
+              <div class="text_ellipsis">主持人：{{m.author}}</div>
+            </div>
+
+            <div class="row_layout">
+              <img src="./img/icon4.png" class="icon">
+              <div>{{m.place}}</div>
+            </div>
+          </div>
+
+          <img src="./img/icon2.png" class="icon">
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="../../../运维人员部署请修改我.js"></script>
   <script src="../../module/vue.js"></script>
-  <script src="../../module/element-ui.js"></script>
+  <script src="https://unpkg.com/vant@2.12/lib/vant.min.js"></script>
   <script src="../../module/axios.min.js"></script>
   <script src="../../module/common_function.js"></script>
   <script src="./index.js"></script>

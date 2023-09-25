@@ -221,6 +221,11 @@ let vm = new Vue({
 			];
 			this.request('post', `${device_list}/${this.status.user_id}/${this.status.place_id}`, this.token, { condition: {} }, (res) => {
 				console.log('设备', res);
+				this.status.place_types = [
+					{ num: 0, type: '全部' },
+					{ num: 0, type: '在线' },
+					{ num: 0, type: '告警' },
+				];
 				if (typeof res.data == 'object' && res.data.data != null) {
 					this.status.place_devices = res.data.data;
 					for (let i = 0; i < this.status.place_devices.length; i++) {

@@ -323,7 +323,8 @@ new Vue({
 			this.html.control_loading = true;
 			this.cur_task_name = '空';
 			this.cur_play_source = '空';
-			await Promise.all([this.get_device_status(), this.get_current_task()]);
+			let res = await this.get_device_status();
+			await this.get_current_task(res);
 			// 如果设备当前在播放状态 则设置定时器
 			if (this.play_ctrl.status === 'play') {
 				this.add_cur_play_time();
@@ -338,7 +339,7 @@ new Vue({
 				} else {
 					// 播放结束 从头开始播放
 					this.play_ctrl.current = 0;
-					this.send_order('seekTo', this.play_ctrl.current);
+					this.send_order('seekto', this.play_ctrl.current);
 				}
 			}, 1000);
 		},
@@ -351,13 +352,10 @@ new Vue({
 				let data = res.data.data.properties.currentTask.propertyValue;
 				this.cur_task_name = data.taskName.propertyValue || '空';
 				this.cur_play_source = data.resName.propertyValue || '空';
-				// 0播放 1暂停
-				let data2 = res.data.data.properties.pause.propertyValue;
-				this.play_ctrl.status = data2 ? 'pause' : 'play';
 			});
 		},
 		// 获取设备当前任务
-		get_current_task() {
+		get_current_task(params) {
 			this.html.play_ctrl_show = false;
 			return this.request('get', `${current_task_url}/${this.device_id}`, this.token, (res) => {
 				if (res.data.head.code !== 200 || res.data.data === null) {
@@ -365,6 +363,9 @@ new Vue({
 				}
 				let data = res.data.data;
 				if (data.taskType === 4 && data.taskMap.playList?.length === 1) {
+					// 0播放 1暂停
+					let data2 = params.data.data.properties.pause.propertyValue;
+					this.play_ctrl.status = data2 ? 'pause' : 'play';
 					// 只有类型4的才可以控制 且播放列表长度为1
 					let task = data.taskMap.playList[0];
 					if (task.fileType !== 4) {
@@ -433,7 +434,7 @@ new Vue({
 			// 因为只会在可点击范围触发事件所以不用判断点击边界
 			let per = Math.round((startP / dom.offsetWidth) * 1000) / 10;
 			// 只修改百分比 定时器累加的秒数就会对不上
-			this.play_ctrl.current = (per / 100) * this.play_ctrl.total;
+			this.play_ctrl.current = Math.round((per / 100) * this.play_ctrl.total);
 			document.onmousemove = (me) => {
 				let offset = clickP - me.clientX;
 				let moveP = startP - offset;
@@ -443,13 +444,13 @@ new Vue({
 				if (moveP < 0) {
 					moveP = 0;
 				}
-				let per2 = Math.round((startP / dom.offsetWidth) * 1000) / 10;
-				this.play_ctrl.current = (per2 / 100) * this.play_ctrl.total;
+				let per2 = Math.round((moveP / dom.offsetWidth) * 1000) / 10;
+				this.play_ctrl.current = Math.round((per2 / 100) * this.play_ctrl.total);
 			};
 			document.onmouseup = (ue) => {
 				document.onmousemove = null;
 				document.onmouseup = null;
-				this.send_order('seekTo', this.play_ctrl.current);
+				this.send_order('seekto', this.play_ctrl.current);
 			};
 		},
 	},

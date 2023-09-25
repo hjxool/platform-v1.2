@@ -272,6 +272,14 @@ new Vue({
 					summary: t.summary,
 					search_person: [],
 					guestList: [],
+					type: t.meetingType,
+					template: t.templateId || '',
+					emcee: [
+						{
+							name: t.moderatorName,
+							id: t.moderatorId,
+						},
+					],
 				};
 				for (let val of t.users) {
 					if (val.isGuest) {

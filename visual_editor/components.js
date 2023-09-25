@@ -108,7 +108,7 @@ const fn = {
 									break;
 								case 'slider':
 								case 'progress':
-									if (this.data_type !== 'int' && this.data_type !== 'float' && this.data_type !== 'double' && this.data_type !== 'any') {
+									if (this.data_type !== 'int' && this.data_type !== 'float' && this.data_type !== 'float' && this.data_type !== 'any') {
 										return;
 									}
 									// data_type为any时能转数字转数字
@@ -125,13 +125,8 @@ const fn = {
 									break;
 								case 'switch':
 								case 'switch_button':
-									if (this.data_type !== 'int' && this.data_type !== 'any') {
-										return;
-									}
-									if (Number(value) !== 0 && Number(value) !== 1) {
-										return;
-									}
-									this.value = value;
+									// 所有值转化成字符串匹配
+									this.value = value + '';
 									break;
 								case 'select':
 								case 'radio':
@@ -154,11 +149,14 @@ const fn = {
 									this.value = value;
 									break;
 								case 'text':
-									// // 除了对象都能接收
-									// if (typeof value === 'object') {
-									// 	return;
-									// }
 									this.value = value + '';
+									break;
+								case 'input':
+									// 除了对象都能接收
+									if (typeof value === 'object') {
+										return;
+									}
+									this.value = value;
 									break;
 							}
 						} else {
@@ -366,20 +364,59 @@ let customButton = {
 let customSwitch = {
 	template: `
     <div :style="style(obj)" class="switch_box" @click="switch_fn">
-      <img v-show="value" src="./img/icon3.png" class="bg_img" draggable="false">
-      <img v-show="!value" src="./img/icon4.png" class="bg_img" draggable="false">
+      <img v-show="value===on_value" :src="src(true)" class="bg_img" draggable="false">
+      <img v-show="value===off_value" :src="src(false)" class="bg_img" draggable="false">
     </div>
   `,
 	mixins: [common_functions, fn],
 	data() {
 		return {
-			value: 0,
+			value: this.obj.SwitchDisplaysOffStatus || '0', //当前值
+			on_value: this.obj.SwitchDisplaysOnStatus || '1', //开的值
+			off_value: this.obj.SwitchDisplaysOffStatus || '0', //关的值
 		};
 	},
 	methods: {
 		switch_fn() {
-			this.value = this.value ? 0 : 1;
-			this.send_order(this.value);
+			if (this.value === this.on_value) {
+				this.value = this.off_value;
+			} else if (this.value === this.off_value) {
+				this.value = this.on_value;
+			}
+			let data;
+			switch (this.data_type) {
+				case 'int':
+				case 'float':
+				case 'double':
+				case 'any':
+					data = parseInt(this.value);
+					break;
+				case 'array':
+				case 'struct':
+					data = JSON.parse(this.value);
+					break;
+				default:
+					data = this.value;
+					break;
+			}
+			this.send_order(data);
+		},
+		// 根据组件类别区分显示图
+		src(flag) {
+			switch (this.obj.type) {
+				case 'switch':
+					if (flag) {
+						return './img/icon3.png';
+					} else {
+						return './img/icon4.png';
+					}
+				case 'switch2':
+					if (flag) {
+						return './img/icon11.png';
+					} else {
+						return './img/icon12.png';
+					}
+			}
 		},
 	},
 };
@@ -388,21 +425,43 @@ let customButtonSwitch = {
 	template: `
     <div :style="style(obj)" class="center switch_box button" @click="switch_fn">
       <div :style="bg()" class="bg_img"></div>
-      <span :style="size(obj)">{{value?text2:text}}</span>
+      <span :style="size(obj)">{{value===on_value?text2:text}}</span>
     </div>
   `,
 	mixins: [common_functions, fn],
 	data() {
 		return {
-			value: 0,
+			value: this.obj.SwitchDisplaysOffStatus || '0', //当前值
 			text: this.obj.value || '',
 			text2: this.obj.value2 || '',
+			on_value: this.obj.SwitchDisplaysOnStatus || '1', //开的值
+			off_value: this.obj.SwitchDisplaysOffStatus || '0', //关的值
 		};
 	},
 	methods: {
 		switch_fn() {
-			this.value = this.value ? 0 : 1;
-			this.send_order(this.value);
+			if (this.value === this.on_value) {
+				this.value = this.off_value;
+			} else if (this.value === this.off_value) {
+				this.value = this.on_value;
+			}
+			let data;
+			switch (this.data_type) {
+				case 'int':
+				case 'float':
+				case 'double':
+				case 'any':
+					data = parseInt(this.value);
+					break;
+				case 'array':
+				case 'struct':
+					data = JSON.parse(this.value);
+					break;
+				default:
+					data = this.value;
+					break;
+			}
+			this.send_order(data);
 		},
 		size(obj_data) {
 			let t = (203 / 22) * 16; //计算多少容器大小下 字体是16px
@@ -415,7 +474,7 @@ let customButtonSwitch = {
 		},
 		bg() {
 			return {
-				background: this.value ? this.obj.background2 : this.obj.background,
+				background: this.value === this.on_value ? this.obj.background2 : this.obj.background,
 			};
 		},
 	},
@@ -821,6 +880,56 @@ let customTable = {
 	computed: {
 		maxheight() {
 			return this.obj.h * this.radio;
+		},
+	},
+};
+// 输入框
+let customInput = {
+	template: `
+    <el-input class="input_style" v-model="value" @change="comfirm_input" :style="style(obj)" 
+    :placeholder="obj.placeholder" type="text" :maxlength="obj.maxlength" show-word-limit></el-input>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			value: '',
+		};
+	},
+	methods: {
+		// 失去焦点或按下回车时提示确认下发指令信息
+		async comfirm_input() {
+			// 根据绑定属性转换输入值 如果没绑定属性则不进行
+			if (!this.path) {
+				return;
+			}
+			let value = Number(this.value);
+			if (this.data_type === 'int' || this.data_type === 'float' || this.data_type === 'double') {
+				// 如果绑定属性是数字但是输入内容无法转换成数字 则提示
+				if (isNaN(value)) {
+					this.$alert('输入内容与属性类型不符', '提示', {
+						confirmButtonText: '确定',
+					});
+					return;
+				}
+			} else if (this.data_type === 'any') {
+				if (isNaN(value)) {
+					// 如果是any类型 又转不成数字则变回字符串
+					value = this.value;
+				}
+			}
+			let result = await this.$confirm(`确认下发指令${value}?`, '提示', {
+				confirmButtonText: '确定',
+				cancelButtonText: '取消',
+			})
+				.then(() => {
+					return true;
+				})
+				.catch(() => {
+					return false;
+				});
+			if (result) {
+				this.send_order(value);
+			}
 		},
 	},
 };

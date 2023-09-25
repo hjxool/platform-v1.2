@@ -1,10 +1,10 @@
 let url = `${我是接口地址}/`;
 let roles_list_url = `${url}api-user/roles/users/assignable`; // 根据角色id查询可分配列表
 let dep_list_url = `${url}api-user/department/users/assignable`; // 根据部门id查询可分配列表
-let remove_dup_url = `${url}api-portal/user/distinct`; //用户去重
+let remove_dup_url = `${url}api-user/department/deptUsers/distinct`; //用户去重
 let role_user_url = `${url}api-user/roles`; //管理给角色分配用户
 let dep_user_url = `${url}api-user/department`; //管理给部门分配用户
-let all_user_url = `${url}api-portal/users`; //分页查询用户列表
+let all_user_url = `${url}api-user/users/nickName`; //分页查询用户列表
 let all_layer_url = `${url}api-user/department/getSubDeptAndCurrentDeptUser`; //获取层级列表
 
 new Vue({
@@ -71,7 +71,8 @@ new Vue({
 				this.request('post', url, this.token, { pageNum: page, pageSize: this.form.page_size, condition: c, keyword: this.form.search }, (res) => {
 					console.log('检索结果', res);
 					this.html.page_loading = false;
-					if (res.data.head.code != 200) {
+					if (res.data.head.code != 200 || !Array.isArray(res.data.data.data)) {
+						this.$message.error('请求异常');
 						return;
 					}
 					this.form.option_select = index;

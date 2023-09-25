@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <link rel="stylesheet" href="https://unpkg.com/vant@2.12/lib/index.css">
+  <link rel="stylesheet" href="../../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index" class="col_layout" v-cloak v-my_loading="loading">
+    <div class="header col_layout">
+      <!-- 搜索 -->
+      <div class="search">
+        <van-search class="box" v-model="head.search" @search="search" placeholder="搜索会议" shape="round"
+          background="transparent"></van-search>
+        <div class="button1" @click="search">搜索</div>
+      </div>
+      <!-- 筛选 -->
+      <div class="filter">
+        <!-- 下拉框 -->
+        <van-dropdown-menu active-color="#2C74F8">
+          <van-dropdown-item v-model="head.type" @change="search" :options="head.types"></van-dropdown-item>
+          <van-dropdown-item v-model="head.status_select" @change="search" :options="head.status"></van-dropdown-item>
+        </van-dropdown-menu>
+        <!-- 选择时间范围 -->
+        <div class="row_layout" @click="head.calendar_show=true" style="justify-content: center;">
+          <div class="icon">&#128197;</div>
+          <div class="time">{{head.start_time?`${head.start_time}至${head.end_time}`:'全部'}}</div>
+        </div>
+        <van-calendar v-model="head.calendar_show" type="range" @confirm="select_time" allow-same-day></van-calendar>
+      </div>
+    </div>
+    <!-- 列表 -->
+    <div class="scroll_box" @wheel="next_page">
+      <div class="metting_box" v-for="m in body.list">
+        <img src="./img/icon2.png" class="bg_img">
+
+        <div class="time col_layout">
+          <van-tag class="tag" plain :type="tag_type(m.status)" size="large">{{tag_text(m.status)}}</van-tag>
+          <div class="text">{{m.start}}</div>
+          <div class="text">-</div>
+          <div class="text">{{m.end}}</div>
+        </div>
+
+        <div class="content row_layout">
+          <div class="box">
+            <div class="title margin text_ellipsis">{{m.title}}</div>
+
+            <div class="row_layout margin">
+              <img src="./img/icon5.png" class="icon">
+              <div class="text_ellipsis">主持人：{{m.author}}</div>
+            </div>
+
+            <div class="row_layout">
+              <img src="./img/icon4.png" class="icon">
+              <div>{{m.place}}</div>
+            </div>
+          </div>
+          <!-- 扫码 -->
+          <img src="./img/icon3.png" class="icon">
+          <!-- 跳转 -->
+          <div class="icon2 center">></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- <script src="../../../运维人员部署请修改我.js"></script> -->
+  <script src="../../module/vue.js"></script>
+  <script src="https://unpkg.com/vant@2.12/lib/vant.min.js"></script>
+  <script src="../../module/axios.min.js"></script>
+  <script src="../../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

@@ -34,6 +34,18 @@ new Vue({
 		this.calendar.today_month = d.getMonth() + 1;
 		this.calendar.today_day = d.getDate();
 		this.get_day_list(d);
+		// 临时
+		for (let index = 0; index < 3; index++) {
+			let t = {
+				status: -1,
+				start: '09:00',
+				end: '10:30',
+				title: '会议主题',
+				author: 'xxx',
+				place: 'xx会议室',
+			};
+			this.body.list.push(t);
+		}
 	},
 	methods: {
 		// 浏览器大小改变后执行方法
