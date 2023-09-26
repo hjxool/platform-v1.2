@@ -175,6 +175,10 @@
           </div>
         </div>
       </div>
+      <!-- 集中控制 -->
+      <div class="page2" v-show="html.option[html.option_focus].name==='集中控制'">
+        <iframe :src="html.control_url" frameborder="0" scrolling="no" style="width: 100%;height: 100%;"></iframe>
+      </div>
     </div>
 
     <!-- 弹窗 -->

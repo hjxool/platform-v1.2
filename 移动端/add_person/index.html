@@ -24,19 +24,60 @@
         <van-dropdown-item v-model="type" :options="types"></van-dropdown-item>
       </van-dropdown-menu>
     </div>
-    <!-- 列表 -->
-    <div class="scroll_box flex_grow">
-      <div class="row row_layout" v-for="layer in list" v-show="is_show(layer)">
-        <!-- 勾选 -->
-        <img v-show="!layer.check" src="./img/icon2.png" class="icon" @click="layer.check=!layer.check">
-        <img v-show="layer.check" src="./img/icon3.png" class="icon" @click="layer.check=!layer.check">
-        <!-- 名 -->
-        <span :style="{paddingLeft:`${layer.row*4}rem`}" @click="layer.check=!layer.check">{{layer.title}}</span>
-        <!-- 展开按钮 -->
-        <img v-show="layer.type!=='person'" :src="unfold_row(layer)?'./img/icon1.png':'./img/icon4.png'" class="icon2"
-          @click="unfold(layer.path)">
+    <!-- 架构检索路径 -->
+    <div v-if="type" class="path_box flex_shrink">
+      <div class="text2" v-for="path,index in stru_path">
+        <span @click="path_back(path,index)" class="text">{{path.name}}</span>
+        <span v-show="index!=stru_path.length-1">></span>
       </div>
     </div>
+    <!-- 列表 -->
+    <div class="scroll_box flex_grow">
+      <!-- 人员形式 -->
+      <template v-if="!type">
+        <div class="row row_layout" v-for="person,index in list2" @click="select_person(person)">
+          <!-- 勾选 -->
+          <img v-show="!person.check" src="./img/icon2.png" class="icon">
+          <img v-show="person.check" src="./img/icon3.png" class="icon">
+          <!-- 名 -->
+          <span class="name">{{person.name}}</span>
+        </div>
+      </template>
+      <!-- 组织形式 -->
+      <template v-if="type">
+        <!-- 组织列表 -->
+        <div class="row row_layout" v-for="de,index in list1" @click="select_person(de)">
+          <!-- 勾选 -->
+          <img v-show="!de.check" src="./img/icon2.png" class="icon">
+          <img v-show="de.check" src="./img/icon3.png" class="icon">
+          <!-- 名 -->
+          <span class="name">{{de.name}}</span>
+          <!-- 下级按钮 -->
+          <div :class="['button1',de.check?'disable':'able']" @click.stop="get_data(de)">下级
+          </div>
+        </div>
+        <!-- 分割线 -->
+        <div v-if="list2.length && list1.length" class="line_between"></div>
+        <!-- 人员列表 -->
+        <div class="row row_layout" v-for="person,index in list2" @click="select_person(person)">
+          <!-- 勾选 -->
+          <img v-show="!person.check" src="./img/icon2.png" class="icon">
+          <img v-show="person.check" src="./img/icon3.png" class="icon">
+          <!-- 名 -->
+          <span class="name">{{person.name}}</span>
+        </div>
+      </template>
+    </div>
+    <!-- 分页 -->
+    <van-pagination class="flex_shrink" @change="get_data" v-model="page_num" :total-items="total_person"
+      :show-page-size="3" force-ellipses>
+      <template #prev-text>
+        <van-icon name="arrow-left"></van-icon>
+      </template>
+      <template #next-text>
+        <van-icon name="arrow"></van-icon>
+      </template>
+    </van-pagination>
     <!-- 已选 -->
     <div class="foot row_layout flex_shrink">
       <span class="text">已选择({{select_list.length}}/1000)</span>

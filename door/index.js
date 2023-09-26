@@ -24,6 +24,7 @@ let vm = new Vue({
 			option: [
 				{ name: '设备管理', src_light: './img/设备明.png', src_dark: './img/设备暗.png' },
 				{ name: '设备监控', src_light: './img/场景明.png', src_dark: './img/场景暗.png' },
+				{ name: '集中控制', src_light: './img/场景明.png', src_dark: './img/场景暗.png' },
 			], //场所选项样式
 			option_focus: 0, //场景/设备选项
 			product_type: ['直连设备', '网关', '网关子设备'], //产品类型
@@ -40,6 +41,7 @@ let vm = new Vue({
 			alert_detail_display: false, //告警详情弹窗
 			visualizedFlag: false, //是否显示可视化编辑按钮
 			click_frequence: false, //限制点击频率
+			control_url: '', // 集中控制iframe url
 		},
 		place_type_list: [], //场所类型
 		edit_place_form: {
@@ -391,15 +393,17 @@ let vm = new Vue({
 		// 切换选项查看场所信息
 		option_switch(index) {
 			this.html.option_focus = index;
-			this.req_user_list();
 			if (this.html.option[index].name === '设备管理') {
+				this.req_user_list();
 				this.get_all_user_devices();
 				this.$nextTick(() => {
 					let dom = document.querySelector('.all_device');
 					this.devices.table_h = dom.offsetHeight - 20;
 				});
 			} else if (this.html.option[index].name == '设备监控') {
-				// this.req_user_list();
+				this.req_user_list();
+			} else if (this.html.option[index].name == '集中控制') {
+				this.html.control_url = `../index.html?token=${this.token}&type=common_control`;
 			}
 		},
 		// 查询所有租户设备

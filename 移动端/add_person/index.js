@@ -9,6 +9,8 @@ let all_layer_url = `${url}api-user/department/getSubDeptAndCurrentDeptUser`; //
 Vue.use(vant.DropdownMenu);
 Vue.use(vant.DropdownItem);
 Vue.use(vant.Search);
+Vue.use(vant.Pagination);
+Vue.use(vant.Icon);
 
 new Vue({
 	el: '#index',
@@ -16,34 +18,25 @@ new Vue({
 	data: {
 		loading: false, //加载弹窗
 		search: '', // 搜索框
-		list: [], // 列表
+		list1: [], // 组织数组
+		list2: [], // 人员数组
 		select_list: [], //勾选的组织及人员列表
-		page_size: 20,
 		type: 0, //按xxx搜索
 		types: [
 			{ text: '按人员选', value: 0 },
 			{ text: '按架构选', value: 1 },
 		],
-		cur_path: '', //展开行
+		stru_path: [], //组织结构路径 存储名字和索引id
+		page_num: 1, //查询页数
+		page_size: 20, //一次查多少条
+		cur_path_id: '', //当前路径
+		total_person: 0,
 	},
 	async mounted() {
 		this.get_token();
 		this.resize();
 		try {
-			this.loading = true;
-			this.list = [
-				{ title: '成都分公司', check: true, row: 1, path: '1', type: 'organization' },
-				{ title: '广州分公司', check: false, row: 1, path: '2', type: 'organization' },
-				{ title: '技术中心', check: false, row: 2, path: '2-1', type: 'organization' },
-				{ title: 'xxx5', check: false, row: 3, path: '2-1-1', type: 'person' },
-				{ title: '部门1', check: false, row: 3, path: '2-1-2', type: 'organization' },
-				{ title: '综合集成事业部', check: false, row: 2, path: '2-2', type: 'organization' },
-				{ title: 'xxx1', check: false, row: 3, path: '2-2-1', type: 'person' },
-				{ title: 'xxx2', check: false, row: 3, path: '2-2-2', type: 'person' },
-				{ title: 'xxx3', check: false, row: 3, path: '2-2-3', type: 'person' },
-				{ title: 'xxx4', check: false, row: 2, path: '2-3', type: 'person' },
-			];
-			this.loading = false;
+			this.get_data();
 		} catch (error) {}
 		// 监听调用页面传入数据 用于回显
 		window.onmessage = (data) => {
@@ -63,60 +56,146 @@ new Vue({
 			let ratio = Math.round((width / 720) * 100) / 100; // 取小数点后两位
 			dom.style.fontSize = ratio * 10 + 'px'; //以720分辨率下字体大小10px为基准
 		},
-		// 根据当前行索引判断是否展开
-		unfold_row(obj) {
-			// 人员没有展开图标
-			if (obj.type === 'person') {
-				return false;
-			}
-			// 挨个对比路径 是否吻合 路径过程中的要全部展开
-			let l1 = this.cur_path.split('-');
-			let l2 = obj.path.split('-');
-			// 必须以当前节点为参照 不然如果当前节点比选的路径长且前面都重合则会错误的显示展开
-			for (let i = 0; i < l2.length; i++) {
-				if (!l1[i] || l2[i] !== l1[i]) {
-					return false;
+		// 根据类别获取人员列表获取
+		async get_data(params1, params2) {
+			this.loading = true;
+			let body = {
+				condition: {},
+				pageSize: this.page_size,
+			};
+			if (this.type) {
+				// 按架构
+				let id;
+				if (typeof params1 == 'object') {
+					// 点下级时
+					id = params1.id;
+					this.page_num = 1;
+				} else if (typeof params1 == 'number') {
+					// 同一组织下 切页
+					id = this.stru_path[this.stru_path.length - 1].id;
+					this.page_num = params1;
+				} else {
+					// 刚进入页面时
+					id = 1;
+					this.stru_path = [{ name: '总公司', id: 1 }];
+					this.page_num = 1;
 				}
-			}
-			return true;
-		},
-		// 是否显示
-		is_show(obj) {
-			// 第一层的都展示
-			if (obj.row === 1) {
-				return true;
-			}
-			// 后面几层只有小于等于所选路径长度+1的层可以显示
-			let l1 = this.cur_path.split('-');
-			let l2 = obj.path.split('-');
-			if (l2.length <= l1.length + 1) {
-				// 对比的是当前节点的前一层 是否可见取决于每层的父节点是否相同
-				for (let i = 0; i < l2.length - 1; i++) {
-					if (l2[i] !== l1[i]) {
-						return false;
-					}
-				}
-				return true;
-			} else {
-				return false;
-			}
-		},
-		// 不同项展开 同项折叠 即往前退一层
-		unfold(path) {
-			let l1 = path.split('-');
-			let l2 = this.cur_path.split('-');
-			for (let i = 0; i < l1.length; i++) {
-				if (l1[i] !== l2[i]) {
-					// 不同路径轨迹和大于所选所选路径的 直接修改
-					this.cur_path = path;
+				body.condition.currentDeptId = id;
+				let { data } = await this.request('post', all_layer_url, this.token, body);
+				this.loading = false;
+				if (data.head.code !== 200) {
 					return;
 				}
+				this.cur_path_id = id;
+				this.list1 = [];
+				for (let val of data.data.sysDeptVOList) {
+					let t = {
+						name: val.deptName,
+						id: val.deptId,
+						check: false,
+						type: 'stru',
+					};
+					this.list1.push(t);
+				}
+				this.list2 = [];
+				if (data.data.userPageResult.data) {
+					for (let val of data.data.userPageResult.data) {
+						let t = {
+							name: val.username,
+							id: val.id,
+							check: false,
+							type: 'person',
+						};
+						this.list2.push(t);
+					}
+				}
+				for (let val of this.select_list) {
+					let find = false;
+					// 勾选列表是公用的 如果在部门列表中找到了 就break 否则去人员列表查
+					for (let val2 of this.list1) {
+						if (val.id === val2.id) {
+							find = true;
+							val.check = true;
+							break;
+						}
+					}
+					if (!find) {
+						for (let val2 of this.list2) {
+							if (val.id === val2.id) {
+								find = true;
+								val.check = true;
+								break;
+							}
+						}
+					}
+				}
+				if (typeof params2 === 'number') {
+					// 路径回退 删除后面的层级
+					this.stru_path.splice(params2 + 1);
+				} else if (id !== 1 && typeof params1 !== 'number') {
+					// 点击下级
+					// 除了根节点和分页 将后续节点入栈
+					this.stru_path.push(params1);
+				}
+				this.total_person = data.data.userPageResult.total; // 只分人员的页
+			} else {
+				// 按人员
+				this.type = 0;
+				if (this.search) {
+					body.keyword = this.search;
+				}
+				if (typeof params1 == 'number') {
+					this.page_num = params1;
+				} else {
+					this.page_num = 1;
+				}
+				body.pageNum = this.page_num;
+				let { data } = await this.request('post', all_user_url, this.token, body);
+				this.loading = false;
+				if (data.head.code !== 200) {
+					return;
+				}
+				this.total_person = data.data.total;
+				this.list2 = [];
+				for (let val of data.data.data) {
+					let t = {
+						name: val.username,
+						id: val.id,
+						check: false,
+						type: 'person', //不同类型显示样式不同
+					};
+					this.list2.push(t);
+				}
+				for (let val of this.list2) {
+					for (let val2 of this.select_list) {
+						if (val.id === val2.id) {
+							val.check = true;
+							break;
+						}
+					}
+				}
 			}
-			// 轨迹重合
-			// 且当前路径长度小于等于所选路径
-			// splice索引从0开始 且包含起始位置的都删除
-			l2.splice(l2.length - 1 - (l2.length - l1.length));
-			this.cur_path = l2.join('-');
+		},
+		// 路径回退
+		path_back(obj, index) {
+			// 如果是当前展示的组织 则不能再查
+			if (this.cur_path_id !== obj.id) {
+				this.get_data(obj, index);
+			}
+		},
+		// 勾选或取消勾选人员和组织
+		select_person(obj) {
+			if (obj.check) {
+				for (let index = 0; index < this.select_list.length; index++) {
+					if (this.select_list[index].id === obj.id) {
+						this.select_list.splice(index, 1);
+						break;
+					}
+				}
+			} else {
+				this.select_list.push(obj);
+			}
+			obj.check = !obj.check;
 		},
 	},
 });
