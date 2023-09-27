@@ -1,3 +1,7 @@
+.row_layout {
+	display: flex;
+	align-items: center;
+}
 #index {
 	width: 100%;
 	height: 100%;
@@ -202,15 +206,12 @@
 				display: flex;
 				flex-shrink: 0;
 				align-items: center;
-				justify-content: end;
+				// justify-content: end;
 				.total {
 					margin: 0 20px;
 					display: flex;
 					flex-direction: column;
 					align-items: center;
-					&:nth-child(3) {
-						margin-right: auto;
-					}
 					.num {
 						font-size: 18px;
 						font-weight: bold;
@@ -228,6 +229,14 @@
 					object-fit: contain;
 					flex-shrink: 0;
 					margin-right: 180px;
+				}
+				// 集中控制按钮
+				> .button1 {
+					padding: 14px 20px;
+					color: #fff;
+					background: rgba(69, 83, 112, 0.9);
+					border-radius: 10px;
+					margin-right: auto;
 				}
 			}
 			.box2 {

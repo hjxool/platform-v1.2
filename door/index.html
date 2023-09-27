@@ -125,10 +125,16 @@
           <div class="card_list">
             <!-- 功能键 -->
             <div class="box1">
-              <div v-show="status.user_id" class="total" v-for="item in status.place_types">
-                <div class="num">{{item.num}}</div>
-                <div class="text">{{item.type}}</div>
+              <!-- 统计 -->
+              <div class="row_layout flex_shrink" style="margin-right: 100px;">
+                <div v-show="status.user_id" class="total" v-for="item in status.place_types">
+                  <div class="num">{{item.num}}</div>
+                  <div class="text">{{item.type}}</div>
+                </div>
               </div>
+              <!-- 集中控制按钮 -->
+              <div class="button button1" @click="turn_to_common_control">场所控制</div>
+              <!-- 删除图标 -->
               <img v-show="config.del_device_show && status.user_id" src="./img/delete.png" class="icon"
                 @drop="del_device" id="del_area">
             </div>

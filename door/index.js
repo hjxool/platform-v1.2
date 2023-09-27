@@ -153,6 +153,7 @@ let vm = new Vue({
 		}
 
 		this.get_place_type();
+		this.req_user_list();
 		this.option_switch(0);
 		window.onresize = () => {
 			let dom = document.querySelector('.all_device');
@@ -200,7 +201,7 @@ let vm = new Vue({
 					this.$message.info('该租户下无场所');
 					return;
 				}
-				this.get_place_devices(res.data.data[0].id);
+				// this.get_place_devices(res.data.data[0].id);
 			});
 		},
 		// 场所类型获取
@@ -394,14 +395,13 @@ let vm = new Vue({
 		option_switch(index) {
 			this.html.option_focus = index;
 			if (this.html.option[index].name === '设备管理') {
-				this.req_user_list();
 				this.get_all_user_devices();
 				this.$nextTick(() => {
 					let dom = document.querySelector('.all_device');
 					this.devices.table_h = dom.offsetHeight - 20;
 				});
 			} else if (this.html.option[index].name == '设备监控') {
-				this.req_user_list();
+				this.get_place_devices(this.status.place_list[0].id);
 			} else if (this.html.option[index].name == '集中控制') {
 				this.html.control_url = `../index.html?token=${this.token}&type=common_control`;
 			}
@@ -704,6 +704,11 @@ let vm = new Vue({
 					});
 				}
 			});
+		},
+		// 跳转集中控制 并传入场所id
+		turn_to_common_control() {
+			this.html.control_url = `../index.html?token=${this.token}&type=common_control&place_id=${this.status.place_id}`;
+			this.html.option_focus = 2;
 		},
 	},
 });

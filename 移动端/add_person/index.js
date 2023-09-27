@@ -1,9 +1,9 @@
 // let url = `${我是接口地址}/`;
 // let search_meeting_url = `${url}api-portal/meeting/list`; //查询会议列表
 let url = 'http://192.168.30.45:9201';
-let remove_dup_url = `${url}api-user/department/deptUsers/distinct`; //用户去重
-let all_user_url = `${url}api-user/users/nickName`; //分页查询用户列表
-let all_layer_url = `${url}api-user/department/getSubDeptAndCurrentDeptUser`; //获取层级列表
+let remove_dup_url = `${url}/api-user/department/deptUsers/distinct`; //用户去重
+let all_user_url = `${url}/api-user/users/nickName`; //分页查询用户列表
+let all_layer_url = `${url}/api-user/department/getSubDeptAndCurrentDeptUser`; //获取层级列表
 
 // 引入vant
 Vue.use(vant.DropdownMenu);
@@ -11,6 +11,7 @@ Vue.use(vant.DropdownItem);
 Vue.use(vant.Search);
 Vue.use(vant.Pagination);
 Vue.use(vant.Icon);
+Vue.use(vant.Popup);
 
 new Vue({
 	el: '#index',
@@ -31,6 +32,7 @@ new Vue({
 		page_size: 20, //一次查多少条
 		cur_path_id: '', //当前路径
 		total_person: 0,
+		select_show: false, //已选弹窗
 	},
 	async mounted() {
 		this.get_token();
@@ -45,6 +47,7 @@ new Vue({
 			this.search = '';
 			if (Array.isArray(data?.data)) {
 				this.select_list = data.data;
+				this.get_data(); //重查一次 重置列表中勾选
 			}
 		};
 	},
@@ -67,7 +70,11 @@ new Vue({
 				// 按架构
 				let id;
 				if (typeof params1 == 'object') {
-					// 点下级时
+					// 点下级 或路径回退 时
+					if (params2 === true) {
+						// 点下级时判断能否点击
+						return;
+					}
 					id = params1.id;
 					this.page_num = 1;
 				} else if (typeof params1 == 'number') {
@@ -110,20 +117,17 @@ new Vue({
 					}
 				}
 				for (let val of this.select_list) {
-					let find = false;
-					// 勾选列表是公用的 如果在部门列表中找到了 就break 否则去人员列表查
-					for (let val2 of this.list1) {
-						if (val.id === val2.id) {
-							find = true;
-							val.check = true;
-							break;
+					if (val.type === 'stru') {
+						for (let val2 of this.list1) {
+							if (val.id === val2.id) {
+								val2.check = true;
+								break;
+							}
 						}
-					}
-					if (!find) {
+					} else {
 						for (let val2 of this.list2) {
 							if (val.id === val2.id) {
-								find = true;
-								val.check = true;
+								val2.check = true;
 								break;
 							}
 						}
@@ -196,6 +200,65 @@ new Vue({
 				this.select_list.push(obj);
 			}
 			obj.check = !obj.check;
+		},
+		// 删除勾选的组织或人员
+		del_select(index) {
+			let obj = this.select_list[index];
+			if (!this.type) {
+				for (let val of this.list2) {
+					if (val.id === obj.id) {
+						val.check = false;
+						break;
+					}
+				}
+			} else {
+				if (obj.type === 'stru') {
+					for (let val of this.list1) {
+						if (val.id === obj.id) {
+							val.check = false;
+							break;
+						}
+					}
+				} else {
+					for (let val of this.list2) {
+						if (val.id === obj.id) {
+							val.check = false;
+							break;
+						}
+					}
+				}
+			}
+			this.select_list.splice(index, 1);
+		},
+		// 向父页面发送消息关闭弹窗
+		close_window(params) {
+			window.parent.postMessage({ type: 'close_pop', data: params });
+		},
+		// 参会人员提交
+		async submit() {
+			this.loading = true;
+			let dep = [];
+			let user = [];
+			for (let val of this.select_list) {
+				if (val.type === 'person') {
+					let t = {
+						id: val.id,
+						username: val.name,
+					};
+					user.push(t);
+				} else {
+					let t = {
+						deptId: val.id,
+						deptName: val.name,
+					};
+					dep.push(t);
+				}
+			}
+			let { data } = await this.request('post', remove_dup_url, this.token, { sysDeptVOList: dep, sysUserVOList: user });
+			if (data.head.code !== 200) {
+				return;
+			}
+			this.close_window(data.data);
 		},
 	},
 });

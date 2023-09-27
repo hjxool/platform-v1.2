@@ -3,7 +3,7 @@
 let url = 'http://192.168.30.45:9201';
 let room_url = `${url}/api-portal/room/list/all`; //查询会议室列表
 let meeting_type_url = `${url}/api-portal/meeting-type/search`; //查询会议室类型
-let token = '1dcdfb21-b115-4a10-93e0-88a107e2b00a';
+let token = '59bc6466-ac89-4ed3-8485-9d859e354bfa';
 
 Vue.use(vant.Step);
 Vue.use(vant.Steps);
@@ -28,6 +28,9 @@ new Vue({
 			start_time: '', //开始时间
 			end_date: '',
 			end_time: '',
+			holder: [], //主持人
+			join: [], //参会人
+			guest: [], //来宾
 		},
 		meeting_type: [], //会议类型
 		picker: {
@@ -49,6 +52,37 @@ new Vue({
 			await this.get_meeting_type();
 			this.loading = false;
 		} catch (error) {}
+		window.onmessage = (data) => {
+			console.log('页面消息', data);
+			if (data.data.type === 'close_pop') {
+				this.picker.show = false;
+				let d = data.data.data;
+				if (Array.isArray(d)) {
+					switch (this.picker.type) {
+						case 'holder':
+							this.form.holder = [];
+							for (let val of d) {
+								let t = {
+									name: val.username,
+									id: val.id,
+								};
+								this.form.holder.push(t);
+							}
+							break;
+						case 'join':
+							this.form.join = [];
+							for (let val of d) {
+								let t = {
+									name: val.username,
+									id: val.id,
+								};
+								this.form.join.push(t);
+							}
+							break;
+					}
+				}
+			}
+		};
 	},
 	methods: {
 		// 浏览器大小改变后执行方法
@@ -117,19 +151,20 @@ new Vue({
 				case 'end_time':
 					this.picker.date = this.form.end_date ? new Date(`${this.form.end_date} ${this.form.end_time}`) : '';
 					break;
-				case 'add_person':
+				case 'holder':
+				case 'join':
 					// this.picker.url = `../../index.html?type=app_add_person&token=${token}`;
 					this.picker.url = `../add_person/index.html?token=${token}`;
 					this.$nextTick(() => {
 						let list = [];
-						// for (let val of this.new_meeting_form[type === 'join' ? 'search_person' : 'emcee']) {
-						// 	let t = {
-						// 		id: val.id,
-						// 		name: val.name,
-						// 		type: 'person',
-						// 	};
-						// 	list.push(t);
-						// }
+						for (let val of this.form[type]) {
+							let t = {
+								id: val.id,
+								name: val.name,
+								type: 'person',
+							};
+							list.push(t);
+						}
 						document.querySelector('#pop_window').contentWindow.postMessage(list);
 					});
 					break;
@@ -186,6 +221,58 @@ new Vue({
 					break;
 				}
 			}
+		},
+		// 弹窗样式
+		pop_style() {
+			let t = {
+				overflow: 'hidden',
+			};
+			switch (this.picker.type) {
+				case 'holder':
+				case 'join':
+					t.height = '90%';
+					break;
+			}
+			return t;
+		},
+		// 删除人员
+		del_person(index, type) {
+			this.form[type].splice(index, 1);
+		},
+		// 触发上传
+		upload_click() {
+			upload.click();
+		},
+		// 上传文件后读取人员列表
+		upload_guest(e) {
+			let file = e.target.files[0];
+			// 取完文件后就清除
+			upload.value = null;
+			let reader = new FileReader();
+			reader.readAsBinaryString(file);
+			reader.onload = (e2) => {
+				try {
+					let binary = e2.target.result;
+					this.form.guest = []; //在当前表单下有可能重复上传文件 每次要清空之前的列表
+					let excel = XLSX.read(binary, { type: 'binary' });
+					for (let sheet in excel.Sheets) {
+						if (Object.prototype.hasOwnProperty.call(excel.Sheets, sheet)) {
+							let single_sheet = XLSX.utils.sheet_to_json(excel.Sheets[sheet]);
+							// 生成的是对象数组
+							for (let val of single_sheet) {
+								let t = Object.entries(val);
+								let visitor = {
+									guestName: t[0][1], //传的数据是这个字段名 不要改
+									guestPhone: t[1][1],
+								};
+								this.form.guest.push(visitor);
+							}
+						}
+					}
+				} catch (err) {
+					alert('只能上传Excel文件');
+				}
+			};
 		},
 	},
 });

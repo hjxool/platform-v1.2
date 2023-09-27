@@ -157,20 +157,17 @@ new Vue({
 						}
 					}
 					for (let val of this.form.select_list) {
-						let find = false;
-						// 勾选列表是公用的 如果在部门列表中找到了 就break 否则去人员列表查
-						for (let val2 of this.form.list1) {
-							if (val.id === val2.id) {
-								find = true;
-								val.check = true;
-								break;
+						if (val.type === 'stru') {
+							for (let val2 of this.form.list1) {
+								if (val.id === val2.id) {
+									val2.check = true;
+									break;
+								}
 							}
-						}
-						if (!find) {
+						} else {
 							for (let val2 of this.form.list2) {
 								if (val.id === val2.id) {
-									find = true;
-									val.check = true;
+									val2.check = true;
 									break;
 								}
 							}

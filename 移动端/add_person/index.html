@@ -15,13 +15,13 @@
     <div class="search_box row_layout">
       <!-- 搜索 -->
       <div class="search">
-        <van-search class="box" v-model="search" @search="search" placeholder="搜索"
+        <van-search class="box" v-model="search" @search="get_data" placeholder="搜索"
           background="transparent"></van-search>
-        <div class="button1" @click="search">搜索</div>
+        <div class="button1" @click="get_data">搜索</div>
       </div>
       <!-- 条件筛选 -->
       <van-dropdown-menu class="type">
-        <van-dropdown-item v-model="type" :options="types"></van-dropdown-item>
+        <van-dropdown-item v-model="type" @change="get_data()" :options="types"></van-dropdown-item>
       </van-dropdown-menu>
     </div>
     <!-- 架构检索路径 -->
@@ -53,7 +53,7 @@
           <!-- 名 -->
           <span class="name">{{de.name}}</span>
           <!-- 下级按钮 -->
-          <div :class="['button1',de.check?'disable':'able']" @click.stop="get_data(de)">下级
+          <div :class="['button1',de.check?'disable':'able']" @click.stop="get_data(de,de.check)">下级
           </div>
         </div>
         <!-- 分割线 -->
@@ -69,7 +69,7 @@
       </template>
     </div>
     <!-- 分页 -->
-    <van-pagination class="flex_shrink" @change="get_data" v-model="page_num" :total-items="total_person"
+    <van-pagination class="page_box flex_shrink" @change="get_data" v-model="page_num" :total-items="total_person"
       :show-page-size="3" force-ellipses>
       <template #prev-text>
         <van-icon name="arrow-left"></van-icon>
@@ -79,10 +79,24 @@
       </template>
     </van-pagination>
     <!-- 已选 -->
-    <div class="foot row_layout flex_shrink">
+    <div class="foot row_layout flex_shrink" @click="select_show=true">
       <span class="text">已选择({{select_list.length}}/1000)</span>
-      <div class="button1">确定</div>
+      <div class="button1" @click.stop="submit">确定</div>
     </div>
+
+    <!-- 弹窗 -->
+    <van-popup class="select_box col_layout" v-model="select_show" position="bottom">
+      <div class="text">已选择({{select_list.length}}/1000)</div>
+      <div class="scroll">
+        <div class="tag row_layout" v-for="t,index in select_list" @click="del_select(index)">
+          <span class="text_ellipsis">{{t.name}}</span>
+          <span>x</span>
+        </div>
+      </div>
+      <div class="submit">
+        <div class="button1" @click="select_show=false">关闭</div>
+      </div>
+    </van-popup>
   </div>
 
   <!-- <script src="../../../运维人员部署请修改我.js"></script> -->
