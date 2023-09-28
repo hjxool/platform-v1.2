@@ -89,7 +89,30 @@
 
       <div class="row1"></div>
       <div class="select">
+        <div class="row_layout row1">
+          <span class="text2">是否回复</span>
+          <van-switch v-model="form.reply" size="4rem"></van-switch>
+        </div>
+      </div>
 
+      <div class="row1"></div>
+      <div class="select">
+        <div class="col_layout">
+          <div class="row_layout row1">
+            <span class="text2">是否通知</span>
+            <van-switch v-model="form.notify" size="4rem"></van-switch>
+          </div>
+
+          <div class="notify_box col_layout" v-show="form.reminds.length">
+            <span class="text1">添加 ></span>
+
+            <div class="tag row_layout row1" v-for="n in form.reminds"
+              @click="show_picker(n.index!==7?'alert':'cus_alert',n)" style="padding: 2rem;">
+              <span class="text_ellipsis">{{reming_text(n)}}</span>
+              <span @click.stop="del_person(index,'reminds')">x</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -106,7 +129,7 @@
 
     <!-- 弹窗 -->
     <van-popup v-model="picker.show" round position="bottom" :style="pop_style()">
-      <van-picker v-if="picker.type=='room'" :columns="picker.options" @cancel="picker.show=false"
+      <van-picker v-if="picker.type=='room'||picker.type=='alert'" :columns="picker.options" @cancel="picker.show=false"
         @confirm="picker_confirm" :title="picker.title" show-toolbar></van-picker>
 
       <van-datetime-picker v-if="picker.type=='start_date'||picker.type=='end_date'" v-model="picker.date" type="date"
@@ -115,6 +138,9 @@
 
       <van-datetime-picker v-if="picker.type=='start_time'||picker.type=='end_time'" v-model="picker.date" type="time"
         @confirm="picker_confirm" @cancel="picker.show=false" title="选择时间"></van-datetime-picker>
+
+      <van-datetime-picker v-if="picker.type=='cus_alert'" v-model="picker.date" type="datetime" title="选择时间"
+        :min-date="picker.min_date"></van-datetime-picker>
       <!-- iframe嵌入页面 -->
       <iframe v-show="picker.type=='holder'||picker.type=='join'" id="pop_window" :src="picker.url" frameborder="0"
         scrolling="no"></iframe>

@@ -31,6 +31,9 @@ new Vue({
 			holder: [], //主持人
 			join: [], //参会人
 			guest: [], //来宾
+			reply: 0, //是否回复
+			notify: 1, //是否通知
+			reminds: [{ alert_time: '', index: 0, type: 0 }], //提醒时间
 		},
 		meeting_type: [], //会议类型
 		picker: {
@@ -44,6 +47,16 @@ new Vue({
 		},
 	},
 	async mounted() {
+		this.reminds = [
+			{ text: '开始时', value: 0 },
+			{ text: '开始前15分钟', value: 1 },
+			{ text: '开始前30分钟', value: 2 },
+			{ text: '开始前1小时', value: 3 },
+			{ text: '开始前2小时', value: 4 },
+			{ text: '开始前1天', value: 5 },
+			{ text: '开始前2天', value: 6 },
+			{ text: '自定义', value: 7 },
+		];
 		this.resize();
 		this.picker.min_date = new Date();
 		try {
@@ -130,7 +143,7 @@ new Vue({
 			this.step.cur++;
 		},
 		// 根据表单填入不同选项
-		show_picker(type) {
+		show_picker(type, params1) {
 			// 记录打开弹窗类型 在确认时区分执行方法
 			this.picker.type = type;
 			this.picker.show = true;
@@ -168,6 +181,15 @@ new Vue({
 						document.querySelector('#pop_window').contentWindow.postMessage(list);
 					});
 					break;
+				case 'alert':
+					this.picker.title = '提醒时间';
+					this.picker.options = this.reminds;
+					this.alert_select = params1; //记录当前操作的提醒数组项
+					break;
+				case 'cus_alert':
+					this.alert_select = params1; //记录当前操作的提醒数组项
+					this.picker.date = params1.alert_time ? new Date(params1.alert_time) : '';
+					break;
 			}
 		},
 		// 选择器确认
@@ -185,7 +207,51 @@ new Vue({
 				case 'end_time':
 					this.form[this.picker.type] = value;
 					break;
+				case 'alert':
+					this.alert_select.index = value;
+					this.init_time(this.alert_select);
+					break;
+				case 'cus_alert':
+					this.custom_time(this.alert_select, value);
+					break;
 			}
+		},
+		// 根据提醒时间选项生成字符串时间 用于提交
+		init_time(obj) {
+			let start = new Date(`${this.form.start_date} ${this.form.start_time}`);
+			let t;
+			switch (obj.index) {
+				case 0:
+					t = start;
+					break;
+				case 1:
+					t = new Date(start.getTime() - 15 * 60 * 1000);
+					break;
+				case 2:
+					t = new Date(start.getTime() - 30 * 60 * 1000);
+					break;
+				case 3:
+					t = new Date(start.getTime() - 60 * 60 * 1000);
+					break;
+				case 4:
+					t = new Date(start.getTime() - 2 * 60 * 60 * 1000);
+					break;
+				case 5:
+					t = new Date(start.getTime() - 24 * 60 * 60 * 1000);
+					break;
+				case 6:
+					t = new Date(start.getTime() - 2 * 24 * 60 * 60 * 1000);
+					break;
+				default:
+					return;
+			}
+			obj.alert_time = `${t.getFullYear()}-${t.getMonth() + 1 < 10 ? '0' + (t.getMonth() + 1) : t.getMonth() + 1}-${t.getDate() < 10 ? '0' + t.getDate() : t.getDate()} ${t.toString().split(' ')[4]}`;
+		},
+		// 自定义提醒时间
+		custom_time(obj, date) {
+			obj.alert_time = `${date.getFullYear()}-${date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1}-${date.getDate() < 10 ? '0' + date.getDate() : date.getDate()} ${
+				date.toString().split(' ')[4]
+			}`;
 		},
 		// 查询会议室
 		async get_room() {
@@ -273,6 +339,27 @@ new Vue({
 					alert('只能上传Excel文件');
 				}
 			};
+		},
+		// 提醒时间显示文字
+		reming_text(obj) {
+			switch (obj.index) {
+				case 0:
+					return '开始时';
+				case 1:
+					return '开始前15分钟';
+				case 2:
+					return '开始前30分钟';
+				case 3:
+					return '开始前1小时';
+				case 4:
+					return '开始前2小时';
+				case 5:
+					return '开始前1天';
+				case 6:
+					return '开始前2天';
+				case 7:
+					return obj.alert_time;
+			}
 		},
 	},
 });
