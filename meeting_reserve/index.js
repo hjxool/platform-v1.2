@@ -42,6 +42,7 @@ new Vue({
 			add_person_loading: false, //添加人员表单加载
 			time_num: 68, //一行时间间隔方块
 			add_person_url: '', //添加人员页面
+			door_password_options: ['人脸', '随机码', '人脸+随机码'],
 		},
 		place_list: [], // 会议室及会议列表
 		// 新建会议表单
@@ -80,6 +81,7 @@ new Vue({
 				{ label: '系统模板', options: [] },
 				{ label: '自定义模板', options: [] },
 			],
+			door_password: 2, //开门码 0人脸 1随机码 2默认人脸+随机码
 		},
 		// 当前用户信息
 		user: {
@@ -757,6 +759,7 @@ new Vue({
 				this.new_meeting_form.step = 0;
 				this.new_meeting_form.type = this.default_meeting_type;
 				this.new_meeting_form.template = '';
+				this.new_meeting_form.door_password = 2;
 			}
 			this.start_move = false;
 		},
@@ -870,6 +873,7 @@ new Vue({
 				description: form.description,
 				moderatorId: this.new_meeting_form.emcee[0].id,
 				meetingType: form.type,
+				doorMethod: form.door_password,
 			};
 			for (let val of form.search_person) {
 				data.userIds.push(val.id);

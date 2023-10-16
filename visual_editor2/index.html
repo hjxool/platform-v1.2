@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <link rel="stylesheet" href="../module/element-ui.css">
+  <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index" v-cloak v-loading="html.page_loading" @click="close_popup">
+    <div class="panel css_img" v-show="page_id==page.id" v-for="page in component_list" :style="panel_size(page)">
+      <template v-for="item,index in page.data">
+        <custom-container v-if="item.type=='container'" :obj="item" :radio="page.radio"></custom-container>
+        <custom-text v-if="item.type=='text-block'" :obj="item" :radio="page.radio"></custom-text>
+        <custom-switch v-if="item.type=='switch1'||item.type=='switch1V'||item.type=='switch2'" :obj="item"
+          :radio="page.radio"></custom-switch>
+        <custom-slider v-if="item.type=='sliderV'" :obj="item" :radio="page.radio"></custom-slider>
+        <custom-slider2 v-if="item.type=='slider'" :obj="item" :radio="page.radio"></custom-slider2>
+        <custom-img v-if="item.type=='image'" :obj="item" :radio="page.radio"></custom-img>
+        <custom-line v-if="item.type=='连线'" :obj="item" :radio="page.radio"></custom-line>
+        <custom-video v-if="item.type=='video'" :obj="item" :radio="page.radio"></custom-video>
+      </template>
+    </div>
+  </div>
+
+  <script src="../../运维人员部署请修改我.js"></script>
+  <script src="../../js/stomp.min.js"></script>
+  <script src="../module/vue.js"></script>
+  <script src="../module/element-ui.js"></script>
+  <script src="../module/axios.min.js"></script>
+  <script src="../module/common_function.js"></script>
+  <script src="./components.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

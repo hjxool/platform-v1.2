@@ -91,6 +91,7 @@ new Vue({
 				min: '', //属性 小
 				max: '', //属性 大
 				step: '', //属性 步长
+				scale: 2, //属性 精度 默认2
 				unit: '', //属性 单位
 				size: '', //属性 数组大小
 				itemType: '', //属性 数组元素类型
@@ -280,6 +281,7 @@ new Vue({
 						table.max = e.dataType.specs.max;
 						table.step = e.dataType.specs.step;
 						table.unit = e.dataType.specs.unitName == null ? '' : `${e.dataType.specs.unitName} / ${e.dataType.specs.unit}`;
+						table.scale = e.dataType.specs.scale || e.dataType.specs.scale === 0 ? 0 : 2;
 					}
 					this.protocol_list.push(table);
 				});
@@ -509,6 +511,7 @@ new Vue({
 					temp.max = row_data.dataType.specs.max;
 					temp.step = row_data.dataType.specs.step;
 					temp.unit = row_data.dataType.specs.unitName == null ? '' : `${row_data.dataType.specs.unitName} / ${row_data.dataType.specs.unit}`;
+					temp.scale = row_data.dataType.specs.scale || row_data.dataType.specs.scale === 0 ? 0 : 2;
 					break;
 			}
 			this.form_list.push(temp);
@@ -567,6 +570,7 @@ new Vue({
 					temp.max = row_data.dataType.specs.max;
 					temp.step = row_data.dataType.specs.step;
 					temp.unit = row_data.dataType.specs.unitName == null ? '' : `${row_data.dataType.specs.unitName} / ${row_data.dataType.specs.unit}`;
+					temp.scale = row_data.dataType.specs.scale || row_data.dataType.specs.scale === 0 ? 0 : 2;
 					break;
 			}
 			this.form_list.push(temp);
@@ -749,56 +753,58 @@ new Vue({
 					// 在编辑和新增里 如果未到最外层这一部分是公共逻辑 进行的是往上找 修改上一层级数据
 					// 其实也可以修改成将当前表单编辑的数据格式化 再替换上一层struct_array里对应的元素对象
 					let array = this.form_list[index - 1].struct_array;
-					array[obj.index].name = obj.name;
-					array[obj.index].identifier = obj.identifier;
-					array[obj.index].dataType.type = obj.dataType;
-					if (array[obj.index].dataType.specs != null) {
-						if (array[obj.index].dataType.specs.item != null) {
-							array[obj.index].dataType.specs.item.properties = [];
-						}
-					}
-					array[obj.index].dataType.properties = [];
-					switch (obj.dataType) {
-						case 'text':
-							// 如果原先数据是date等 specs就是null不能直接添加属性 而要用新对象直接覆盖
-							// 而且本来specs里就没有什么固定内容
-							array[obj.index].dataType.specs = { length: obj.textLength };
-							break;
-						case 'date':
-							break;
-						case 'struct':
-							for (let i of obj.struct_array) {
-								array[obj.index].dataType.properties.push(i);
-							}
-							break;
-						case 'array':
-							array[obj.index].dataType.specs = {
-								size: obj.size,
-								item: { type: obj.itemType },
-							};
-							array[obj.index].dataType.specs.item.properties = [];
-							if (obj.itemType == 'struct') {
-								for (let i of obj.struct_array) {
-									array[obj.index].dataType.specs.item.properties.push(i);
-								}
-							}
-							break;
-						case 'enum':
-							array[obj.index].dataType.specs = { enumValue: {}, enumType: obj.enum_value_type };
-							for (let val of obj.enum_list) {
-								array[obj.index].dataType.specs.enumValue[val.value] = val.label;
-							}
-							break;
-						default:
-							array[obj.index].dataType.specs = {
-								min: obj.min == '' ? 0 : obj.min,
-								max: obj.max == '' ? 0 : obj.max,
-								step: obj.step == '' ? 0 : obj.step,
-								unitName: obj.unit.split(' / ')[0] == '' ? null : obj.unit.split(' / ')[0],
-								unit: obj.unit.split(' / ')[0] == '' ? null : obj.unit.split(' / ')[1],
-							};
-							break;
-					}
+					array.splice(obj.index, 1, this.format_params(obj));
+					// array[obj.index].name = obj.name;
+					// array[obj.index].identifier = obj.identifier;
+					// array[obj.index].dataType.type = obj.dataType;
+					// if (array[obj.index].dataType.specs != null) {
+					// 	if (array[obj.index].dataType.specs.item != null) {
+					// 		array[obj.index].dataType.specs.item.properties = [];
+					// 	}
+					// }
+					// array[obj.index].dataType.properties = [];
+					// switch (obj.dataType) {
+					// 	case 'text':
+					// 		// 如果原先数据是date等 specs就是null不能直接添加属性 而要用新对象直接覆盖
+					// 		// 而且本来specs里就没有什么固定内容
+					// 		array[obj.index].dataType.specs = { length: obj.textLength };
+					// 		break;
+					// 	case 'date':
+					// 		break;
+					// 	case 'struct':
+					// 		for (let i of obj.struct_array) {
+					// 			array[obj.index].dataType.properties.push(i);
+					// 		}
+					// 		break;
+					// 	case 'array':
+					// 		array[obj.index].dataType.specs = {
+					// 			size: obj.size,
+					// 			item: { type: obj.itemType },
+					// 		};
+					// 		array[obj.index].dataType.specs.item.properties = [];
+					// 		if (obj.itemType == 'struct') {
+					// 			for (let i of obj.struct_array) {
+					// 				array[obj.index].dataType.specs.item.properties.push(i);
+					// 			}
+					// 		}
+					// 		break;
+					// 	case 'enum':
+					// 		array[obj.index].dataType.specs = { enumValue: {}, enumType: obj.enum_value_type };
+					// 		for (let val of obj.enum_list) {
+					// 			array[obj.index].dataType.specs.enumValue[val.value] = val.label;
+					// 		}
+					// 		break;
+					// 	default:
+					// 		array[obj.index].dataType.specs = {
+					// 			min: obj.min == '' ? 0 : obj.min,
+					// 			max: obj.max == '' ? 0 : obj.max,
+					// 			step: obj.step == '' ? 0 : obj.step,
+					// 			unitName: obj.unit.split(' / ')[0] == '' ? null : obj.unit.split(' / ')[0],
+					// 			unit: obj.unit.split(' / ')[0] == '' ? null : obj.unit.split(' / ')[1],
+					// 			scale: obj.scale,
+					// 		};
+					// 		break;
+					// }
 					// 修改完后关闭一层表单
 					this.form_list.pop();
 					this.child_count_list.pop();
@@ -860,9 +866,8 @@ new Vue({
 					} else if (this.static_params.add_edit === 'edit') {
 						switch (obj.type) {
 							case '属性':
-								array = this.model.properties;
-								array.forEach((e) => {
-									if (e.propertyId == obj.id) {
+								for (let e of this.model.properties) {
+									if (e.propertyId === obj.id) {
 										e.name = obj.name;
 										e.identifier = obj.identifier;
 										e.dataType.type = obj.dataType;
@@ -908,6 +913,7 @@ new Vue({
 													step: obj.step == '' ? 0 : obj.step,
 													unitName: obj.unit.split(' / ')[0] == '' ? null : obj.unit.split(' / ')[0],
 													unit: obj.unit.split(' / ')[0] == '' ? null : obj.unit.split(' / ')[1],
+													scale: obj.scale || obj.scale === 0 ? 0 : 2,
 												};
 												break;
 										}
@@ -916,11 +922,12 @@ new Vue({
 											this.form_list = [];
 											this.child_count_list.pop();
 										});
+										break;
 									}
-								});
+								}
 								break;
 							case '事件':
-								this.model.events.forEach((e) => {
+								for (let e of this.model.events) {
 									if (e.eventId == obj.id) {
 										e.identifier = obj.identifier;
 										e.name = obj.name;
@@ -931,11 +938,12 @@ new Vue({
 											this.form_list = [];
 											this.child_count_list.pop();
 										});
+										break;
 									}
-								});
+								}
 								break;
 							case '服务':
-								this.model.services.forEach((e) => {
+								for (let e of this.model.services) {
 									if (e.serviceId == obj.id) {
 										e.identifier = obj.identifier;
 										e.name = obj.name;
@@ -947,8 +955,9 @@ new Vue({
 											this.form_list = [];
 											this.child_count_list.pop();
 										});
+										break;
 									}
-								});
+								}
 								break;
 						}
 					}
@@ -1005,6 +1014,7 @@ new Vue({
 						step: obj.step == '' ? 0 : obj.step,
 						unitName: obj.unit.split(' / ')[0] == '' ? null : obj.unit.split(' / ')[0],
 						unit: obj.unit.split(' / ')[0] == '' ? null : obj.unit.split(' / ')[1],
+						scale: obj.scale || obj.scale === 0 ? 0 : 2,
 					};
 					break;
 			}
@@ -1258,9 +1268,8 @@ new Vue({
 				case 'int':
 					return 0;
 				case 'float':
-					return 2;
 				case 'double':
-					return 4;
+					return obj.scale;
 			}
 		},
 		// 步长分类
@@ -1269,9 +1278,8 @@ new Vue({
 				case 'int':
 					return 1;
 				case 'float':
-					return 0.1;
 				case 'double':
-					return 0.01;
+					return Math.pow(0.1, obj.scale);
 			}
 		},
 		// 启用当前物模型
@@ -1349,6 +1357,7 @@ new Vue({
 					form_obj.max = select_obj.dataType.specs.max || 0;
 					form_obj.step = select_obj.dataType.specs.step || 0;
 					form_obj.unit = `${select_obj.dataType.specs.unitName} / ${select_obj.dataType.specs.unit}`;
+					form_obj.scale = select_obj.dataType.specs.scale || select_obj.dataType.specs.scale === 0 ? 0 : 2;
 					break;
 			}
 			this.form_verify(form_obj.name, 'name');

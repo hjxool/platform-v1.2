@@ -3,13 +3,17 @@
 let url = 'http://192.168.30.45:9201';
 let room_url = `${url}/api-portal/room/list/all`; //查询会议室列表
 let meeting_type_url = `${url}/api-portal/meeting-type/search`; //查询会议室类型
-let token = '59bc6466-ac89-4ed3-8485-9d859e354bfa';
+let template_list_url = `${url}/api-portal/displayBoard/template/list`; //获取模板列表
+let get_scene_url = `${url}/api-portal/scene-rule/available`; //查询场所可用场景
+let meeting_reserve_url = `${url}/api-portal/meeting`; //预约会议
+let token = '929e4d12-0e50-4047-939d-80d74202bc69';
 
 Vue.use(vant.Step);
 Vue.use(vant.Steps);
 Vue.use(vant.Picker);
 Vue.use(vant.Popup);
 Vue.use(vant.DatetimePicker);
+Vue.use(vant.Dialog);
 
 new Vue({
 	el: '#index',
@@ -17,13 +21,13 @@ new Vue({
 	data: {
 		loading: false, //加载弹窗
 		step: {
-			cur: 1, //当前进行到第几步
+			cur: 0, //当前进行到第几步
 			steps: ['进行中', '通知配置', '模板配置'],
 		},
 		form: {
 			theme: '', //会议主题
 			room: '', //会议室
-			type: '', //会议类型id
+			type: '1', //会议类型id
 			start_date: '', //开始年月日
 			start_time: '', //开始时间
 			end_date: '',
@@ -31,11 +35,17 @@ new Vue({
 			holder: [], //主持人
 			join: [], //参会人
 			guest: [], //来宾
-			reply: 0, //是否回复
-			notify: 1, //是否通知
-			reminds: [{ alert_time: '', index: 0, type: 0 }], //提醒时间
+			reply: false, //是否回复
+			notify: true, //是否通知
+			reminds: [], //提醒时间
+			signIn: true, //是否签到
+			summary: true, //会议纪要
+			template: '', //所选模板
 		},
 		meeting_type: [], //会议类型
+		template_list: [], //模板列表
+		scene_text: '', //场景提示
+		pop_show: false, //弹窗显示
 		picker: {
 			title: '会议室', //选择器标题
 			show: false, //显示
@@ -63,8 +73,11 @@ new Vue({
 			this.loading = true;
 			await this.get_room();
 			await this.get_meeting_type();
+			await this.get_template_list();
 			this.loading = false;
-		} catch (error) {}
+		} catch (error) {
+			console.log('error', error);
+		}
 		window.onmessage = (data) => {
 			console.log('页面消息', data);
 			if (data.data.type === 'close_pop') {
@@ -139,8 +152,118 @@ new Vue({
 						return;
 					}
 					break;
+				case 1:
+					if (!this.form.holder.length) {
+						vant.Toast('主持人不能为空');
+						return;
+					}
+					if (this.form.holder.length > 1) {
+						vant.Toast('主持人只能有一个');
+						return;
+					}
+					if (!this.form.join.length) {
+						vant.Toast('参会人不能为空');
+						return;
+					}
+					if (this.form.notify) {
+						if (!this.form.reminds.length) {
+							vant.Toast('请添加提醒时间');
+							return;
+						} else {
+							for (let i = 0; i < this.form.reminds.length; i++) {
+								if (this.form.reminds[i].value === 7) {
+									// 检查是否有选自定义时间但没选时间
+									if (!this.form.reminds[i].alert_time) {
+										vant.Toast('自定义时间不能为空');
+										return;
+									}
+								} else {
+									// 检查是否有重复的时间
+									for (let k = i + 1; k < this.form.reminds.length; k++) {
+										if (this.form.reminds[i].value === this.form.reminds[k].value) {
+											vant.Toast('提醒时间不能重复');
+											return;
+										}
+									}
+								}
+							}
+						}
+					}
+					break;
+				case 2:
+					this.get_scene();
+					return;
 			}
 			this.step.cur++;
+		},
+		// 查询时间段内场景信息
+		async get_scene() {
+			// 开始结束时间
+			let s = new Date(this.form.start_date);
+			let e = new Date(this.form.end_date);
+			this.st = `${s.getFullYear()}-${s.getMonth() + 1 < 10 ? '0' + (s.getMonth() + 1) : s.getMonth() + 1}-${s.getDate() < 10 ? '0' + s.getDate() : s.getDate()} ${this.form.start_time}:00`;
+			this.et = `${e.getFullYear()}-${e.getMonth() + 1 < 10 ? '0' + (e.getMonth() + 1) : e.getMonth() + 1}-${e.getDate() < 10 ? '0' + e.getDate() : e.getDate()} ${this.form.end_time}:00`;
+			// 提示是否有场景执行 而后提交请求
+			this.loading = true;
+			this.scene_text = '';
+			let res = await this.request('get', `${get_scene_url}/${this.form.room}?placeStartDate=${this.st}&placeEndDate=${this.et}`, token);
+			this.loading = false;
+			if (res.data.head.code !== 200) {
+				return;
+			}
+			for (let val of res.data.data) {
+				this.scene_text += `${val.sceneName}、`;
+			}
+			// 如果有场景则显示弹窗
+			this.pop_show = this.scene_text ? true : false;
+			// 如果不显示弹窗则直接创建
+			if (!this.pop_show) {
+				this.create_meeting();
+			}
+		},
+		// 创建会议
+		async create_meeting() {
+			this.loading = true;
+			let data = {
+				theme: this.form.theme,
+				roomId: this.form.room.value,
+				meetingType: this.form.type,
+				startTime: this.st,
+				endTime: this.et,
+				moderatorId: this.form.holder[0].id,
+				userIds: this.form.join.map((e) => e.id),
+				guestList: this.form.guest,
+				reply: this.form.reply ? 1 : 0,
+				sendMessage: this.form.notify ? 1 : 0,
+				meetingReminds: this.form.reminds.map((e) => {
+					return { type: e.type, remindTime: e.alert_time };
+				}),
+				signIn: this.form.signIn ? 1 : 0,
+				summary: this.form.summary ? 1 : 0,
+			};
+			if (this.form.template) {
+				data.templateId = this.form.template;
+			}
+			let res = await this.request('post', meeting_reserve_url, token, data);
+			this.loading = false;
+			if (res.data.head.code !== 200) {
+				return false;
+			}
+			vant.Toast('创建成功');
+			return res;
+		},
+		// 显示弹窗点击确定时创建会议
+		async pop_submit(action, done) {
+			if (action === 'confirm') {
+				let res = await this.create_meeting();
+				if (!res) {
+					done(false);
+					return;
+				}
+				done();
+			} else {
+				done();
+			}
 		},
 		// 根据表单填入不同选项
 		show_picker(type, params1) {
@@ -162,7 +285,7 @@ new Vue({
 					this.picker.date = this.form.start_time ? new Date(`${this.form.start_date} ${this.form.start_time}`) : '';
 					break;
 				case 'end_time':
-					this.picker.date = this.form.end_date ? new Date(`${this.form.end_date} ${this.form.end_time}`) : '';
+					this.picker.date = this.form.end_time ? new Date(`${this.form.end_date} ${this.form.end_time}`) : '';
 					break;
 				case 'holder':
 				case 'join':
@@ -208,7 +331,8 @@ new Vue({
 					this.form[this.picker.type] = value;
 					break;
 				case 'alert':
-					this.alert_select.index = value;
+					// 传入的是options对象
+					this.alert_select.value = value.value;
 					this.init_time(this.alert_select);
 					break;
 				case 'cus_alert':
@@ -220,7 +344,7 @@ new Vue({
 		init_time(obj) {
 			let start = new Date(`${this.form.start_date} ${this.form.start_time}`);
 			let t;
-			switch (obj.index) {
+			switch (obj.value) {
 				case 0:
 					t = start;
 					break;
@@ -342,7 +466,7 @@ new Vue({
 		},
 		// 提醒时间显示文字
 		reming_text(obj) {
-			switch (obj.index) {
+			switch (obj.value) {
 				case 0:
 					return '开始时';
 				case 1:
@@ -360,6 +484,64 @@ new Vue({
 				case 7:
 					return obj.alert_time;
 			}
+		},
+		// 改变是否提醒 清空数组
+		change_info() {
+			if (this.form.notify == 0) {
+				this.form.reminds = [];
+			}
+		},
+		// 添加提醒时间、方式
+		add_alert_time() {
+			let list = this.form.reminds;
+			if (list.length === 3) {
+				return;
+			}
+			let t;
+			switch (list.length) {
+				case 0:
+					t = {
+						value: 0,
+						type: 0,
+						alert_time: '',
+					};
+					break;
+				default:
+					t = {
+						//自动添加的提醒每次会自动选后一个选项 已经是倒数第二个选项了就只会添加倒数第二个选项
+						value: list[list.length - 1].value < 6 ? list[list.length - 1].value + 1 : 6,
+						type: 0,
+						alert_time: '',
+					};
+					break;
+			}
+			this.init_time(t);
+			list.push(t);
+		},
+		// 获取模板列表
+		async get_template_list() {
+			// industryType 1表示会议模板
+			let body = { pageNum: 1, pageSize: 900, condition: { industryType: 1, sysTemp: true } };
+			let sys = await this.request('post', template_list_url, token, body);
+			body.condition.sysTemp = false;
+			let cus = await this.request('post', template_list_url, token, body);
+			if (sys.data.head.code !== 200 || !sys.data.data?.data) {
+				sys = [];
+			} else {
+				sys = sys.data.data.data;
+				for (let val of sys) {
+					val.title = '系统-' + val.title;
+				}
+			}
+			if (cus.data.head.code !== 200 || !cus.data.data?.data) {
+				cus = [];
+			} else {
+				cus = cus.data.data.data;
+				for (let val of cus) {
+					val.title = '自定义-' + val.title;
+				}
+			}
+			this.template_list = sys.concat(cus);
 		},
 	},
 });

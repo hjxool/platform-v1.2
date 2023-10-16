@@ -406,7 +406,7 @@ new Vue({
 						this.request_data = {};
 						this.url = search_device_list_url;
 						this.request_data.condition = {
-							placeType: 0,
+							// placeType: 0,
 							type: params == '在线设备' ? 1 : params == '离线设备' ? 2 : 3,
 						};
 						this.request_data.pageNum = 1;

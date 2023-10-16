@@ -1,0 +1,206 @@
+* {
+	user-select: none;
+}
+#index {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	overflow: auto;
+}
+.bg_img {
+	z-index: 0;
+}
+.center {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+// 面板固定样式
+.panel {
+	width: 100%;
+	position: relative;
+}
+.css_img {
+	background-size: 100% 100%;
+}
+// 滑动条
+.slider_box {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	.text {
+		font-size: 12px;
+		color: #fff;
+		padding: 4px 10px;
+		max-width: 100%;
+		z-index: 1;
+		position: absolute;
+		top: 4%;
+	}
+	.box1 {
+		width: 50%;
+		position: absolute;
+		z-index: 1;
+		display: flex;
+		justify-content: center;
+		bottom: 8%;
+		height: 70%;
+		.bg_img {
+			height: 92.4%;
+			left: 0;
+			right: 0;
+			top: 0;
+			bottom: 0;
+			margin: auto;
+		}
+	}
+}
+.slider_box2 {
+	display: flex;
+	align-items: center;
+	.text {
+		font-size: 12px;
+		color: #fff;
+		padding: 4px 10px;
+		max-width: 27%;
+		z-index: 1;
+		position: absolute;
+		top: 4%;
+	}
+	.box1 {
+		height: 50%;
+		position: absolute;
+		z-index: 1;
+		display: flex;
+		align-items: center;
+		left: 8%;
+		width: 70%;
+		.bg_img {
+			width: 92.4%;
+			left: 0;
+			right: 0;
+			top: 0;
+			bottom: 0;
+			margin: auto;
+		}
+	}
+}
+// 进度条
+.progress_box {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	.progress {
+		z-index: 1;
+		flex-grow: 1;
+		width: 40%; //纵向排列时height失效
+		border: 2px solid #193da5;
+		box-shadow: 0px 0px 0px 2px rgba(4, 13, 39, 0.84) inset;
+		background: linear-gradient(90deg, #051125, #0d2e6a);
+
+		display: flex;
+		flex-direction: column;
+		justify-content: space-evenly;
+		align-items: center;
+		.lump {
+			width: 96%;
+			height: 8px;
+			border-radius: 2px;
+		}
+	}
+	.text {
+		font-size: 0.875rem;
+		color: #fff;
+		// margin: 10px 0;
+		z-index: 1;
+	}
+}
+// 按钮及按钮开关
+.button_box {
+	cursor: pointer;
+	background-image: url('./img/icon2.png');
+	background-size: 100% 100%;
+	background-repeat: no-repeat;
+	&:active {
+		background-image: url('./img/icon1.png');
+	}
+}
+// 开关
+.switch_box {
+	cursor: pointer;
+	.bg_img {
+		border-radius: 10px;
+	}
+}
+// 下拉框
+.select_box {
+	padding-right: 20px;
+	display: flex;
+	align-items: center;
+	cursor: pointer;
+	.text_ellipsis {
+		z-index: 10;
+	}
+}
+.popup_text {
+	padding: 10px 0;
+	cursor: pointer;
+}
+// 矩阵
+.matrix {
+	display: grid;
+}
+// 单选组
+.radio_group {
+	display: flex;
+	flex-wrap: wrap;
+	.el-radio {
+		margin-right: 10px !important;
+	}
+	.el-radio__inner {
+		width: 20px !important;
+		height: 20px !important;
+		&::after {
+			width: 6px;
+			height: 6px;
+		}
+	}
+	.el-radio__label {
+		font-size: 20px !important;
+	}
+}
+// 多选框组
+.check_box {
+	display: flex;
+	flex-wrap: wrap;
+	.el-checkbox {
+		margin-right: 10px !important;
+	}
+}
+.input_style {
+	display: flex;
+	> .el-input__inner {
+		flex-grow: 1;
+		height: auto;
+		background-color: #1c2132;
+		color: #fff;
+		border: 1px solid #82a6c4;
+	}
+	.el-input__count-inner {
+		background: transparent !important;
+	}
+}
+// 动态路径
+.path {
+	fill: none;
+	stroke: rgb(24, 144, 255);
+	stroke-width: 5;
+	stroke-dasharray: 15;
+	marker-end: url(#arrow);
+	animation: 30s linear 0s infinite normal none running path_line;
+}
+@keyframes path_line {
+	100% {
+		stroke-dashoffset: -1000;
+	}
+}

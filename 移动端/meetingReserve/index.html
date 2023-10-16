@@ -14,16 +14,22 @@
   <div id="index" class="col_layout" v-cloak v-my_loading="loading">
     <!-- 内容框 -->
     <div class="form flex_grow" v-show="step.cur===0">
-      <div class="title">会议名称</div>
+      <div class="row1">
+        <div class="title">会议名称</div>
+      </div>
       <input class="input" v-model="form.theme" placeholder="请输入会议名称" type="text">
 
-      <div class="title">会议室</div>
+      <div class="row1">
+        <div class="title">会议室</div>
+      </div>
       <div class="select row_layout" @click="show_picker('room')">
         <span class="holder" v-show="!form.room">请选择会议室</span>
         <span v-if="form.room">{{form.room.text}}</span>
       </div>
 
-      <div class="title">请选择会议类型</div>
+      <div class="row1">
+        <div class="title">请选择会议类型</div>
+      </div>
       <div class="radio_box">
         <div class="radio row_layout" v-for="t in meeting_type" @click="form.type=t.id">
           <span>{{t.name}}</span>
@@ -33,7 +39,9 @@
         </div>
       </div>
 
-      <div class="title">会议时间</div>
+      <div class="row1">
+        <div class="title">会议时间</div>
+      </div>
       <div class="select time_box">
         <span class="align">开始时间</span>
         <span class="align center" @click="show_picker('start_date')">{{form.start_date||'空'}}</span>
@@ -89,7 +97,7 @@
 
       <div class="row1"></div>
       <div class="select">
-        <div class="row_layout row1">
+        <div class="row_layout">
           <span class="text2">是否回复</span>
           <van-switch v-model="form.reply" size="4rem"></van-switch>
         </div>
@@ -98,13 +106,13 @@
       <div class="row1"></div>
       <div class="select">
         <div class="col_layout">
-          <div class="row_layout row1">
+          <div class="row_layout row1" style="padding-top: 0;">
             <span class="text2">是否通知</span>
-            <van-switch v-model="form.notify" size="4rem"></van-switch>
+            <van-switch v-model="form.notify" @change="change_info" size="4rem"></van-switch>
           </div>
 
-          <div class="notify_box col_layout" v-show="form.reminds.length">
-            <span class="text1">添加 ></span>
+          <div class="notify_box col_layout" v-show="form.notify">
+            <span class="text1" @click="add_alert_time">添加 ></span>
 
             <div class="tag row_layout row1" v-for="n in form.reminds"
               @click="show_picker(n.index!==7?'alert':'cus_alert',n)" style="padding: 2rem;">
@@ -114,17 +122,51 @@
           </div>
         </div>
       </div>
+
+      <div class="row1"></div>
+      <div class="select">
+        <div class="row_layout">
+          <span class="text2">是否签到</span>
+          <van-switch v-model="form.signIn" size="4rem"></van-switch>
+        </div>
+      </div>
+
+      <div class="row1"></div>
+      <div class="select">
+        <div class="row_layout">
+          <span class="text2">会议纪要</span>
+          <van-switch v-model="form.summary" size="4rem"></van-switch>
+        </div>
+      </div>
     </div>
 
-    <div class="form flex_grow" v-show="step.cur===2"></div>
+    <div class="form flex_grow col_layout" v-show="step.cur===2">
+      <div class="row1 title flex_shrink">选择模板</div>
+
+      <div class="template_box flex_grow">
+        <div class="col_layout box" v-for="t in template_list" @click="form.template=t.id">
+          <div class="flex_grow col_layout">
+            <div :class="['head',form.template==t.id?'head1':'','text_ellipsis']">{{t.title}}</div>
+
+            <div class="flex_grow">
+              <img v-show="t.thumbnails[0]" :src="t.thumbnails[0]" style="width: 100%;height: 100%;">
+              <!-- 没有图片时替换 -->
+              <div v-show="!t.thumbnails[0]" class="no_img center">暂无</div>
+            </div>
+          </div>
+
+          <div :class="['icon',form.template==t.id?'icon1':'','flex_shrink']"></div>
+        </div>
+      </div>
+    </div>
     <!-- 步骤条 -->
-    <van-steps class="step_style" :active="step.cur">
+    <van-steps class="step_style flex_shrink" :active="step.cur">
       <van-step v-for="s,index in step.steps">{{step_name(s,index)}}</van-step>
     </van-steps>
     <!-- 按钮 -->
-    <div class="buttons row_layout">
+    <div class="buttons row_layout flex_shrink">
       <div class="box pre" v-show="step.cur" @click="step.cur--">上一步</div>
-      <div class="box" @click="next_step">下一步</div>
+      <div class="box" @click="next_step">{{step.cur==2?'完成':'下一步'}}</div>
     </div>
 
     <!-- 弹窗 -->
@@ -139,13 +181,19 @@
       <van-datetime-picker v-if="picker.type=='start_time'||picker.type=='end_time'" v-model="picker.date" type="time"
         @confirm="picker_confirm" @cancel="picker.show=false" title="选择时间"></van-datetime-picker>
 
-      <van-datetime-picker v-if="picker.type=='cus_alert'" v-model="picker.date" type="datetime" title="选择时间"
-        :min-date="picker.min_date"></van-datetime-picker>
+      <van-datetime-picker v-if="picker.type=='cus_alert'" v-model="picker.date" @confirm="picker_confirm"
+        @cancel="picker.show=false" type="datetime" title="选择时间" :min-date="picker.min_date"></van-datetime-picker>
       <!-- iframe嵌入页面 -->
       <iframe v-show="picker.type=='holder'||picker.type=='join'" id="pop_window" :src="picker.url" frameborder="0"
         scrolling="no"></iframe>
     </van-popup>
-    <!--  -->
+    <!-- 消息提示 -->
+    <van-dialog v-model="pop_show" :before-close="pop_submit" title="提示" show-cancel-button>
+      <div class="col_layout">
+        <div>该会议将执行以下自动或条件场景——{{scene_text}}</div>
+        <div>如果对此会议有影响，请及时处理</div>
+      </div>
+    </van-dialog>
   </div>
 
   <!-- <script src="../../../运维人员部署请修改我.js"></script> -->

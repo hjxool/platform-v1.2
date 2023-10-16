@@ -320,6 +320,13 @@
                   </el-option>
                 </el-select>
               </el-form-item>
+
+              <el-form-item label="开门码">
+                <el-select v-model="new_meeting_form.door_password">
+                  <el-option v-for="item,index in html.door_password_options" :label="item" :value="index">
+                  </el-option>
+                </el-select>
+              </el-form-item>
             </template>
 
             <template v-if="new_meeting_form.step===2">
@@ -342,8 +349,11 @@
           </el-form>
         </div>
 
-        <el-button @click="step_pass(new_meeting_form)" type="primary" style="align-self:center;"
-          round>{{new_meeting_form.step===2?'完成':'下一步'}}</el-button>
+        <div class="form_foot row_layout">
+          <el-button v-show="new_meeting_form.step" @click="new_meeting_form.step--" round>上一步</el-button>
+          <el-button @click="step_pass(new_meeting_form)" type="primary"
+            round>{{new_meeting_form.step===2?'完成':'下一步'}}</el-button>
+        </div>
       </div>
     </div>
     <!-- 添加参会人 -->

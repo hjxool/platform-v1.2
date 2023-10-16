@@ -61,7 +61,6 @@ new Vue({
 		},
 		// 根据类别获取人员列表获取
 		async get_data(params1, params2) {
-			this.loading = true;
 			let body = {
 				condition: {},
 				pageSize: this.page_size,
@@ -88,6 +87,7 @@ new Vue({
 					this.page_num = 1;
 				}
 				body.condition.currentDeptId = id;
+				this.loading = true;
 				let { data } = await this.request('post', all_layer_url, this.token, body);
 				this.loading = false;
 				if (data.head.code !== 200) {
@@ -154,6 +154,7 @@ new Vue({
 					this.page_num = 1;
 				}
 				body.pageNum = this.page_num;
+				this.loading = true;
 				let { data } = await this.request('post', all_user_url, this.token, body);
 				this.loading = false;
 				if (data.head.code !== 200) {

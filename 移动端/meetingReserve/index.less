@@ -6,6 +6,11 @@
 	display: flex;
 	align-items: center;
 }
+.center {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
 .flex_grow {
 	flex-grow: 1;
 }
@@ -63,7 +68,7 @@
 	padding: 2rem;
 	.title {
 		// padding: 2rem 0 2rem 1rem;
-		padding-left: 1rem;
+		padding-left: 1rem !important;
 		font-size: 1.6rem;
 		font-family: Microsoft YaHei;
 	}
@@ -76,7 +81,7 @@
 		color: #567aff;
 	}
 	.text2 {
-		font-size: 3rem;
+		// font-size: 3rem;
 		color: #35393d;
 		margin-right: auto;
 		font-family: Microsoft YaHei;
@@ -175,6 +180,46 @@
 	.notify_box {
 		border-top: 1px solid #e2eaf3;
 		padding-top: 2rem;
+	}
+	// 模板选择
+	.template_box {
+		overflow: auto;
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		grid-template-rows: repeat(auto-fill, 36rem);
+		grid-auto-rows: 36rem;
+		> .box {
+			margin: 0 2rem;
+			overflow: hidden;
+			> .flex_grow {
+				border: 1px solid #d9e4ec;
+				box-shadow: 0px 2px 8px 0px rgba(100, 104, 113, 0.16);
+				> .head {
+					background: #fff;
+					padding: 2rem 0 2rem 2rem;
+				}
+				> .head1 {
+					background: #e2eaf3;
+				}
+				.no_img {
+					height: 100%;
+					background: #c0c4cc;
+				}
+			}
+			> .icon {
+				width: 4rem;
+				height: 4rem;
+				margin: 2rem 0;
+				align-self: center;
+				background: #e3e8ee;
+				border: 2px solid #c3c6cd;
+				border-radius: 50%;
+			}
+			> .icon1 {
+				background: #fff;
+				border: 1.5rem solid #567aff;
+			}
+		}
 	}
 }
 // 步骤条样式

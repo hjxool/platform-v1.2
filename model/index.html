@@ -123,9 +123,16 @@
                     </el-input-number>
                   </div>
                 </el-form-item>
+                <template v-if="card.dataType=='float'||card.dataType=='double'">
+                  <el-form-item label="精度" size="medium">
+                    <el-input-number v-model="card.scale" :precision="0" :step="1" :min="0"
+                      :disabled="static_params.add_edit=='check'" size="medium" controls-position="right">
+                    </el-input-number>
+                  </el-form-item>
+                </template>
                 <el-form-item label="步长" size="medium">
                   <el-input-number v-model="card.step" :precision="precision_sort(card)" :step="step_sort(card)"
-                    :disabled="static_params.add_edit=='check'" size="medium" controls-position="right">
+                    :min="0" :disabled="static_params.add_edit=='check'" size="medium" controls-position="right">
                   </el-input-number>
                   <div class="verify_text" v-show="rules.step.show">{{rules.step.message}}</div>
                 </el-form-item>
