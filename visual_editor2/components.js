@@ -198,6 +198,7 @@ let customText = {
 				t['fontSize'] = obj_data.style.fontSize * this.radio + 'px';
 			}
 			t['lineHeight'] = obj_data.h * this.radio + 'px';
+			t['textAlign'] = 'center';
 			if (obj_data.style.fontWeight) {
 				t['fontWeight'] = obj_data.style.fontWeight;
 			}
@@ -234,10 +235,23 @@ let customSwitch = {
 	mixins: [common_functions, fn],
 	data() {
 		return {
-			value: this.obj.SwitchDisplaysOffStatus || '0', //当前值
-			on_value: this.obj.SwitchDisplaysOnStatus || '1', //开的值
-			off_value: this.obj.SwitchDisplaysOffStatus || '0', //关的值
+			value: '0', //当前值
+			on_value: '1', //开的值
+			off_value: '0', //关的值
 		};
+	},
+	created() {
+		for (let val of this.obj.dataConfig) {
+			switch (val.nickName) {
+				case '开值':
+					this.on_value = val.value;
+					break;
+				case '关值':
+					this.off_value = val.value;
+					break;
+			}
+		}
+		this.value = this.off_value;
 	},
 	methods: {
 		switch_fn() {
@@ -300,7 +314,7 @@ let customSlider = {
       </div>
       <div class="box1">
         <img src="./img/icon5.png" class="bg_img">
-        <el-slider v-model="value" @change="send_order($event)" vertical :show-tooltip="false" :min="obj.min" :max="obj.max" :step="obj.step"></el-slider>
+        <el-slider v-model="value" @change="send_order($event)" vertical :show-tooltip="false" :min="min" :max="max" :step="step"></el-slider>
       </div>
     </div>
   `,
@@ -308,11 +322,34 @@ let customSlider = {
 	data() {
 		return {
 			value: 0,
+			step: 1, //步长
+			min: 0,
+			max: 10,
+			units: '', //单位
 		};
+	},
+	created() {
+		for (let val of this.obj.dataConfig) {
+			switch (val.nickName) {
+				case '步长值':
+					this.step = val.value;
+					break;
+				case '最小值':
+					this.min = val.value;
+					break;
+				case '最大值':
+					this.max = val.value;
+					break;
+				case '单位':
+					this.units = val.value;
+					break;
+			}
+		}
+		this.value = this.min;
 	},
 	computed: {
 		accuracy() {
-			let t = this.obj.step + '';
+			let t = this.step + '';
 			let t2 = t.split('.')[1];
 			if (t2) {
 				return t2.length;
@@ -321,7 +358,7 @@ let customSlider = {
 			}
 		},
 		value_text() {
-			return `${this.value} ${this.obj.units || ''}`;
+			return `${this.value}${this.units ? ' ' + this.units : ''}`;
 		},
 	},
 };
@@ -336,8 +373,8 @@ let customSlider2 = {
       </div>
       <div class="box1">
         <img src="./img/icon15.png" class="bg_img">
-        <el-slider v-model="value" @change="send_order($event)" :show-tooltip="false" :min="obj.min" :max="obj.max"
-          :step="obj.step"></el-slider>
+        <el-slider v-model="value" @change="send_order($event)" :show-tooltip="false" :min="min" :max="max"
+          :step="step" style="width:90%"></el-slider>
       </div>
     </div>
   `,
@@ -345,11 +382,34 @@ let customSlider2 = {
 	data() {
 		return {
 			value: 0,
+			step: 1, //步长
+			min: 0,
+			max: 10,
+			units: '', //单位
 		};
+	},
+	created() {
+		for (let val of this.obj.dataConfig) {
+			switch (val.nickName) {
+				case '步长值':
+					this.step = val.value;
+					break;
+				case '最小值':
+					this.min = val.value;
+					break;
+				case '最大值':
+					this.max = val.value;
+					break;
+				case '单位':
+					this.units = val.value;
+					break;
+			}
+		}
+		this.value = this.min;
 	},
 	computed: {
 		accuracy() {
-			let t = this.obj.step + '';
+			let t = this.step + '';
 			let t2 = t.split('.')[1];
 			if (t2) {
 				return t2.length;
@@ -358,7 +418,7 @@ let customSlider2 = {
 			}
 		},
 		value_text() {
-			return `${this.value} ${this.obj.units || ''}`;
+			return `${this.value}${this.units ? ' ' + this.units : ''}`;
 		},
 	},
 };

@@ -320,16 +320,16 @@
                   </el-option>
                 </el-select>
               </el-form-item>
+            </template>
 
+            <template v-if="new_meeting_form.step===2">
               <el-form-item label="开门码">
                 <el-select v-model="new_meeting_form.door_password">
                   <el-option v-for="item,index in html.door_password_options" :label="item" :value="index">
                   </el-option>
                 </el-select>
               </el-form-item>
-            </template>
 
-            <template v-if="new_meeting_form.step===2">
               <el-form-item label="选择模板">
                 <el-select v-model="new_meeting_form.template" :disabled="new_meeting_form.is_rebook">
                   <el-option-group v-for="group in new_meeting_form.template_list" :key="group.label"

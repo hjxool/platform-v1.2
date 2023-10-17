@@ -31,6 +31,7 @@ new Vue({
 			save: 0, //0表示不能显示和修改会议纪要
 			qr_src: '', //签到二维码
 			status: -1, //会议状态
+			open_door_code: '', //开门码
 		},
 		user_list: [], //参会人员列表
 		id: '', //会议id
@@ -218,6 +219,10 @@ new Vue({
 					option.color = ['#FFA500', '#48D1CC'];
 					this.e3.setOption(option);
 					this.end_meeting_show();
+					// 有开门码则显示
+					if (this.meeting_obj.doorCode) {
+						this.meeting_detail.open_door_code = this.meeting_obj.doorCode;
+					}
 					this.$nextTick(() => {
 						// 编辑器
 						if (this.meeting_detail.save) {

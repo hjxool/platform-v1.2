@@ -19,6 +19,10 @@
       <el-page-header @back="goBack" content="详情页面"></el-page-header>
 
       <div class="row_layout flex_shrink">
+        <!-- 开门码 -->
+        <div v-if="meeting_detail.open_door_code" style="margin-right: 40px;">开门码：{{meeting_detail.open_door_code}}
+        </div>
+        <!-- 按钮 -->
         <el-button @click="refrash" style="margin-right:20px;" type="primary" size="small" round>刷新</el-button>
         <el-button v-show="html.end_display" @click="end_meeting" style="margin-right:20px;" type="primary" size="small"
           round>结束会议</el-button>
