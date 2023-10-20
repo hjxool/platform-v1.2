@@ -88,12 +88,10 @@ const fn = {
 						if (Array.isArray(source)) {
 							value = source[key];
 						} else {
-							if (source[key]?.propertyValue) {
-								value = source[key]?.propertyValue;
-							} else if (source[key]?.propertyValue === 0) {
-								value = source[key]?.propertyValue;
-							} else {
+							if (source[key]?.propertyValue === undefined) {
 								value = source[key];
+							} else {
+								value = source[key]?.propertyValue;
 							}
 						}
 						if (path_index == path.length - 1) {
@@ -176,8 +174,8 @@ let customContainer = {
 // 文本框
 let customText = {
 	template: `
-    <div :style="cus_style(obj)" @click="turn_to_page" :title="value">
-      {{value}}
+    <div class="custom_text" :style="cus_style(obj)" @click="turn_to_page" :title="value">
+      <span class="content">{{value}}</span>
     </div>
   `,
 	data() {
@@ -197,8 +195,6 @@ let customText = {
 			if (obj_data.style.fontSize) {
 				t['fontSize'] = obj_data.style.fontSize * this.radio + 'px';
 			}
-			t['lineHeight'] = obj_data.h * this.radio + 'px';
-			t['textAlign'] = 'center';
 			if (obj_data.style.fontWeight) {
 				t['fontWeight'] = obj_data.style.fontWeight;
 			}
@@ -434,7 +430,7 @@ let customImg = {
 // 视频
 let customVideo = {
 	template: `
-    <video :style="style(obj)" :id="obj.id"></video>
+    <video :style="style(obj)" :id="obj.id" controls autoplay muted></video>
   `,
 	mixins: [common_functions, fn],
 	mounted() {
@@ -442,10 +438,10 @@ let customVideo = {
 		if (flvjs.isSupported()) {
 			player = flvjs.createPlayer(
 				{
-					type: '', //媒体类型
-					url: '', //数据源地址
+					type: this.obj.videoConfig.proxy.label, //媒体类型
+					url: this.obj.videoConfig.proxy.value, //数据源地址
 					isLive: true, //是否为直播流
-					hasAudio: true, //数据源是否包含有音频
+					// hasAudio: false, //数据源是否包含有音频
 					// hasVideo: true, //数据源是否包含有视频
 					// enableStashBuffer: false, //是否启用缓存区
 					controls: false,
@@ -461,6 +457,10 @@ let customVideo = {
 			player.attachMediaElement(dom); //将实例注册到节点
 			player.load(); //加载数据流
 			player.play(); //播放数据流
+			// 报错回调
+			player.on(flvjs.Events.ERROR, (errorType, detail, info) => {
+				console.log('视频报错', errorType, detail, info);
+			});
 			// 备用
 			// flvPlayer.pause(); //暂停播放数据流
 			// flvPlayer.unload(); //取消数据流加载

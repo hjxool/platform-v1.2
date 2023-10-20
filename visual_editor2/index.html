@@ -21,9 +21,9 @@
           :radio="page.radio"></custom-switch>
         <custom-slider v-if="item.type=='sliderV'" :obj="item" :radio="page.radio"></custom-slider>
         <custom-slider2 v-if="item.type=='slider'" :obj="item" :radio="page.radio"></custom-slider2>
-        <custom-img v-if="item.type=='image'" :obj="item" :radio="page.radio"></custom-img>
+        <custom-img v-if="item.type=='image'||item.shapeNickname=='设备节点'" :obj="item" :radio="page.radio"></custom-img>
         <custom-line v-if="item.type=='连线'" :obj="item" :radio="page.radio"></custom-line>
-        <custom-video v-if="item.type=='video'" :obj="item" :radio="page.radio"></custom-video>
+        <custom-video v-if="item.type=='videoPlayer'" :obj="item" :radio="page.radio"></custom-video>
       </template>
     </div>
   </div>
@@ -33,6 +33,7 @@
   <script src="../module/vue.js"></script>
   <script src="../module/element-ui.js"></script>
   <script src="../module/axios.min.js"></script>
+  <script src="../../js/flv.js"></script>
   <script src="../module/common_function.js"></script>
   <script src="./components.js"></script>
   <script src="./index.js"></script>
