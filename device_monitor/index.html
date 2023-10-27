@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <link rel="stylesheet" href="../../css/eleme-dark.css">
+  <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index">
+    <div class="page2_body">
+      <!-- 场所列表 -->
+      <div :class="[html.place_fold?'place_list2':'place_list']">
+        <div v-show="!html.place_fold" v-for="item,index in status.place_list" class="place"
+          @click="get_place_devices(item.id)" @mouseenter="html.place_icon_display=index"
+          @mouseleave="html.place_icon_display=-1">
+          <img v-show="status.place_id==item.id" src="./img/场所亮.png" class="bg_img">
+          <img v-show="status.place_id!=item.id" src="./img/场所暗.png" class="bg_img">
+          <img v-show="config.rename_place_show && html.place_icon_display==index" src="./img/edit.png" class="icon"
+            @click.stop="edit_place(item)">
+          <span :class="['text','text_ellipsis',status.place_id==item.id?'':'text_dark']"
+            :title="item.placeName">{{item.placeName}}</span>
+          <img v-show="config.del_place_show && html.place_icon_display==index" src="./img/closeIcon.png" class="icon2"
+            @click.stop="del_place(item)">
+        </div>
+        <div :class="[html.place_fold?'fold':'unfold','center','button']" @click="html.place_fold=!html.place_fold">
+          <div class="icon"></div>
+        </div>
+      </div>
+      <div class="gap"></div>
+      <!-- 设备卡片 -->
+      <div class="card_list">
+        <!-- 功能键 -->
+        <div class="box1">
+          <!-- 统计 -->
+          <div class="row_layout flex_shrink" style="margin-right: auto;">
+            <div v-show="status.user_id" class="total" v-for="item in status.place_types">
+              <div class="num">{{item.num}}</div>
+              <div class="text">{{item.type}}</div>
+            </div>
+          </div>
+          <!-- 删除图标 -->
+          <img v-show="config.del_device_show && status.user_id" src="./img/delete.png" class="icon" @drop="del_device"
+            id="del_area">
+        </div>
+        <!-- 卡片容器 -->
+        <div class="box2">
+          <div v-for="item,index in status.place_devices" class="card" draggable="true" @dragstart="drag_device(item)">
+            <img v-show="item.statusValue==1" src="./img/deviceBg.png" class="bg_img">
+            <img v-show="item.statusValue!=1" src="./img/设备卡片报警.png" class="bg_img">
+            <div class="img">
+              <div class="bg"></div>
+              <img :src="item.pictureUrl" class="bg_img" style="z-index: 0;object-fit: cover;">
+            </div>
+            <div class="type">
+              <img v-if="item.isAlarm==1" @click="alert_detail(item.id)" src="./img/offline.png"
+                class="icon flex_shrink button">
+              <div class="box2_1 flex_shrink center">
+                {{item.productType==1?html.product_type[0]:item.productType==2?html.product_type[1]:html.product_type[2]}}
+              </div>
+            </div>
+            <div class="name_box">
+              <div class="name text_ellipsis" :title="item.deviceName">{{item.deviceName}}</div>
+              <div class="status">
+                <div class="flex_shrink icon" :style="{backgroundColor:item.statusValue==1?'#00FFA2':'#F6B63C'}">
+                </div>
+                <span class="flex_shrink text"
+                  :style="{color:item.statusValue==1?'#00FFA2':'#F6B63C'}">{{item.statusValue==1?'在线':item.statusValue?'离线':'未注册'}}</span>
+              </div>
+            </div>
+            <div v-show="config.control_device_show" class="button2" @click="turn_to_device(item)">
+              <img src="./img/button.png" class="bg_img" draggable="false">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 弹窗 -->
+    <!-- 编辑/新增场所 -->
+    <div class="popover" v-if="html.edit_place_display">
+      <el-card class="form_layout" style="width: 400px;">
+        <div class="form_head">
+          <span class="title">提示</span>
+          <div class="button" @click="html.edit_place_display=false">
+            <i class="el-icon-close icon"></i>
+          </div>
+        </div>
+        <el-form ref="edit_place_form" :model="edit_place_form" :rules="place_rules" label-width="80px">
+          <el-form-item label="场所类型">
+            <el-select v-model="edit_place_form.type">
+              <el-option v-for="item in place_type_list" :label="item.name" :value="item.id">
+              </el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="场所名称" prop="name">
+            <el-input v-model="edit_place_form.name"></el-input>
+          </el-form-item>
+          <el-form-item class="button_layout">
+            <el-button type="primary" @click="place_submit">确定</el-button>
+            <el-button @click="html.edit_place_display=false">取消</el-button>
+          </el-form-item>
+        </el-form>
+      </el-card>
+    </div>
+    <!-- 设备跳转弹窗 -->
+    <div class="popover" v-show="html.turn_to_device">
+      <div class="device_window">
+        <div class="head">
+          <h2 class="title">{{html.device_name}}</h2>
+          <div class="box1">
+            <div v-show="html.visualizedFlag" style="display:flex;align-items:center;">
+              <div v-for="item in status.visual_exclusive_config" style="margin-right:16px;">
+                <el-switch v-model="item.value" @change="exclusive_visual_save(item,$event)" style="margin-right:10px;"
+                  :active-value="1" :inactive-value="0"></el-switch>
+                <span>{{item.label}}</span>
+              </div>
+            </div>
+
+            <el-dropdown v-show="html.visualizedFlag&&!status.open_visual_edit" @command="turn_to_visual_edit"
+              :disabled="!status.visual_exclusive_config[0]?.value" style="margin: 0 10px;">
+              <el-button type="primary" size="small">
+                设备可视化编辑<i class="el-icon-arrow-down el-icon--right"></i>
+              </el-button>
+              <el-dropdown-menu slot="dropdown">
+                <el-dropdown-item command="PC">PC</el-dropdown-item>
+                <el-dropdown-item command="PHONE">移动端</el-dropdown-item>
+              </el-dropdown-menu>
+            </el-dropdown>
+            <el-button v-show="html.visualizedFlag&&status.open_visual_edit" @click="close_visual_edit" type="danger"
+              size="small">关闭</el-button>
+
+            <el-button @click="iconize_device_window" type="warning" icon="el-icon-minus" circle
+              size="mini"></el-button>
+            <el-button @click="close_device_window" style="margin-left: 10px;" type="danger" icon="el-icon-close" circle
+              size="mini"></el-button>
+          </div>
+        </div>
+        <iframe class="body" :src="html.device_url" frameborder="0" scrolling="no"></iframe>
+      </div>
+    </div>
+    <!-- 最小化窗口 -->
+    <el-button v-if="html.iconize_device" @click="full_size" class="iconize_device_window" type="warning"
+      size="mini">{{html.device_name}} 弹出窗</el-button>
+    <!-- 告警信息弹窗 -->
+    <div class="popover" v-show="html.alert_detail_display">
+      <div class="alert_window">
+        <div class="head">
+          <span style="color:#fff;font-weight:bold;">告警详情</span>
+          <el-button @click="close_alert_window" type="danger" icon="el-icon-close" circle size="mini"></el-button>
+        </div>
+        <div class="alert_body">
+          <el-table :data="status.alert_list" :max-height="status.alert_table_h">
+            <el-table-column prop="alarmTime" label="时间" width="180"></el-table-column>
+            <el-table-column prop="content" label="告警内容"></el-table-column>
+            <el-table-column label="操作" width="100">
+              <template slot-scope="scope">
+                <el-button @click="handle_alert_message(scope.row)" type="primary" size="mini">点我处理</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+        <el-pagination class="paging" @current-change="alert_detail" layout="total, prev, pager, next"
+          :total="status.total_alert" :page-size="status.page_size"></el-pagination>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../运维人员部署请修改我.js"></script>
+  <script src="../module/vue.js"></script>
+  <script src="../module/element-ui.js"></script>
+  <script src="../module/axios.min.js"></script>
+  <script src="../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

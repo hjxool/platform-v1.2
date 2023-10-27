@@ -21,45 +21,60 @@
 	background: #f5f6f8;
 	overflow-x: hidden;
 }
+// 头部标题和返回
+.back_title {
+	padding: 1.5rem;
+	// background: #fff;
+	> .iconfont {
+		font-size: 1.5rem;
+		font-weight: bold;
+	}
+	> .title {
+		font-size: 1.6rem;
+		margin: 0 auto;
+	}
+}
 // 头部检索
 .header {
 	margin-bottom: 2rem;
 	z-index: 50;
 	> .search {
-		margin: 2rem 4rem 0;
-		position: relative;
-		.van-search__content {
-			height: 5rem;
-			background: #fff;
-		}
-		.van-cell {
-			align-items: center;
+		justify-content: center;
+		> .box {
+			width: 24rem;
+			.van-search__content {
+				height: 4rem;
+				background: #fff;
+			}
+			.van-cell {
+				align-items: center;
+			}
 		}
 		> .button1 {
-			position: absolute;
+			// position: absolute;
 			font-size: 1.6rem;
-			padding: 0.8rem 1.5rem;
-			border-radius: 2.6rem;
+			padding: 8px 20px;
+			border-radius: 100px;
 			background: #d8ebfa;
-			right: 2rem;
-			top: 50%;
-			transform: translateY(-50%);
+			// right: 2rem;
+			// top: 50%;
+			// transform: translateY(-50%);
 		}
 	}
 	> .filter {
 		display: grid;
-		grid-template-columns: 2fr 1fr;
+		grid-template-columns: 1fr 1fr;
 		align-items: center;
 		.van-dropdown-menu__bar {
 			background: transparent;
 			box-shadow: none;
 		}
 		.icon {
-			font-size: 2rem;
+			font-size: 1.6rem;
 			margin-right: 1rem;
 		}
 		.time {
-			font-size: 1.6rem;
+			font-size: 1.4rem;
 		}
 	}
 }
@@ -70,9 +85,9 @@
 	margin-bottom: 1rem;
 	padding: 0 2rem;
 	> .metting_box {
-		margin-bottom: 3rem;
+		margin-bottom: 1rem;
 		position: relative;
-		height: 16rem;
+		height: 10rem;
 		display: grid;
 		grid-template-columns: 19% auto;
 		grid-template-rows: 94%;
@@ -80,33 +95,43 @@
 		> .time {
 			align-items: center;
 			justify-content: center;
+			background: #fff;
+			border-top-left-radius: 6px;
+			border-bottom-left-radius: 6px;
 			> .tag {
-				margin-bottom: 16px;
+				margin-bottom: 1rem;
 			}
 			> .text {
-				font-size: 2rem;
+				font-size: 1.4rem;
+			}
+			> .line {
+				width: 0.5rem;
+				height: 1px;
+				background: #35393d;
+				margin: 1rem 0;
 			}
 		}
 		> .content {
-			padding-left: 3rem;
+			padding-left: 1rem;
 			overflow: hidden;
+			position: relative;
 			> .box {
 				flex-grow: 1;
 				overflow: hidden;
 				padding-right: 2rem;
 				> .title {
-					font-size: 2.4rem;
+					font-size: 1.6rem;
 				}
 				> .margin {
-					margin-bottom: 2rem;
+					margin-bottom: 1rem;
 				}
 				> .row_layout {
-					font-size: 1.6rem;
+					font-size: 1.4rem;
 					color: #697077;
 					> .icon {
-						width: 2rem;
-						height: 2rem;
-						margin-right: 14px;
+						width: 1.4rem;
+						height: 1.4rem;
+						margin-right: 1rem;
 					}
 				}
 			}
@@ -122,7 +147,7 @@
 				color: #87aef6;
 				font-weight: bold;
 				font-size: 1.6rem;
-				margin: 0 1.2rem 0 3rem;
+				margin: 0 1.2rem 0 0;
 			}
 		}
 	}

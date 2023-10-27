@@ -6,12 +6,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title></title>
   <link rel="stylesheet" href="https://unpkg.com/vant@2.12/lib/index.css">
+  <link rel="stylesheet" href="../../module/icon.css">
   <link rel="stylesheet" href="../../module/common_style.css">
   <link rel="stylesheet" href="./index.css">
 </head>
 
 <body>
   <div id="index" class="col_layout" v-cloak v-my_loading="loading">
+    <!-- 返回 -->
+    <div class="back_title row_layout" @click="turn_back">
+      <div class="iconfont icon-xiangzuojiantou"></div>
+      <div class="title">会议预约</div>
+    </div>
     <!-- 内容框 -->
     <div class="form flex_grow" v-show="step.cur===0">
       <div class="row1">
@@ -43,16 +49,20 @@
         <div class="title">会议时间</div>
       </div>
       <div class="select time_box">
-        <span class="align">开始时间</span>
-        <span class="align center" @click="show_picker('start_date')">{{form.start_date||'空'}}</span>
-        <span class="align center" @click="show_picker('start_time')">{{form.start_time||'空'}}</span>
-        <div class="line"></div>
+        <span>开始时间</span>
+        <span class="center" @click="show_picker('start_date')">{{form.start_date||'空'}}</span>
+        <div class="row_layout">
+          <div class="line"></div>
+          <span @click="show_picker('start_time')">{{form.start_time||'空'}}</span>
+        </div>
       </div>
       <div class="select time_box">
-        <span class="align">结束时间</span>
-        <span class="align center" @click="show_picker('end_date')">{{form.end_date||'空'}}</span>
-        <span class="align center" @click="show_picker('end_time')">{{form.end_time||'空'}}</span>
-        <div class="line"></div>
+        <span>结束时间</span>
+        <span class="center" @click="show_picker('end_date')">{{form.end_date||'空'}}</span>
+        <div class="row_layout">
+          <div class="line"></div>
+          <span @click="show_picker('end_time')">{{form.end_time||'空'}}</span>
+        </div>
       </div>
     </div>
 
@@ -61,7 +71,7 @@
         <div class="title">主持人</div>
         <div class="text1">添加 ></div>
       </div>
-      <div class="select person_box">
+      <div class="select person_box" style="padding:1rem">
         <div class="tag row_layout row1" v-for="person,index in form.holder" @click="del_person(index,'holder')">
           <span class="text_ellipsis">{{person.name}}</span>
           <span>x</span>
@@ -72,7 +82,7 @@
         <div class="title">参会人员</div>
         <div class="text1">添加 ></div>
       </div>
-      <div class="select person_box">
+      <div class="select person_box" style="padding:1rem">
         <div class="tag row_layout row1" v-for="person,index in form.join" @click="del_person(index,'join')">
           <span class="text_ellipsis">{{person.name}}</span>
           <span>x</span>
@@ -88,7 +98,7 @@
         <!-- 隐藏的上传文件标签 -->
         <input type="file" style="display:none;" id="upload" @change="upload_guest">
       </div>
-      <div class="select person_box">
+      <div class="select person_box" style="padding:1rem">
         <div class="tag row_layout row1" v-for="person,index in form.guest" @click="del_person(index,'guest')">
           <span class="text_ellipsis">{{person.guestName}}</span>
           <span>x</span>
@@ -104,7 +114,7 @@
       </div>
 
       <div class="row1"></div>
-      <div class="select">
+      <div class="select" :style="{paddingBottom:form.notify?'':'0'}">
         <div class="col_layout">
           <div class="row_layout row1" style="padding-top: 0;">
             <span class="text2">是否通知</span>
@@ -114,8 +124,8 @@
           <div class="notify_box col_layout" v-show="form.notify">
             <span class="text1" @click="add_alert_time">添加 ></span>
 
-            <div class="tag row_layout row1" v-for="n in form.reminds"
-              @click="show_picker(n.index!==7?'alert':'cus_alert',n)" style="padding: 2rem;">
+            <div class="tag row_layout row1" v-for="n,index in form.reminds"
+              @click="show_picker(n.value!==7?'alert':'cus_alert',n)" style="padding: 2rem;">
               <span class="text_ellipsis">{{reming_text(n)}}</span>
               <span @click.stop="del_person(index,'reminds')">x</span>
             </div>
@@ -140,7 +150,7 @@
       </div>
     </div>
 
-    <div class="form flex_grow col_layout" v-show="step.cur===2">
+    <div class="form flex_grow col_layout" v-show="step.cur===2" style="padding:0;">
       <div class="row1 title flex_shrink">选择模板</div>
 
       <div class="template_box flex_grow">

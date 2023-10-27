@@ -1,12 +1,10 @@
 // let url = `${我是接口地址}/`;
-// let search_meeting_url = `${url}api-portal/meeting/list`; //查询会议列表
 let url = 'http://192.168.30.45:9201';
 let room_url = `${url}/api-portal/room/list/all`; //查询会议室列表
 let meeting_type_url = `${url}/api-portal/meeting-type/search`; //查询会议室类型
 let template_list_url = `${url}/api-portal/displayBoard/template/list`; //获取模板列表
 let get_scene_url = `${url}/api-portal/scene-rule/available`; //查询场所可用场景
 let meeting_reserve_url = `${url}/api-portal/meeting`; //预约会议
-let token = '929e4d12-0e50-4047-939d-80d74202bc69';
 
 Vue.use(vant.Step);
 Vue.use(vant.Steps);
@@ -57,6 +55,12 @@ new Vue({
 		},
 	},
 	async mounted() {
+		if (!location.search) {
+			this.token = sessionStorage.token;
+			this.id = sessionStorage.token; //会议室id
+		} else {
+			this.get_token();
+		}
 		this.reminds = [
 			{ text: '开始时', value: 0 },
 			{ text: '开始前15分钟', value: 1 },
@@ -69,15 +73,11 @@ new Vue({
 		];
 		this.resize();
 		this.picker.min_date = new Date();
-		try {
-			this.loading = true;
-			await this.get_room();
-			await this.get_meeting_type();
-			await this.get_template_list();
-			this.loading = false;
-		} catch (error) {
-			console.log('error', error);
-		}
+		this.loading = true;
+		await this.get_room();
+		await this.get_meeting_type();
+		await this.get_template_list();
+		this.loading = false;
 		window.onmessage = (data) => {
 			console.log('页面消息', data);
 			if (data.data.type === 'close_pop') {
@@ -206,7 +206,7 @@ new Vue({
 			// 提示是否有场景执行 而后提交请求
 			this.loading = true;
 			this.scene_text = '';
-			let res = await this.request('get', `${get_scene_url}/${this.form.room}?placeStartDate=${this.st}&placeEndDate=${this.et}`, token);
+			let res = await this.request('get', `${get_scene_url}/${this.form.room.value}?placeStartDate=${this.st}&placeEndDate=${this.et}`, this.token);
 			this.loading = false;
 			if (res.data.head.code !== 200) {
 				return;
@@ -244,7 +244,7 @@ new Vue({
 			if (this.form.template) {
 				data.templateId = this.form.template;
 			}
-			let res = await this.request('post', meeting_reserve_url, token, data);
+			let res = await this.request('post', meeting_reserve_url, this.token, data);
 			this.loading = false;
 			if (res.data.head.code !== 200) {
 				return false;
@@ -289,8 +289,8 @@ new Vue({
 					break;
 				case 'holder':
 				case 'join':
-					// this.picker.url = `../../index.html?type=app_add_person&token=${token}`;
-					this.picker.url = `../add_person/index.html?token=${token}`;
+					// this.picker.url = `../../index.html?type=app_add_person&token=${this.token}`;
+					this.picker.url = `../add_person/index.html?token=${this.token}`;
 					this.$nextTick(() => {
 						let list = [];
 						for (let val of this.form[type]) {
@@ -379,7 +379,7 @@ new Vue({
 		},
 		// 查询会议室
 		async get_room() {
-			let { data } = await this.request('post', room_url, token);
+			let { data } = await this.request('post', room_url, this.token);
 			if (data.head.code !== 200) {
 				return;
 			}
@@ -391,10 +391,19 @@ new Vue({
 				};
 				this.rooms.push(t);
 			}
+			// 如果收到会议室id则回显
+			if (this.id) {
+				for (let val of this.rooms) {
+					if (this.id === val.value) {
+						this.form.room = val;
+						break;
+					}
+				}
+			}
 		},
 		// 查询会议室类型
 		async get_meeting_type() {
-			let { data } = await this.request('post', meeting_type_url, token, {
+			let { data } = await this.request('post', meeting_type_url, this.token, {
 				condition: {
 					status: true,
 				},
@@ -522,9 +531,9 @@ new Vue({
 		async get_template_list() {
 			// industryType 1表示会议模板
 			let body = { pageNum: 1, pageSize: 900, condition: { industryType: 1, sysTemp: true } };
-			let sys = await this.request('post', template_list_url, token, body);
+			let sys = await this.request('post', template_list_url, this.token, body);
 			body.condition.sysTemp = false;
-			let cus = await this.request('post', template_list_url, token, body);
+			let cus = await this.request('post', template_list_url, this.token, body);
 			if (sys.data.head.code !== 200 || !sys.data.data?.data) {
 				sys = [];
 			} else {
@@ -542,6 +551,10 @@ new Vue({
 				}
 			}
 			this.template_list = sys.concat(cus);
+		},
+		// 返回上一页
+		turn_back() {
+			window.location.href = `../meeting_platform/index.html?token=${this.token}`;
 		},
 	},
 });

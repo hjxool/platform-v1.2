@@ -34,6 +34,12 @@ new Vue({
 				case 'OperationAndMaintenance':
 					path = 'door';
 					break;
+				case 'device_manage':
+					path = 'device_manage';
+					break;
+				case 'device_monitor':
+					path = 'device_monitor';
+					break;
 				case 'MeetingReservation':
 					path = 'meeting_reserve';
 					break;

@@ -1,8 +1,6 @@
 // let url = `${我是接口地址}/`;
-// let search_meeting_url = `${url}api-portal/meeting/list`; //查询会议列表
-let url = 'http://software.china-hushan.com:13001';
+let url = 'http://192.168.30.45:9201';
 let search_meeting_url = `${url}/api-portal/meeting/list`; //查询会议列表
-let token = '4b0f780f-56af-4ccd-aff1-fbc8838441ca';
 
 // 引入vant
 Vue.use(vant.DropdownMenu);
@@ -45,12 +43,15 @@ new Vue({
 		loading: false, //加载弹窗
 	},
 	async mounted() {
+		if (!location.search) {
+			this.token = sessionStorage.token;
+		} else {
+			this.get_token();
+		}
 		this.resize();
-		try {
-			this.loading = true;
-			await this.get_data();
-			this.loading = false;
-		} catch (error) {}
+		this.loading = true;
+		await this.get_data();
+		this.loading = false;
 		this.dom = document.querySelector('.scroll_box');
 	},
 	methods: {
@@ -58,7 +59,7 @@ new Vue({
 		resize() {
 			let dom = document.documentElement;
 			let width = dom.clientWidth;
-			let ratio = Math.round((width / 720) * 100) / 100; // 取小数点后两位
+			let ratio = Math.round((width / 360) * 100) / 100; // 取小数点后两位
 			dom.style.fontSize = ratio * 10 + 'px'; //以720分辨率下字体大小10px为基准
 		},
 		// 选择对应标题显示不同内容
@@ -100,7 +101,7 @@ new Vue({
 				body.condition.startTime = this.start_time;
 				body.condition.endTime = this.end_time;
 			}
-			let { data } = await this.request('post', search_meeting_url, token, body);
+			let { data } = await this.request('post', search_meeting_url, this.token, body);
 			if (data.head.code !== 200) {
 				return;
 			}
@@ -168,6 +169,10 @@ new Vue({
 					}
 				}
 			}, 700);
+		},
+		// 返回上一页
+		turn_back() {
+			window.location.href = `../meeting_platform/index.html?token=${this.token}`;
 		},
 	},
 });

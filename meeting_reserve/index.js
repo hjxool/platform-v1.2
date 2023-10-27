@@ -667,8 +667,10 @@ new Vue({
 						if (col_index >= start_index && col_index <= end_index) {
 							let info = t[i];
 							this.meeting_info.name = info.theme;
-							this.meeting_info.start_time = info.startTime;
-							this.meeting_info.end_time = info.endTime;
+							let sd = info.startTime.split(' ')[0];
+							this.meeting_info.start_time = `${sd} ${start[0]}:${start[1]}`;
+							let ed = info.endTime.split(' ')[0];
+							this.meeting_info.end_time = `${ed} ${end[0]}:${end[1]}`;
 							switch (info.type) {
 								case 0:
 									this.meeting_info.type = '视频会议';
@@ -728,10 +730,10 @@ new Vue({
 						this.new_meeting_form.time_end = `${t2}:15`;
 						break;
 					case 2:
-						this.new_meeting_form.time_end = `${t}:30`;
+						this.new_meeting_form.time_end = `${t2}:30`;
 						break;
 					case 3:
-						this.new_meeting_form.time_end = `${t}:45`;
+						this.new_meeting_form.time_end = `${t2}:45`;
 						break;
 				}
 				this.change_reserve_type();

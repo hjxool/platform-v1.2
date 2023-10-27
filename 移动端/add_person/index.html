@@ -17,8 +17,8 @@
       <div class="search">
         <van-search class="box" v-model="search" @search="get_data" placeholder="搜索"
           background="transparent"></van-search>
-        <div class="button1" @click="get_data">搜索</div>
       </div>
+      <div class="button1" @click="get_data">搜索</div>
       <!-- 条件筛选 -->
       <van-dropdown-menu class="type">
         <van-dropdown-item v-model="type" @change="get_data()" :options="types"></van-dropdown-item>
