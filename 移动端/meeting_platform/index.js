@@ -4,8 +4,9 @@ let cur_user_url = `${url}/api-auth/oauth/userinfo`; //当前用户
 let meeting_url = `${url}/api-portal/meeting/list`; //查询时间段内会议
 let tenants_url = `${url}/api-user/users/tenantSimple`; //租户列表
 let cur_tenant_url = `${url}/api-auth/oauth/user/tenant`; //当前租户
-let rooms_url = `${url}/api-portal/place`; //场所列表
+let rooms_url = `${url}/api-portal/room/find/usage`; //场所列表
 let change_tenant_url = `${url}/api-auth/oauth/user/token`; //切换租户token换绑用户
+let change_token_url = `${url}/api-auth/oauth/oa/token`; //重庆理工OA获取token
 
 Vue.use(vant.Swipe);
 Vue.use(vant.SwipeItem);
@@ -44,9 +45,11 @@ new Vue({
 		// } else {
 		// 	this.get_token();
 		// }
-		this.token = 'f23d728f-122f-4a4d-8a13-a857e4d90fa4';
-		this.resize();
+		// 用获取到的token换新token
 		this.loading = true;
+		await this.change_token();
+		this.token = 'd23b585a-27d3-42cf-93c1-dc9ca05f3600';
+		this.resize();
 		await Promise.all([this.get_cur_user(), this.get_today_meeting(), this.get_tenants()]).catch((err) => err);
 		this.loading = false;
 	},
@@ -90,7 +93,7 @@ new Vue({
 		},
 		// 根据租户获取会议室
 		async get_room_list() {
-			let { data } = await this.request('post', `${rooms_url}/${this.cur_tenant.id}/findAll`, this.token);
+			let { data } = await this.request('post', rooms_url, this.token, {});
 			if (data.head.code !== 200) {
 				return;
 			}
@@ -193,7 +196,31 @@ new Vue({
 				case '我的会议':
 					window.location.href = `../myMeeting/index.html?token=${this.token}`;
 					break;
+				case '会议日历':
+					window.location.href = `../meeting_calendar/index.html?token=${this.token}`;
+					break;
+				case '会议详情':
+					window.location.href = `../meeting_detail/index.html?token=${this.token}&id=${params}&prePage=meeting_platform`;
+					break;
+				case '会议审批':
+					window.location.href = `../meeting_audit/index.html?token=${this.token}`;
+					break;
 			}
+		},
+		// 换token
+		async change_token() {
+			let { data: res } = await axios({
+				method: 'post',
+				url: change_token_url,
+				headers: {
+					app_type,
+					ticket: this.token,
+				},
+			});
+			if (res.head.code !== 200) {
+				return;
+			}
+			this.token = res.data.access_token;
 		},
 	},
 });

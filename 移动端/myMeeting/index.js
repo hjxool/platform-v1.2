@@ -115,6 +115,7 @@ new Vue({
 					title: val.theme,
 					author: val.moderatorName,
 					place: val.roomName,
+					id: val.id,
 				};
 				this.body.list.push(t);
 			}
@@ -173,6 +174,14 @@ new Vue({
 		// 返回上一页
 		turn_back() {
 			window.location.href = `../meeting_platform/index.html?token=${this.token}`;
+		},
+		// 跳转模块
+		turn_to_page(type, params) {
+			switch (type) {
+				case '会议详情':
+					window.location.href = `../meeting_detail/index.html?token=${this.token}&id=${params}&prePage=myMeeting`;
+					break;
+			}
 		},
 	},
 });

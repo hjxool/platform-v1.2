@@ -201,6 +201,10 @@ new Vue({
 		// stomp连接失败的回调
 		on_error(error) {
 			// this.$message.error(error.headers.message);
+			console.log('连接失败');
+			setTimeout(() => {
+				this.link_websocket();
+			}, 1000);
 		},
 		// 获取页面参数
 		get_device_status() {

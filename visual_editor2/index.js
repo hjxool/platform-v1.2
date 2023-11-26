@@ -94,6 +94,7 @@ new Vue({
 			let c_w = dom.clientWidth;
 			for (let val of res.data.data.panelParam) {
 				// 每个面板比例不同
+				// 连线组件组要将画布拉伸到跟页面大小一样 所以radio要代理
 				val.radio = Math.round((c_w / val.mb.w) * 100) / 100;
 			}
 			this.component_list = res.data.data.panelParam;
@@ -101,6 +102,10 @@ new Vue({
 			this.$nextTick(async () => {
 				this.$bus.$emit('common_params', this.token);
 				await this.count_device_list();
+				// 开启设备实时数据上报
+				for (let val of this.list) {
+					this.start_report(val);
+				}
 				if (localStorage.hushanwebuserinfo) {
 					let obj = JSON.parse(localStorage.hushanwebuserinfo);
 					let ws_name = obj.mqUser;
@@ -254,21 +259,23 @@ new Vue({
 			this.list = []; //存储不同设备的id
 			for (let val of this.component_list) {
 				for (let val2 of val.data) {
-					for (let val3 of val2.attr) {
-						if (!this.list.length) {
-							// 没设备时直接添加
-							this.list.push(val3.deviceId);
-						} else {
-							// 只有不相同的设备id才入栈
-							let find = false;
-							for (let val4 of this.list) {
-								if (val4 === val3.deviceId) {
-									find = true;
-									break;
-								}
-							}
-							if (!find) {
+					if (Array.isArray(val2.attr)) {
+						for (let val3 of val2.attr) {
+							if (!this.list.length) {
+								// 没设备时直接添加
 								this.list.push(val3.deviceId);
+							} else {
+								// 只有不相同的设备id才入栈
+								let find = false;
+								for (let val4 of this.list) {
+									if (val4 === val3.deviceId) {
+										find = true;
+										break;
+									}
+								}
+								if (!find) {
+									this.list.push(val3.deviceId);
+								}
 							}
 						}
 					}
@@ -281,6 +288,10 @@ new Vue({
 			}
 			// 全部请求回来后再进行后续 否则可能会覆盖推流数据
 			await Promise.all(result).catch((err) => {});
+		},
+		// 让设备开始上报
+		start_report(device_id) {
+			this.request('put', `${decive_report_url}/${device_id}`);
 		},
 	},
 });

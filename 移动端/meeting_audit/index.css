@@ -1,0 +1,1 @@
+.col_layout{display:flex;flex-direction:column}.row_layout{display:flex;align-items:center}.flex_grow{flex-grow:1}#index{width:100%;height:100%;position:absolute;overflow:hidden;background:#edf0f3}.back_title{padding:1.5rem}.back_title>.iconfont{font-size:1.5rem;font-weight:bold}.back_title>.title{font-size:1.5rem;margin:0 auto}

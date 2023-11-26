@@ -147,7 +147,24 @@
 	> .range {
 		position: absolute;
 		top: 0;
-		left: 7rem;
-		right: 0;
+		left: calc(7rem + 2px);
+		right: 2rem;
+		// background: rgba(0, 0, 0, 0.1);
+		> .meeting {
+			position: absolute;
+			left: 0;
+			right: 0;
+			background: #e4f2fd;
+			border: 2px solid #567aff;
+			border-radius: 10px;
+			> .time {
+				padding: 4px 6px;
+				background: #106fff;
+				border-bottom-right-radius: 10px;
+				color: #fff;
+				font-size: 1.2rem;
+				align-self: flex-start;
+			}
+		}
 	}
 }

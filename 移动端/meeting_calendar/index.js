@@ -1,6 +1,6 @@
 // let url = `${我是接口地址}/`;
 let url = 'http://192.168.30.45:9201';
-let room_url = `${url}/api-portal/room/list/all`; //查询会议室列表
+let meeting_url = `${url}/api-portal/meeting/calender/search`; //会议日历
 
 Vue.use(vant.Popup);
 Vue.use(vant.DatetimePicker);
@@ -24,6 +24,8 @@ new Vue({
 			show: false, //选择器显示
 			title: '选择年月', //选择器标题
 		},
+		meetings: [], //会议列表
+		block_height: 6, //每小时行高
 	},
 	async mounted() {
 		if (!location.search) {
@@ -32,6 +34,8 @@ new Vue({
 			this.get_token();
 		}
 		this.resize();
+		// 7点到23点总秒数 用于计算会议时间距离顶部位置
+		this.total_time = (23 - 7) * 60 * 60;
 		this.first_load = true;
 		// 当前日期
 		this.month.time = new Date();
@@ -40,8 +44,6 @@ new Vue({
 		this.month.max_date = new Date(`${this.month.time.getFullYear() + 1}/${this.month.time.getMonth() + 1}/${this.month.time.getDate()}`);
 		this.init_month_text();
 		this.init_week_day();
-		this.loading = true;
-		this.loading = false;
 		this.$nextTick(() => {
 			// 记录星期滚动节点
 			this.week_box = document.getElementById('week_box');
@@ -131,6 +133,8 @@ new Vue({
 		// 选择对应天
 		select_day(obj) {
 			this.week.select = obj;
+			// 查询会议
+			this.get_meeting();
 			// 每次选完重置位置
 			this.init_day_position();
 		},
@@ -176,6 +180,56 @@ new Vue({
 			this.init_month_text();
 			this.init_week_day();
 			this.pop.show = false;
+			this.get_meeting();
+		},
+		// 查询日期下会议
+		async get_meeting() {
+			// 查询所选日期会议
+			this.meetings = [];
+			this.loading = true;
+			let date = new Date(this.week.select.time);
+			let y = date.getFullYear();
+			let m = date.getMonth() + 1;
+			let d = date.getDate();
+			let st = `${y}-${m}-${d} 06:00:00`;
+			let et = `${y}-${m}-${d} 23:00:00`;
+			let { data: res } = await this.request('post', meeting_url, this.token, { queryType: 3, startTime: st, endTime: et });
+			this.loading = false;
+			let list = Object.entries(res.data);
+			if (res.head.code !== 200 || !list.length) {
+				return;
+			}
+			let list2 = list[0][1]; // 返回数据是 date:[{},...]的形式
+			for (let val of list2) {
+				let t = {
+					start: val.startTime.split(' ')[1],
+					end: val.endTime.split(' ')[1],
+					name: val.theme,
+					id: val.id,
+				};
+				this.meetings.push(t);
+			}
+		},
+		// 会议容器距离顶部位置
+		meeting_top(obj) {
+			let s = obj.start.split(':');
+			// 距离顶部位置跟开始时间和总时间相关
+			let top = (Number(s[0]) - 7) * 60 * 60 + Number(s[1]) * 60;
+			let e = obj.end.split(':');
+			// 高度跟会议时间差值相关
+			let height = (Number(e[0]) - Number(s[0])) * 60 * 60 + (Number(e[1]) - Number(s[1])) * 60;
+			return {
+				top: (top / this.total_time) * 100 + '%',
+				height: (height / this.total_time) * 16 * this.block_height + 'rem',
+			};
+		},
+		// 跳转模块
+		turn_to_page(type, params) {
+			switch (type) {
+				case '会议详情':
+					window.location.href = `../meeting_detail/index.html?token=${this.token}&id=${params}&prePage=meeting_calendar`;
+					break;
+			}
 		},
 	},
 });

@@ -168,18 +168,23 @@
               </el-form-item>
 
               <el-form-item label="主持人" required>
-                <div class="emcee_box row_layout">
-                  <div class="person button flex_shrink" @click="add_person_display('holder')">
-                    <i class="el-icon-plus icon1"></i>
-                    <span class="name">添加</span>
-                  </div>
+                <div class="person_box">
+                  <!-- 人员显示列表 -->
+                  <div class="box1">
+                    <div class="person button flex_shrink" @click="add_person_display('holder')">
+                      <i class="el-icon-plus icon1"></i>
+                      <span class="name">添加</span>
+                    </div>
 
-                  <div class="person flex_shrink" v-for="item,index in new_meeting_form.emcee">
-                    <span class="name text_ellipsis" :title="item.name">{{item.name}}</span>
-                    <i class="el-icon-close" @click="del_person(index,'holder')"></i>
-                  </div>
+                    <div class="person flex_shrink" v-for="item,index in new_meeting_form.emcee">
+                      <span class="name text_ellipsis" :title="item.name">{{item.name}}</span>
+                      <i class="el-icon-close" @click="del_person(index,'holder')"></i>
+                    </div>
 
-                  <div v-show="!new_meeting_form.emcee.length" class="placeholder">主持人</div>
+                    <div v-show="!new_meeting_form.emcee.length" class="placeholder">主持人</div>
+                  </div>
+                  <!-- 人数统计 -->
+                  <div class="box2">{{new_meeting_form.emcee.length}}人</div>
                 </div>
               </el-form-item>
 
@@ -198,7 +203,7 @@
                           <span class="name text_ellipsis" :title="item.name">{{item.name}}</span>
                           <i class="el-icon-close" @click="del_person(index,'join')"></i>
                         </div>
-                        <div v-show="new_meeting_form.search_person.length==1" class="placeholder">参会人员</div>
+                        <div v-show="new_meeting_form.search_person.length<=1" class="placeholder">参会人员</div>
                       </div>
                       <!-- 人数统计 -->
                       <div class="box2">{{new_meeting_form.search_person.length}}人</div>

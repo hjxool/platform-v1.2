@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title></title>
-  <link rel="stylesheet" href="https://unpkg.com/vant@2.12/lib/index.css">
+  <link rel="stylesheet" href="../../module/vant.css">
   <link rel="stylesheet" href="../../module/icon.css">
   <link rel="stylesheet" href="../../module/common_style.css">
   <link rel="stylesheet" href="./index.css">
@@ -43,8 +43,7 @@
     </div>
     <!-- 列表 -->
     <div class="scroll_box" @wheel="next_page">
-      <div class="metting_box" v-for="m in body.list">
-
+      <div class="metting_box" v-for="m in body.list" @click="turn_to_page('会议详情',m.id)">
         <div class="time col_layout">
           <van-tag class="tag" plain :type="tag_type(m.status)">{{tag_text(m.status)}}</van-tag>
           <div class="text">{{m.start}}</div>
@@ -79,7 +78,7 @@
 
   <!-- <script src="../../../运维人员部署请修改我.js"></script> -->
   <script src="../../module/vue.js"></script>
-  <script src="https://unpkg.com/vant@2.12/lib/vant.min.js"></script>
+  <script src="../../module/vant.min.js"></script>
   <script src="../../module/axios.min.js"></script>
   <script src="../../module/common_function.js"></script>
   <script src="./index.js"></script>

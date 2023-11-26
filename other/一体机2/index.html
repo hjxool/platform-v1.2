@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>音响系统</title>
+  <link rel="icon" href="./img/logo.ico">
+  <link rel="stylesheet" href="../../module/element-ui.css">
+  <link rel="stylesheet" href="../../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+  <link rel="shortcut icon" href="#" />
+</head>
+
+<body>
+  <div class="index" v-cloak>
+    <!-- 头部 -->
+    <div class="header">
+      <!-- <img src="./img/返回按钮.png" class="button" style="margin: 0 12px 0 24px;width: 45px;height: 45px;"
+        @click="return_home"> -->
+      <img src="./img/logo.png" style="width: 200px;height: 26px;margin: 0 15px;">
+      <div style="width: 2px;height: 22px;margin: 0 15px;background: #035AB0;"></div>
+      <span style="font-size: 30px;color: #F5F5F5;margin: 0 35px;">智慧运算中心</span>
+      <span style="font-size: 14px;color: #F5F5F5;padding-top: 10px;">{{device_name}}</span>
+      <!-- 头部背景 -->
+      <img src="./img/抬头背景.png" class="bg_img">
+    </div>
+    <!-- 头部下 -->
+    <div class="header_bottom">
+      <el-select v-model="html.config_select" style="margin: 0 20px;" size="mini" @change="send_order('SCALL')">
+        <el-option v-for="item,index in configs" :label="`场景${index+1}`" :value="item"></el-option>
+      </el-select>
+      <div class="button1 button center" @click="send_order('SSAVE')">
+        <img src="./img/button2.png" class="bg_img">
+        保存
+      </div>
+      <!-- 切换的tab -->
+      <el-button v-for="item,index in html.page" @click="change_page(index)"
+        :type="html.page_select==index?'primary':''" style="margin-left:20px;" size="small">{{item}}</el-button>
+    </div>
+    <!-- 定制页 -->
+    <div class="body" v-show="html.page_select==0">
+      <div class="box1">
+        <!-- 矩阵 -->
+        <div class="box1_1">
+          <div class="box1_1_head">
+            <div class="block center text" v-for="num,index in 13">
+              {{index>0?'IN'+index:''}}
+            </div>
+          </div>
+          <div class="box1_1_body">
+            <div class="box1_1_left">
+              <div class="block center text" v-for="num in 9">
+                {{'OUT'+num}}
+              </div>
+            </div>
+            <div class="box1_1_content">
+              <div class="row" v-for="item,index in matrix">
+                <div class="block button" v-for="item2,index2 in item" @click="send_order('MIXS',item2,index,index2)">
+                  <img v-show="item2==1" src="./img/icon1.png" class="bg_img">
+                  <img v-show="item2==0" src="./img/icon2.png" class="bg_img">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- 视频控制 -->
+        <div class="box1_2">
+          <span class="title">视频控制</span>
+          <div class="box1_2_1">
+            <div class="button center" v-for="item,index in html.video_buttons" @click="send_order('VSWT',item,index)">
+              <img v-show="!video_matrix_status(index)" src="./img/button2.png" class="bg_img">
+              <img v-show="video_matrix_status(index)" src="./img/button3.png" class="bg_img">
+              <span class="text">{{item.label}}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 滑块 -->
+      <div class="box2">
+        <div class="box2_1">
+          <div class="slider" v-for="item,index in input">
+            <div class="text1 center flex_shrink">IN{{index+1}}</div>
+            <div class="line1 flex_shrink"></div>
+            <div class="line2 flex_shrink"></div>
+            <div class="button button1 center flex_shrink" @click="send_order('INMS',item)">
+              <img v-show="item.mute==0" src="./img/button2.png" class="bg_img">
+              <img v-show="item.mute==1" src="./img/button3.png" class="bg_img">
+              静音
+            </div>
+            <div class="text2 center text_ellipsis flex_shrink">
+              {{item.gain}} dB
+            </div>
+            <div class="slider_box flex_shrink">
+              <div class="level_box flex_shrink">
+                <span class="text center">{{html.level_max}}</span>
+                <div class="level">
+                  <img src="./img/icon4.png" class="bg_img">
+                  <div class="cover" :style="level(item.level)"></div>
+                </div>
+                <span class="text center">{{html.level_min}}</span>
+              </div>
+              <div class="gain_box flex_shrink">
+                <span class="text center">+{{html.gain_max}}</span>
+                <div @mousedown="slider_turn_to($event,item,undefined,'INGS')" class="gain_body flex_shrink">
+                  <img src="./img/icon5.png" class="bg_img">
+                  <img src="./img/icon6.png" class="icon1 gain">
+                  <div class="cover" :style="gain_cover(item.gain)"></div>
+                  <img :style="gain_button(item.gain)" @mousedown.stop="slider_move(item,'INGS')" draggable="false"
+                    src="./img/icon7.png" class="icon2 button slider_button">
+                </div>
+                <span class="text center">{{html.gain_min}}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="line">
+          <img src="./img/icon3.png" class="icon">
+          <img src="./img/icon3.png" class="icon">
+        </div>
+        <div class="box2_1">
+          <div class="slider" v-for="item,index in output">
+            <div class="text1 center flex_shrink">OUT{{index+1}}</div>
+            <div class="line1 flex_shrink"></div>
+            <div class="line2 flex_shrink"></div>
+            <div class="button button1 center flex_shrink" @click="send_order('OUTMS',item)">
+              <img v-show="item.mute==0" src="./img/button2.png" class="bg_img">
+              <img v-show="item.mute==1" src="./img/button3.png" class="bg_img">
+              静音
+            </div>
+            <div class="text2 center text_ellipsis flex_shrink">
+              {{item.gain}} dB
+            </div>
+            <div class="slider_box flex_shrink">
+              <div class="level_box flex_shrink">
+                <span class="text center">{{html.level_max}}</span>
+                <div class="level">
+                  <img src="./img/icon4.png" class="bg_img">
+                  <div class="cover" :style="level(item.level)"></div>
+                </div>
+                <span class="text center">{{html.level_min}}</span>
+              </div>
+              <div class="gain_box flex_shrink">
+                <span class="text center">+{{html.gain_max}}</span>
+                <div @mousedown="slider_turn_to($event,item)" @mousedown="slider_turn_to($event,item,undefined,'OUTGS')"
+                  class="gain_body flex_shrink">
+                  <img src="./img/icon5.png" class="bg_img">
+                  <img src="./img/icon6.png" class="icon1 gain">
+                  <div class="cover" :style="gain_cover(item.gain)"></div>
+                  <img :style="gain_button(item.gain)" @mousedown.stop="slider_move(item,'OUTGS')" draggable="false"
+                    src="./img/icon7.png" class="icon2 button slider_button">
+                </div>
+                <span class="text center">{{html.gain_min}}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 可视化 -->
+    <div class="iframe_page" v-if="html.page_select==1">
+      <iframe :src="html.url" frameborder="0" scrolling="no" width="100%" height="100%"></iframe>
+    </div>
+  </div>
+
+  <script src="../../../运维人员部署请修改我.js"></script>
+  <script src="../../../js/stomp.min.js"></script>
+  <script src="../../module/vue.js"></script>
+  <script src="../../module/element-ui.js"></script>
+  <script src="../../module/axios.min.js"></script>
+  <script src="../../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

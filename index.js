@@ -55,6 +55,9 @@ new Vue({
 				case 'yitiji':
 					path = 'other/一体机';
 					break;
+				case 'yitiji2':
+					path = 'other/一体机2';
+					break;
 				case 'power_supply':
 					location.href = `../智慧设备/电源设备/index.html${location.search}`;
 					return;

@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title></title>
-  <link rel="stylesheet" href="https://unpkg.com/vant@2.12/lib/index.css">
+  <link rel="stylesheet" href="../../module/vant.css">
   <link rel="stylesheet" href="../../module/icon.css">
   <link rel="stylesheet" href="../../module/common_style.css">
   <link rel="stylesheet" href="./index.css">
@@ -48,8 +48,13 @@
         </div>
       </div>
       <!-- 限制会议框显示范围 -->
-      <div class="range" :style="{height:`${16*6}rem`}">
+      <div class="range" :style="{height:`${16*block_height}rem`}">
+        <div class="meeting col_layout" v-for="m in meetings" :style="meeting_top(m)"
+          @click="turn_to_page('会议详情',m.id)">
+          <div class="time">{{m.start}} ~ {{m.end}}</div>
 
+          <div class="flex_grow center text1">{{m.name}}</div>
+        </div>
       </div>
     </div>
 
@@ -63,8 +68,7 @@
 
   <!-- <script src="../../../运维人员部署请修改我.js"></script> -->
   <script src="../../module/vue.js"></script>
-  <script src="https://unpkg.com/vant@2.12/lib/vant.min.js"></script>
-  <script src="../../module/xlsx.core.min.js"></script>
+  <script src="../../module/vant.min.js"></script>
   <script src="../../module/axios.min.js"></script>
   <script src="../../module/common_function.js"></script>
   <script src="./index.js"></script>

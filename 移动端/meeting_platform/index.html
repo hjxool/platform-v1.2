@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title></title>
-  <link rel="stylesheet" href="https://unpkg.com/vant@2.12/lib/index.css">
+  <link rel="stylesheet" href="../../module/vant.css">
   <link rel="stylesheet" href="../../module/common_style.css">
   <link rel="stylesheet" href="./index.css">
 </head>
@@ -28,7 +28,8 @@
       </div>
       <!-- 会议列表 -->
       <van-swipe class="meeting_scroll">
-        <van-swipe-item class="meeting" v-for="m in today.list" @change="next_page_meeting">
+        <van-swipe-item class="meeting" v-for="m in today.list" @change="next_page_meeting"
+          @click="turn_to_page('会议详情',m.id)">
           <div class="flex_shrink time col_layout">
             <div class="text blue">{{m.statusName}}</div>
             <div class="text2">{{m.start}}</div>
@@ -68,18 +69,18 @@
     <!-- 会议室列表 -->
     <div class="room_list flex_grow">
       <div class="box col_layout" v-for="r in rooms">
-        <div class="title text_ellipsis">{{r.placeName}}</div>
+        <div class="title text_ellipsis">{{r.roomName}}</div>
 
         <div class="flex_grow col_layout">
           <img src="./img/icon11.png" class="bg_img">
 
           <div class="row_layout">
-            <div :class="['dot',r.status?'blue':'green']">&#9679</div>
-            <div :class="['text',r.status?'blue':'green']">{{r.status?'使用中':'空闲中'}}</div>
-            <img class="icon" src="./img/icon12.png">
+            <div :class="['dot',r.useStatus?'blue':'green']">&#9679</div>
+            <div :class="['text',r.useStatus?'blue':'green']">{{r.useStatus?'使用中':'空闲中'}}</div>
+            <img class="icon" v-show="r.approve" src="./img/icon12.png">
           </div>
 
-          <div class="text">智慧设备：等接口</div>
+          <div class="text">智慧设备：{{r.deviceNum}}</div>
 
           <div class="center" @click="turn_to_page('会议预约',r.id)">预约会议</div>
         </div>
@@ -95,7 +96,7 @@
 
   <!-- <script src="../../../运维人员部署请修改我.js"></script> -->
   <script src="../../module/vue.js"></script>
-  <script src="https://unpkg.com/vant@2.12/lib/vant.min.js"></script>
+  <script src="../../module/vant.min.js"></script>
   <script src="../../module/axios.min.js"></script>
   <script src="../../module/common_function.js"></script>
   <script src="./index.js"></script>

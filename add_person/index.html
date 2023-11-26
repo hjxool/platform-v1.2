@@ -15,8 +15,8 @@
 <body>
   <div id="index" v-cloak>
     <div class="left">
-      <el-input v-model="form.search" @change="get_person_data(1)" size="small" clearable>
-        <i @click="get_person_data(1)" slot="suffix" class="el-input__icon el-icon-search button"></i>
+      <el-input v-show="form.option_select" v-model="form.search" @change="type_search" size="small" clearable>
+        <i @click="type_search" slot="suffix" class="el-input__icon el-icon-search button"></i>
       </el-input>
       <div class="options" v-show="form.option_select==0">
         <div class="box flex_shrink button" v-for="index in 2" @click="get_person_data(index)">

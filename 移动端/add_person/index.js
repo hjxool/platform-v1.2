@@ -1,7 +1,6 @@
 // let url = `${我是接口地址}/`;
 // let search_meeting_url = `${url}api-portal/meeting/list`; //查询会议列表
 let url = 'http://192.168.30.45:9201';
-let remove_dup_url = `${url}/api-user/department/deptUsers/distinct`; //用户去重
 let all_user_url = `${url}/api-user/users/nickName`; //分页查询用户列表
 let all_layer_url = `${url}/api-user/department/getSubDeptAndCurrentDeptUser`; //获取层级列表
 
@@ -25,7 +24,7 @@ new Vue({
 		type: 0, //按xxx搜索
 		types: [
 			{ text: '按人员选', value: 0 },
-			{ text: '按架构选', value: 1 },
+			{ text: '按部门选', value: 1 },
 		],
 		stru_path: [], //组织结构路径 存储名字和索引id
 		page_num: 1, //查询页数
@@ -41,12 +40,12 @@ new Vue({
 			this.get_data();
 		} catch (error) {}
 		// 监听调用页面传入数据 用于回显
-		window.onmessage = (data) => {
+		window.onmessage = ({ data }) => {
 			console.log('父页面消息', data);
 			this.type = 0;
 			this.search = '';
-			if (Array.isArray(data?.data)) {
-				this.select_list = data.data;
+			if (Array.isArray(data)) {
+				this.select_list = data;
 				this.get_data(); //重查一次 重置列表中勾选
 			}
 		};
@@ -116,6 +115,7 @@ new Vue({
 						this.list2.push(t);
 					}
 				}
+				// 回显勾选
 				for (let val of this.select_list) {
 					if (val.type === 'stru') {
 						for (let val2 of this.list1) {
@@ -171,6 +171,7 @@ new Vue({
 					};
 					this.list2.push(t);
 				}
+				// 回显勾选
 				for (let val of this.list2) {
 					for (let val2 of this.select_list) {
 						if (val.id === val2.id) {
@@ -237,29 +238,8 @@ new Vue({
 		},
 		// 参会人员提交
 		async submit() {
-			this.loading = true;
-			let dep = [];
-			let user = [];
-			for (let val of this.select_list) {
-				if (val.type === 'person') {
-					let t = {
-						id: val.id,
-						username: val.name,
-					};
-					user.push(t);
-				} else {
-					let t = {
-						deptId: val.id,
-						deptName: val.name,
-					};
-					dep.push(t);
-				}
-			}
-			let { data } = await this.request('post', remove_dup_url, this.token, { sysDeptVOList: dep, sysUserVOList: user });
-			if (data.head.code !== 200) {
-				return;
-			}
-			this.close_window(data.data);
+			// 只传递原始数据 交由外面处理
+			this.close_window(this.select_list);
 		},
 	},
 });

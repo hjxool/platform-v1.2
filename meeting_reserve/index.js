@@ -6,7 +6,7 @@ let meeting_reserve = `${url}api-portal/meeting`;
 let upload_files = `${url}api-portal/meeting/upload/files`;
 let cur_user_url = `${url}api-auth/oauth/userinfo`;
 // let stru_list_url = `${url}api-portal/department/getsubDeptAndCurrentDeptUser`;
-// let remove_dup_url = `${url}api-portal/user/distinct`;
+let remove_dup_url = `${url}api-user/department/deptUsers/distinct`; //用户去重
 let limits_url = `${url}api-user/menus/current`; //获取菜单权限
 let get_scene_url = `${url}api-portal/scene-rule/available`; //查询场所可用场景
 let meeting_type_url = `${url}api-portal/meeting-type/search`; // 查询会议类型列表
@@ -219,24 +219,28 @@ new Vue({
 		// 横向滚动条相关参数
 		this.meeting_boxs = document.querySelector('.meeting_boxs');
 		this.scroll = false;
-		window.onmessage = (data) => {
+		window.onmessage = async (data) => {
 			console.log('页面消息', data);
 			if (Array.isArray(data?.data)) {
 				if (this.add_person_form.add_type === 'holder') {
+					let list = await this.de_weight(data.data);
 					this.new_meeting_form.emcee = [];
-					for (let val of data.data) {
+					for (let val of list) {
 						let t = {
 							name: val.username,
 							id: val.id,
+							type: 'person',
 						};
 						this.new_meeting_form.emcee.push(t);
 					}
 				} else if (this.add_person_form.add_type === 'join') {
+					let list = await this.de_weight(data.data);
 					this.new_meeting_form.search_person = [];
-					for (let val of data.data) {
+					for (let val of list) {
 						let t = {
 							name: val.username,
 							id: val.id,
+							type: 'person',
 						};
 						this.new_meeting_form.search_person.push(t);
 					}
@@ -428,14 +432,14 @@ new Vue({
 				let start_minute = +start[1];
 				let start_index = (start_hour - 6) * 4;
 				// 时间分隔为15 30 45 00
-				switch (start_minute) {
-					case 15:
+				switch (true) {
+					case start_minute >= 15 && start_minute < 30:
 						start_index = start_index + 1;
 						break;
-					case 30:
+					case start_minute >= 30 && start_minute < 45:
 						start_index = start_index + 2;
 						break;
-					case 45:
+					case start_minute >= 45:
 						start_index = start_index + 3;
 						break;
 				}
@@ -444,14 +448,14 @@ new Vue({
 				let end_minute = +end[1];
 				// 结束时间是分隔线之前 开始时间从分隔线之后
 				let end_index = (end_hour - 6) * 4 - 1;
-				switch (end_minute) {
-					case 15:
+				switch (true) {
+					case end_minute >= 15 && end_minute < 30:
 						end_index = end_index + 1;
 						break;
-					case 30:
+					case end_minute >= 30 && end_minute < 45:
 						end_index = end_index + 2;
 						break;
-					case 45:
+					case end_minute >= 45:
 						end_index = end_index + 3;
 						break;
 				}
@@ -1356,6 +1360,33 @@ new Vue({
 		// 鼠标悬浮显示审核人信息
 		auditor_title(obj) {
 			return `${obj.approveUserickName || '空'}(${obj.approveUserPhone || '空'})`;
+		},
+		// 部门人员去重
+		async de_weight(list) {
+			this.html.loading = true;
+			let dep = [];
+			let user = [];
+			for (let val of list) {
+				if (val.type === 'person') {
+					let t = {
+						id: val.id,
+						username: val.name,
+					};
+					user.push(t);
+				} else {
+					let t = {
+						deptId: val.id,
+						deptName: val.name,
+					};
+					dep.push(t);
+				}
+			}
+			let { data } = await this.request('post', remove_dup_url, this.token, { sysDeptVOList: dep, sysUserVOList: user });
+			this.html.loading = false;
+			if (data.head.code !== 200) {
+				return false;
+			}
+			return data.data;
 		},
 	},
 	computed: {

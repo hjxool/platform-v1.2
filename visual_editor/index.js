@@ -3,6 +3,7 @@ let components_url = `${url}api-device/device/controlPanel/PC`; //根据设备id
 let get_data_url = url + 'api-device/device/status'; //查询数据
 let sendCmdtoDevice = url + 'api-device/device/panel/operation'; // 下发指令
 let user_info_url = `${url}api-auth/oauth/userinfo`; //获取用户信息
+let decive_report_url = `${url}api-device/device/panel/operation`; //打开设备上报
 
 new Vue({
 	el: '#index',
@@ -44,6 +45,8 @@ new Vue({
 		} else {
 			this.get_token();
 		}
+		// 开启设备实时数据上报
+		this.start_report(this.device_id);
 		this.get_components();
 		window.addEventListener('resize', () => {
 			// 组件列表初始化好后才能执行
@@ -136,43 +139,6 @@ new Vue({
 				// this.$bus.$emit('get_value', this.data_and_path);
 			});
 		},
-		// 将原始数据放入处理成路径返回对比
-		// get_path(source, path) {
-		// 	// 判断是否是对象/数组
-		// 	if (typeof source[1].propertyValue == 'object') {
-		// 		let s = source[1].propertyValue;
-		// 		if (s.constructor == Array) {
-		// 			// 判断数组下是对象还是基础类型数据
-		// 			if (typeof s[0] == 'object') {
-		// 				for (let k = 0; k < s.length; k++) {
-		// 					let a = Object.entries(s[k]);
-		// 					for (let val of a) {
-		// 						this.get_path(val, `${path || source[0]}[${k}].${val[0]}`);
-		// 					}
-		// 				}
-		// 			} else {
-		// 				// 基本类型数组也要取每个下标值
-		// 				for (let k = 0; k < s.length; k++) {
-		// 					let target = {};
-		// 					target.path = `${path || source[0]}[${k}]`;
-		// 					target.value = s[k];
-		// 					this.data_and_path.push(target);
-		// 				}
-		// 			}
-		// 		} else {
-		// 			// 对象
-		// 			for (let val of Object.entries(s)) {
-		// 				this.get_path(val, `${path || source[0]}.${val[0]}`);
-		// 			}
-		// 		}
-		// 	} else {
-		// 		// 基本类型数据直接赋值
-		// 		let target = {};
-		// 		target.path = path || source[0];
-		// 		target.value = source[1].propertyValue;
-		// 		this.data_and_path.push(target);
-		// 	}
-		// },
 		// 获取用户信息包括 id 连接stomp用户名和密码
 		get_user_info() {
 			this.request('get', user_info_url, this.token, (res) => {
@@ -287,6 +253,10 @@ new Vue({
 		// 点击任意处关闭弹窗
 		close_popup() {
 			this.$bus.$emit('display_popup', this.current_group, false);
+		},
+		// 让设备开始上报
+		start_report(device_id) {
+			this.request('put', `${decive_report_url}/${device_id}`);
 		},
 	},
 });

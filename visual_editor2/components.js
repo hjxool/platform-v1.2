@@ -473,16 +473,63 @@ let customVideo = {
 // 连线
 let customLine = {
 	template: `
-    <svg>
+    <svg :style="cus_style(obj,page)">
       <!-- 预设的箭头图标 -->
       <defs>
         <marker refX="-3" id="arrow" orient="auto" markerUnits="userSpaceOnUse" overflow="visible">
           <path stroke="#1890ff" fill="#1890ff" transform="rotate(180)" d="M 0 0 L 8 -4 L 6 0 L 8 4 Z"></path>
         </marker>
       </defs>
-      <path class="path" :d="obj.path"></path>
+      <path class="path" :d="line_path"></path>
     </svg>
   `,
+	props: ['page'],
+	mixins: [common_functions, fn],
+	methods: {
+		cus_style(obj, page) {
+			return {
+				position: 'absolute',
+				zIndex: obj.z_index,
+				left: 0,
+				top: 0,
+				width: '100%',
+				height: `${page.mb.h * page.radio}px`,
+			};
+		},
+	},
+	computed: {
+		// 连线路径要等比例缩放
+		line_path() {
+			let res = this.obj.path.matchAll(/\d+(\.\d+)?/g);
+			// 根据匹配值的位置索引 将改变的值插入
+			let list = [];
+			for (let val of res) {
+				let t = {
+					value: Number(val['0']) * this.radio,
+					index: val.index,
+					extent: val['0'].length,
+				};
+				list.push(t);
+			}
+			// 将原始字符串处理成数组
+			let str_list = this.obj.path.split('');
+			// 注：拆成数组的时候是以每个字符分割 修改数组的时候是将原长度个数的元素改为一个元素 因此长度缩减 extent-1
+			// 下一轮修改数组时要将索引减去之前元素导致数组缩减的长度
+			let de_count = 0;
+			for (let i = 0; i < list.length; i++) {
+				let now = list[i];
+				if (i) {
+					de_count += list[i - 1].extent - 1;
+				}
+				// 根据匹配值的起始位置索引 删除字符长度的元素 再加入新数据
+				str_list.splice(now.index - de_count, now.extent, now.value);
+			}
+
+			// 将修改后的数组合并为字符串
+			let str = str_list.join('');
+			return str;
+		},
+	},
 };
 
 // // 按钮

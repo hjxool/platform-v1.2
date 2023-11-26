@@ -48,6 +48,11 @@ new Vue({
 		get_person_data(index, params, params2) {
 			this.html.page_loading = true;
 			if (index == 1) {
+				// 如果是从主页进来清空搜索栏
+				if (!this.form.option_select) {
+					this.form.search = '';
+				}
+				// 按人员
 				let page;
 				if (typeof params == 'number') {
 					page = params;
@@ -98,6 +103,9 @@ new Vue({
 					}
 				});
 			} else {
+				// 每次搜索清空搜索栏
+				this.form.search = '';
+				// 按组织架构
 				let id;
 				let page;
 				if (typeof params == 'object') {
@@ -183,6 +191,8 @@ new Vue({
 						}
 					}
 					this.form.total_person = data.userPageResult.total; // 只分人员的页
+					// 备份 清空搜索栏时恢复数据 重新搜索时以备份数据检索
+					this.dep_backup = [JSON.parse(JSON.stringify(this.form.list1)), JSON.parse(JSON.stringify(this.form.list2))];
 				});
 			}
 		},
@@ -242,6 +252,12 @@ new Vue({
 		},
 		// 参会人员提交
 		add_person_sub() {
+			// 张工的页面要去重返回结果 我的页面只返回原始数据
+			if (this.router === 'search_user') {
+				window.parent.postMessage(this.form.select_list);
+				this.close_window();
+				return;
+			}
 			this.html.page_loading = true;
 			let dep = [];
 			let user = [];
@@ -278,11 +294,12 @@ new Vue({
 				} else if (this.router === 'department_add_user') {
 					url = dep_user_url;
 					jump = '部门管理';
-				} else if (this.router === 'search_user') {
-					window.parent.postMessage(res.data.data);
-					this.close_window();
-					return;
 				}
+				// else if (this.router === 'search_user') {
+				// 	window.parent.postMessage(res.data.data);
+				// 	this.close_window();
+				// 	return;
+				// }
 				this.request('put', `${url}/${this.id}/users`, this.token, list, (res) => {
 					this.html.page_loading = false;
 					if (res.data.head.code != 200) {
@@ -305,6 +322,23 @@ new Vue({
 					return {
 						background: this.theme == 'light' ? 'rgba(105,105,105,0.2)' : '',
 					};
+			}
+		},
+		// 根据当前打开的类型搜索
+		type_search() {
+			switch (this.form.option_select) {
+				case 1:
+					this.get_person_data(1);
+					break;
+				case 2:
+					if (this.form.search) {
+						// 按部门检索时只过滤当前层级下列表
+						this.form.list1 = this.dep_backup[0].filter((val) => val.name.indexOf(this.form.search) !== -1);
+						this.form.list2 = this.dep_backup[1].filter((val) => val.name.indexOf(this.form.search) !== -1);
+					} else {
+						this.form.list1 = this.dep_backup[0];
+					}
+					break;
 			}
 		},
 	},

@@ -5,6 +5,7 @@ let meeting_type_url = `${url}/api-portal/meeting-type/search`; //查询会议�
 let template_list_url = `${url}/api-portal/displayBoard/template/list`; //获取模板列表
 let get_scene_url = `${url}/api-portal/scene-rule/available`; //查询场所可用场景
 let meeting_reserve_url = `${url}/api-portal/meeting`; //预约会议
+let remove_dup_url = `${url}/api-user/department/deptUsers/distinct`; //用户去重
 
 Vue.use(vant.Step);
 Vue.use(vant.Steps);
@@ -28,7 +29,6 @@ new Vue({
 			type: '1', //会议类型id
 			start_date: '', //开始年月日
 			start_time: '', //开始时间
-			end_date: '',
 			end_time: '',
 			holder: [], //主持人
 			join: [], //参会人
@@ -39,6 +39,9 @@ new Vue({
 			signIn: true, //是否签到
 			summary: true, //会议纪要
 			template: '', //所选模板
+			leader: [], //校领导
+			lead_dep: [], //牵头单位
+			// join_dep: [], //参会部门
 		},
 		meeting_type: [], //会议类型
 		template_list: [], //模板列表
@@ -78,33 +81,71 @@ new Vue({
 		await this.get_meeting_type();
 		await this.get_template_list();
 		this.loading = false;
-		window.onmessage = (data) => {
+		window.onmessage = async (data) => {
 			console.log('页面消息', data);
 			if (data.data.type === 'close_pop') {
 				this.picker.show = false;
 				let d = data.data.data;
 				if (Array.isArray(d)) {
+					let list;
 					switch (this.picker.type) {
 						case 'holder':
-							this.form.holder = [];
-							for (let val of d) {
-								let t = {
-									name: val.username,
-									id: val.id,
-								};
-								this.form.holder.push(t);
-							}
-							break;
+						case 'leader':
 						case 'join':
-							this.form.join = [];
-							for (let val of d) {
+							list = await this.de_weight(d);
+							this.form[this.picker.type] = [];
+							for (let val of list) {
 								let t = {
 									name: val.username,
 									id: val.id,
+									type: 'person',
 								};
-								this.form.join.push(t);
+								this.form[this.picker.type].push(t);
 							}
 							break;
+						case 'lead_dep':
+							// case 'join_dep':
+							this.form[this.picker.type] = [];
+							let find = false;
+							for (let val of d) {
+								// 只显示部门
+								if (val.type === 'stru') {
+									let t = {
+										name: val.name,
+										id: val.id,
+										type: 'stru',
+									};
+									this.form[this.picker.type].push(t);
+								} else {
+									// 如果选了人员则提示
+									find = true;
+								}
+							}
+							if (find) {
+								vant.Toast('不能选人员');
+							}
+							break;
+						// case 'join':
+						// 	this.form[this.picker.type] = [];
+						// 	let find2 = false;
+						// 	for (let val of d) {
+						// 		// 只显示人员
+						// 		if (val.type === 'person') {
+						// 			let t = {
+						// 				name: val.name,
+						// 				id: val.id,
+						// 				type: 'person',
+						// 			};
+						// 			this.form[this.picker.type].push(t);
+						// 		} else {
+						// 			// 如果选了部门则提示
+						// 			find2 = true;
+						// 		}
+						// 	}
+						// 	if (find2) {
+						// 		vant.Toast('不能选部门');
+						// 	}
+						// 	break;
 					}
 				}
 			}
@@ -141,12 +182,12 @@ new Vue({
 						vant.Toast('会议室不能为空');
 						return;
 					}
-					if (!this.form.start_date || !this.form.start_time || !this.form.end_date || !this.form.end_time) {
+					if (!this.form.start_date || !this.form.start_time || !this.form.end_time) {
 						vant.Toast('时间不能为空');
 						return;
 					}
 					let start = new Date(`${this.form.start_date} ${this.form.start_time}`).getTime();
-					let end = new Date(`${this.form.end_date} ${this.form.end_time}`).getTime();
+					let end = new Date(`${this.form.start_date} ${this.form.end_time}`).getTime();
 					if (end <= start) {
 						vant.Toast('开始时间不能大于结束时间');
 						return;
@@ -159,10 +200,6 @@ new Vue({
 					}
 					if (this.form.holder.length > 1) {
 						vant.Toast('主持人只能有一个');
-						return;
-					}
-					if (!this.form.join.length) {
-						vant.Toast('参会人不能为空');
 						return;
 					}
 					if (this.form.notify) {
@@ -189,6 +226,22 @@ new Vue({
 							}
 						}
 					}
+					if (!this.form.leader.length) {
+						vant.Toast('校领导不能为空');
+						return;
+					}
+					if (this.form.lead_dep.length !== 1) {
+						vant.Toast('牵头单位有且仅能选一个');
+						return;
+					}
+					// if (!this.form.join_dep.length && !this.form.join.length) {
+					// 	vant.Toast('参会部门或人员至少选一个');
+					// 	return;
+					// }
+					if (!this.form.join.length) {
+						vant.Toast('参会人至少选一个');
+						return;
+					}
 					break;
 				case 2:
 					this.get_scene();
@@ -200,9 +253,11 @@ new Vue({
 		async get_scene() {
 			// 开始结束时间
 			let s = new Date(this.form.start_date);
-			let e = new Date(this.form.end_date);
-			this.st = `${s.getFullYear()}-${s.getMonth() + 1 < 10 ? '0' + (s.getMonth() + 1) : s.getMonth() + 1}-${s.getDate() < 10 ? '0' + s.getDate() : s.getDate()} ${this.form.start_time}:00`;
-			this.et = `${e.getFullYear()}-${e.getMonth() + 1 < 10 ? '0' + (e.getMonth() + 1) : e.getMonth() + 1}-${e.getDate() < 10 ? '0' + e.getDate() : e.getDate()} ${this.form.end_time}:00`;
+			let y = s.getFullYear();
+			let m = s.getMonth() + 1 < 10 ? '0' + (s.getMonth() + 1) : s.getMonth() + 1;
+			let d = s.getDate() < 10 ? '0' + s.getDate() : s.getDate();
+			this.st = `${y}-${m}-${d} ${this.form.start_time}:00`;
+			this.et = `${y}-${m}-${d} ${this.form.end_time}:00`;
 			// 提示是否有场景执行 而后提交请求
 			this.loading = true;
 			this.scene_text = '';
@@ -240,6 +295,11 @@ new Vue({
 				}),
 				signIn: this.form.signIn ? 1 : 0,
 				summary: this.form.summary ? 1 : 0,
+				appointmentMode: 0, //默认单次预约
+				// 校领导
+				leadersIds: this.form.leader.map((e) => e.id),
+				// 牵头单位
+				leadingAgency: this.form.lead_dep.map((e) => e.id),
 			};
 			if (this.form.template) {
 				data.templateId = this.form.template;
@@ -278,17 +338,17 @@ new Vue({
 				case 'start_date':
 					this.picker.date = this.form.start_date ? new Date(this.form.start_date) : '';
 					break;
-				case 'end_date':
-					this.picker.date = this.form.end_date ? new Date(this.form.end_date) : '';
-					break;
 				case 'start_time':
 					this.picker.date = this.form.start_time ? new Date(`${this.form.start_date} ${this.form.start_time}`) : '';
 					break;
 				case 'end_time':
-					this.picker.date = this.form.end_time ? new Date(`${this.form.end_date} ${this.form.end_time}`) : '';
+					this.picker.date = this.form.end_time ? new Date(`${this.form.start_date} ${this.form.end_time}`) : '';
 					break;
 				case 'holder':
 				case 'join':
+				case 'leader':
+				case 'lead_dep':
+					// case 'join_dep':
 					// this.picker.url = `../../index.html?type=app_add_person&token=${this.token}`;
 					this.picker.url = `../add_person/index.html?token=${this.token}`;
 					this.$nextTick(() => {
@@ -297,7 +357,9 @@ new Vue({
 							let t = {
 								id: val.id,
 								name: val.name,
-								type: 'person',
+								// 到这一步都是经过去重或者部门和人员分开显示的
+								// 所以回显要带上type标识
+								type: val.type,
 							};
 							list.push(t);
 						}
@@ -323,7 +385,6 @@ new Vue({
 					this.form.room = value;
 					break;
 				case 'start_date':
-				case 'end_date':
 					this.form[this.picker.type] = `${value.getFullYear()}-${value.getMonth() + 1}-${value.getDate()}`;
 					break;
 				case 'start_time':
@@ -429,6 +490,9 @@ new Vue({
 			switch (this.picker.type) {
 				case 'holder':
 				case 'join':
+				case 'leader':
+				case 'lead_dep':
+					// case 'join_dep':
 					t.height = '90%';
 					break;
 			}
@@ -555,6 +619,46 @@ new Vue({
 		// 返回上一页
 		turn_back() {
 			window.location.href = `../meeting_platform/index.html?token=${this.token}`;
+		},
+		// 部门人员去重
+		async de_weight(list) {
+			this.loading = true;
+			let dep = [];
+			let user = [];
+			for (let val of list) {
+				if (val.type === 'person') {
+					let t = {
+						id: val.id,
+						username: val.name,
+					};
+					user.push(t);
+				} else {
+					let t = {
+						deptId: val.id,
+						deptName: val.name,
+					};
+					dep.push(t);
+				}
+			}
+			let { data } = await this.request('post', remove_dup_url, this.token, { sysDeptVOList: dep, sysUserVOList: user });
+			this.loading = false;
+			if (data.head.code !== 200) {
+				return false;
+			}
+			return data.data;
+		},
+		// iframe显示条件
+		iframe_show() {
+			switch (this.picker.type) {
+				case 'holder':
+				case 'join':
+				case 'leader':
+				case 'lead_dep':
+					// case 'join_dep':
+					return true;
+				default:
+					return false;
+			}
 		},
 	},
 });

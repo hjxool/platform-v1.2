@@ -340,7 +340,7 @@ new Vue({
 			if (!r2) {
 				return;
 			}
-			let data = model;
+			let data = this.model;
 			data.profile.versionAlias = r1.value;
 			this.request('post', protocol_newVersion, this.token, data, (res) => {
 				if (res.data.head.code !== 200) {
@@ -1023,9 +1023,9 @@ new Vue({
 				name: obj.name,
 				dataType: dataType,
 			};
-			// if (obj.id != null && obj.id != '') {
-			// 	temp.propertyId = obj.id;
-			// }
+			if (obj.id != null && obj.id != '') {
+				temp.propertyId = obj.id;
+			}
 			return temp;
 		},
 		// 切换数据类型时构造不同的参数
