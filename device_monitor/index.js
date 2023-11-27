@@ -219,6 +219,12 @@ let vm = new Vue({
 		drag_device(device) {
 			this.device_id = device.id;
 		},
+		// 拖拽放开时清除设备id等
+		drop(e) {
+			if (e.target.id != 'del_area') {
+				this.device_id = '';
+			}
+		},
 		// 告警弹窗显示
 		alert_detail(params) {
 			// 形参是数字则是翻页 是对象则检索第一页
