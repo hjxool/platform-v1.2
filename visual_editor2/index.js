@@ -1,8 +1,9 @@
 let url = `${我是接口地址}/`;
-let components_url = `${url}api-portal/device-topo/panel/place`; //根据场所id查询可视化面板
+let components_url = `${url}api-portal/device-topo/panel`; //根据场所id查询可视化面板
 let get_data_url = url + 'api-device/device/status'; //查询组件数据
 let sendCmdtoDevice = url + 'api-device/device/panel/operation'; // 下发指令
 let user_info_url = `${url}api-auth/oauth/userinfo`; //获取用户信息
+let decive_report_url = `${url}api-device/device/panel/operation`; //获取用户信息
 
 new Vue({
 	el: '#index',
@@ -86,12 +87,14 @@ new Vue({
 		// 获取组件布局
 		async get_components() {
 			let res = await this.request('get', `${components_url}/${this.id}`, this.token);
-			if (res.data.head.code != 200 || !res.data.data) {
+			if (res.data.head.code != 200 || !res.data.data?.panelParam) {
 				this.$message('未配置产品可视化界面');
 				return;
 			}
 			let dom = document.documentElement;
 			let c_w = dom.clientWidth;
+			// 去重后的设备id
+			this.list = res.data.data.allBindDeviceIds;
 			for (let val of res.data.data.panelParam) {
 				// 每个面板比例不同
 				// 连线组件组要将画布拉伸到跟页面大小一样 所以radio要代理
@@ -256,31 +259,31 @@ new Vue({
 		},
 		// 统计所有组件总共涉及的设备id
 		async count_device_list() {
-			this.list = []; //存储不同设备的id
-			for (let val of this.component_list) {
-				for (let val2 of val.data) {
-					if (Array.isArray(val2.attr)) {
-						for (let val3 of val2.attr) {
-							if (!this.list.length) {
-								// 没设备时直接添加
-								this.list.push(val3.deviceId);
-							} else {
-								// 只有不相同的设备id才入栈
-								let find = false;
-								for (let val4 of this.list) {
-									if (val4 === val3.deviceId) {
-										find = true;
-										break;
-									}
-								}
-								if (!find) {
-									this.list.push(val3.deviceId);
-								}
-							}
-						}
-					}
-				}
-			}
+			// this.list = []; //存储不同设备的id
+			// for (let val of this.component_list) {
+			// 	for (let val2 of val.data) {
+			// 		if (Array.isArray(val2.attr)) {
+			// 			for (let val3 of val2.attr) {
+			// 				if (!this.list.length) {
+			// 					// 没设备时直接添加
+			// 					this.list.push(val3.deviceId);
+			// 				} else {
+			// 					// 只有不相同的设备id才入栈
+			// 					let find = false;
+			// 					for (let val4 of this.list) {
+			// 						if (val4 === val3.deviceId) {
+			// 							find = true;
+			// 							break;
+			// 						}
+			// 					}
+			// 					if (!find) {
+			// 						this.list.push(val3.deviceId);
+			// 					}
+			// 				}
+			// 			}
+			// 		}
+			// 	}
+			// }
 			// 异步请求 请求回来的数据进行广播
 			let result = [];
 			for (let val of this.list) {
