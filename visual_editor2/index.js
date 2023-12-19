@@ -93,8 +93,20 @@ new Vue({
 			}
 			let dom = document.documentElement;
 			let c_w = dom.clientWidth;
-			// 去重后的设备id
-			this.list = res.data.data.allBindDeviceIds;
+			// 设备id去重
+			this.list = [];
+			for (let val1 of res.data.data.allBindDeviceIds) {
+				let find = false;
+				for (let val2 of this.list) {
+					if (val2 === val1) {
+						find = true;
+						break;
+					}
+				}
+				if (!find) {
+					this.list.push(val1);
+				}
+			}
 			for (let val of res.data.data.panelParam) {
 				// 每个面板比例不同
 				// 连线组件组要将画布拉伸到跟页面大小一样 所以radio要代理
@@ -155,7 +167,7 @@ new Vue({
 					`/exchange/device-report/device-report.${val}`,
 					(res) => {
 						let data = JSON.parse(res.body);
-						this.$bus.$emit('get_value', { data: data.contents[0].attributes, device_id: val });
+						this.$bus.$emit('get_value', { data: data.contents[0].attributes, device_id: val, device_status: data.essageBizType });
 					},
 					{ 'auto-delete': true }
 				);

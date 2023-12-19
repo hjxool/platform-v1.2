@@ -623,16 +623,16 @@ new Vue({
 			let reg;
 			switch (flag) {
 				case 'name':
-					reg = /^[\u4E00-\u9FA5A-Za-z0-9_]+$/;
+					reg = /^\S+$/;
 					if (!reg.test(value)) {
-						this.rules[flag].message = '不能为空或者输入特殊字符';
+						this.rules[flag].message = '不能输入空格';
 						return false;
 					}
 					break;
 				case 'identifier':
-					reg = /^\w+$/;
+					reg = /^\S+$/;
 					if (!reg.test(value)) {
-						this.rules[flag].message = '不能为空或者输入特殊字符';
+						this.rules[flag].message = '不能输入空格';
 						return false;
 					}
 					break;
@@ -657,9 +657,9 @@ new Vue({
 					}
 					break;
 				case 'unit_name':
-					reg = /^[\u4E00-\u9FA5A-Za-z0-9_]+$/;
+					reg = /^\S+$/;
 					if (!reg.test(value)) {
-						this.rules[flag].message = '不能为空或者输入特殊字符';
+						this.rules[flag].message = '不能输入空格';
 						return false;
 					}
 					for (let obj of this.static_params.unit_options) {

@@ -26,8 +26,8 @@
       </el-radio-group>
       <el-button v-show="config.device_bind_show" class="button1 button" @click="distribute_place"
         size="small">设备绑定</el-button>
-      <el-button v-show="config.add_place_show" class="button1 button" style="margin: 0;"
-        @click="add_place(status.user_id)" size="small">新增场所</el-button>
+      <el-button v-show="config.add_place_show" class="button1 button" style="margin: 0;" @click="add_place"
+        size="small">新增场所</el-button>
     </div>
     <!-- 列表 -->
     <div class="all_device">
@@ -70,7 +70,7 @@
     <!-- 分页栏 -->
     <div class="paging">
       <el-pagination @current-change="get_all_user_devices" background layout="total, prev, pager, next"
-        :total="devices.total" :page-size="devices.page_size"></el-pagination>
+        :total="devices.total" :page-size="devices.page_size" :current-page="devices.current_page"></el-pagination>
     </div>
 
     <!-- 弹窗 -->

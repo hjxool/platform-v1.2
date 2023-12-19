@@ -4,19 +4,46 @@ const fn = {
 	beforeMount() {
 		// 此处监听数据变化 根据路径判断是否赋值
 		this.$bus.$on('get_value', (res) => {
-			// 有回显数据时 传入的是一个原始结构对象 根据path属性解析路径取任意层级的值
-			// 此时是在组件挂载完毕时接收到的数据 path已经有了
-			if (this.path_list?.length !== 1 || this.obj.deviceId !== res.device_id) {
-				// path_list未就绪或者未绑定属性
-				// path_list绑定多个属性也不回显
-				// 组件关联设备id不匹配
-				return;
+			// 不同组件判断条件不同
+			if (this.obj.type === '连线') {
+				// 只有 连线两端都是设备节点才显示状态
+				if (!this.obj.bindDeviceId?.targetDevice || !this.obj.bindDeviceId?.sourceDevice) {
+					return;
+				}
+				// 判断当前设备上报消息 与当前连线组件是否相关
+				// 断连条件 有一个设备离线就断开 在线条件 两个设备都在线
+				switch (res.device_id) {
+					case this.obj.bindDeviceId.targetDevice:
+						// 相关则判断设备在线状态 4离线 5在线
+						if (res.device_status === 4 && this.target_status) {
+							this.target_status = false;
+						} else if (res.device_status === 5 && !this.target_status) {
+							this.target_status = true;
+						}
+						break;
+					case this.obj.bindDeviceId.sourceDevice:
+						if (res.device_status === 4 && this.source_status) {
+							this.source_status = false;
+						} else if (res.device_status === 5 && !this.source_status) {
+							this.source_status = true;
+						}
+						break;
+				}
+			} else {
+				// 有回显数据时 传入的是一个原始结构对象 根据path属性解析路径取任意层级的值
+				// 此时是在组件挂载完毕时接收到的数据 path已经有了
+				if (this.path_list?.length !== 1 || this.obj.deviceId !== res.device_id) {
+					// path_list未就绪或者未绑定属性
+					// path_list绑定多个属性也不回显
+					// 组件关联设备id不匹配
+					return;
+				}
+				// 到这一步说明当前数据与当前组件相关 进行进一步路径解析
+				// 每一条数据 只跟一个设备相关
+				// 虽然可以绑定多个属性 但是回显会冲突 因此只取一个属性值作为代表
+				let index = 0;
+				this.analysis_path(this.path_list[0].path, index, res.data);
 			}
-			// 到这一步说明当前数据与当前组件相关 进行进一步路径解析
-			// 每一条数据 只跟一个设备相关
-			// 虽然可以绑定多个属性 但是回显会冲突 因此只取一个属性值作为代表
-			let index = 0;
-			this.analysis_path(this.path_list[0].path, index, res.data);
 		});
 		this.$bus.$on('common_params', (...val) => {
 			this.token = val[0];
@@ -114,10 +141,8 @@ const fn = {
 								case 'switch1':
 								case 'switch1V':
 								case 'switch2':
-									// 所有值转化成字符串匹配
-									this.value = value + '';
-									break;
 								case 'text-block':
+									// 所有值转化成字符串匹配
 									this.value = value + '';
 									break;
 							}
@@ -476,15 +501,31 @@ let customLine = {
     <svg :style="cus_style(obj,page)">
       <!-- 预设的箭头图标 -->
       <defs>
-        <marker refX="-3" id="arrow" orient="auto" markerUnits="userSpaceOnUse" overflow="visible">
-          <path stroke="#1890ff" fill="#1890ff" transform="rotate(180)" d="M 0 0 L 8 -4 L 6 0 L 8 4 Z"></path>
+        <marker id="arrow" refX="-3" orient="auto" markerUnits="userSpaceOnUse" overflow="visible">
+          <path :style="mark_style(obj.lineStyle)" transform="rotate(180)" d="M 0 0 L 8 -4 L 6 0 L 8 4 Z"></path>
+        </marker>
+
+        <marker id="err" markerUnits="userSpaceOnUse" overflow="visible" orient="auto" refY="20" refX="10">
+          <path d="M10 10 L30 30 M30 10 L10 30" stroke="red" stroke-width="3"></path>
+        </marker>
+
+        <marker id="dot" markerUnits="userSpaceOnUse" overflow="visible" refX="5" refY="5">
+          <circle cx="10" cy="10" r="10"></circle>
         </marker>
       </defs>
-      <path class="path" :d="line_path"></path>
+
+      <path :class="[is_full_line?'path2':'path']" :d="line_path" :style="line_style(obj.lineStyle)"></path>
     </svg>
   `,
 	props: ['page'],
 	mixins: [common_functions, fn],
+	data() {
+		return {
+			// 不能用一个标识表示 因为是由两个设备状态组合判断 而每次收到的消息只有一台设备
+			target_status: true, // 终端设备状态
+			source_status: true, // 起始设备状态
+		};
+	},
 	methods: {
 		cus_style(obj, page) {
 			return {
@@ -495,6 +536,38 @@ let customLine = {
 				width: '100%',
 				height: `${page.mb.h * page.radio}px`,
 			};
+		},
+		// 线的样式
+		line_style(style) {
+			let t = {
+				strokeWidth: `${style.strokeWidth}`,
+			};
+			// 先判断是实线还是流动虚线
+			if (!this.is_full_line) {
+				t.stroke = this.connect ? `${style.stroke}` : 'red';
+				// 流动线才有虚线样式
+				t.strokeDasharray = `${style.strokeDasharray}`;
+				// 流动线才需要判断连接标识
+				// 如果断连 则添加标识
+				if (!this.connect) {
+					t.markerMid = `url(#err)`;
+				}
+			} else {
+				t.stroke = `${style.stroke}`;
+			}
+			return t;
+		},
+		// 箭头样式
+		mark_style(style) {
+			let t = {};
+			if (!this.is_full_line) {
+				t.fill = this.connect ? `${style.stroke}` : 'red';
+				t.stroke = this.connect ? `${style.stroke}` : 'red';
+			} else {
+				// 实线不需要判断断连
+				t.fill = `${style.stroke}`;
+			}
+			return t;
 		},
 	},
 	computed: {
@@ -511,6 +584,22 @@ let customLine = {
 				};
 				list.push(t);
 			}
+			// 此处就能判断路径点个数 只有2个点说明是横纵直线 marker-mid不能生效
+			// 因此需要特殊处理 中间加个点
+			let mid = '';
+			if (list.length === 4) {
+				// 因为只有横线 或 纵线 所以只考虑X或Y坐标
+				if (list[0].value === list[2].value) {
+					// 说明是纵线
+					let t = (list[3].value - list[1].value) / 2 + list[1].value;
+					// 注意L前没空格 坐标后有空格
+					mid = `L ${list[0].value} ${t} `;
+				} else {
+					// 横线
+					let t = (list[2].value - list[0].value) / 2 + list[0].value;
+					mid = `L ${t} ${list[0].value} `;
+				}
+			}
 			// 将原始字符串处理成数组
 			let str_list = this.obj.path.split('');
 			// 注：拆成数组的时候是以每个字符分割 修改数组的时候是将原长度个数的元素改为一个元素 因此长度缩减 extent-1
@@ -525,9 +614,25 @@ let customLine = {
 				str_list.splice(now.index - de_count, now.extent, now.value);
 			}
 
+			// 判断是否为直线 如果是 将中间点字符串插入到末尾点的字母前面
+			if (mid) {
+				// 格式一定是 M x y L x y
+				let i = str_list.indexOf('L');
+				str_list.splice(i, 0, mid);
+			}
 			// 将修改后的数组合并为字符串
 			let str = str_list.join('');
 			return str;
+		},
+		// 连接标识 由两个设备状态共同决定
+		// 用计算属性监听设备状态 如果发生改变则重新判断
+		connect() {
+			return this.target_status && this.source_status;
+		},
+		// 实线 虚线区分标识
+		is_full_line() {
+			// 有connection属性说明是流动线 有banEdit属性说明是实线 两个属性互斥
+			return this.obj.lineStyle.banEdit !== undefined;
 		},
 	},
 };

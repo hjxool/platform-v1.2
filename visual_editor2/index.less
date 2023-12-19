@@ -190,6 +190,7 @@
 // 动态路径
 .path {
 	fill: none;
+	// 万一没有对应属性 启用默认样式
 	stroke: rgb(24, 144, 255);
 	stroke-width: 5;
 	stroke-dasharray: 15;
@@ -200,6 +201,10 @@
 	100% {
 		stroke-dashoffset: -1000;
 	}
+}
+.path2 {
+	marker-end: url(#dot);
+	stroke: rgb(24, 144, 255);
 }
 // 文本框
 .custom_text {

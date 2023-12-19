@@ -134,6 +134,7 @@ let vm = new Vue({
 				for (let val of this.status.user_list) {
 					if (val.companyName == res.data.data) {
 						this.status.user_id = val.tenantId;
+						break;
 					}
 				}
 			});

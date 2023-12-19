@@ -35,6 +35,7 @@ new Vue({
 			ver: '', //md5
 			file_name: '', //文件名
 			load_text: '', //遮罩显示内容
+			model: 0, // 模式 0分片 1链接
 		},
 		firmware_rules: {
 			product: [{ required: true, message: '请选择关联产品', trigger: 'change' }],
@@ -44,12 +45,11 @@ new Vue({
 		upgrade_form: {
 			size: '', //文件传到设备切片大小
 			force: false, //强制从第一片开始传
-			not_all: false, //非全选
-			checkAll: false, //全选
 			list: [], //同产品的设备
-			select_list: [], //勾选的设备
 			total: 0, //设备总数
 			page_size: 10, //单页显示设备数
+			cur_page: 1, //当前页
+			search: '', //升级搜索设备
 		},
 		upgrade_rules: {
 			size: [
@@ -190,6 +190,7 @@ new Vue({
 			this.firmware_form.file_name = row_obj.firmwareUrl;
 			this.firmware_rules.file.show = false;
 			this.html.firmware_display = true;
+			this.firmware_form.model = row_obj.upgradeMode || 0;
 		},
 		// 固件信息提交
 		firm_sub(form_name) {
@@ -207,6 +208,7 @@ new Vue({
 							firmwareName: this.firmware_form.name,
 							productId: this.firmware_form.product,
 							id: this.firmware_id,
+							upgradeMode: this.firmware_form.model,
 						};
 						this.request('put', edit_firmware_url, this.token, data, (res) => {
 							this.html.popover_loading = false;
@@ -218,41 +220,12 @@ new Vue({
 							}
 						});
 					} else {
-						// let file = select_file.files[0]; //如果以后要做并发上传 可以在这加生成MD5 然后作为闭包传入回调函数
-						// let length = file.size; //文件总大小
-						// let size = 1024 * 1024 * 5; //以5M大小切片
-						// let slice_list = []; //存储文件切片
-						// let total = Math.ceil(length / size); //总共多少片 用以停止发送请求
-						// for (let i = 0; i < total; i++) {
-						// 	let t = file.slice(size * i, size * (i + 1));
-						// 	slice_list.push(t);
-						// }
 						let index = 0; //slice_list索引
 						this.firmware_form.load_text = `开始上传`;
 						setTimeout(() => {
 							this.firmware_form.load_text = `上传进度：0%`;
 						}, 500);
 						this.slice_upload(index);
-						// let reader = new FileReader();
-						// reader.readAsArrayBuffer(file);
-						// reader.onload = (e) => {
-						// let f_b = e.target.result;
-						// let length = f_b.byteLength;
-						// let size = 1024 * 1024 * 5;
-						// let slice_list = [];
-						// let total = Math.ceil(length / size);
-						// for (let i = 0; i < total; i++) {
-						// 	let t = f_b.slice(size * i, size * (i + 1));
-						// 	slice_list.push(t);
-						// }
-						// let index = 0;
-						// this.firmware_form.load_text = `开始上传`;
-						// setTimeout(() => {
-						// 	this.firmware_form.load_text = `上传进度：0%`;
-						// }, 500);
-						// 从这开始递归
-						// this.slice_upload(index, total, slice_list, length);
-						// };
 					}
 				}
 			});
@@ -379,27 +352,12 @@ new Vue({
 					break;
 			}
 		},
-		// 升级设备表单全选
-		check_all(val) {
-			this.upgrade_form.select_list = [];
-			if (val) {
-				for (let val2 of this.upgrade_form.list) {
-					this.upgrade_form.select_list.push(val2.id);
-				}
-			}
-			this.upgrade_form.not_all = false;
-		},
-		// 勾选设备时
-		check_change(array) {
-			// console.log(array);
-			// this.upgrade_form.checkAll = array.length == this.upgrade_form.list.length;
-			// this.upgrade_form.not_all = array.length > 0 && array.length < this.upgrade_form.list.length;
-		},
 		// 升级固件提交
 		up_sub(form_name) {
 			this.$refs[form_name].validate((result) => {
 				let result2 = true;
-				if (this.upgrade_form.select_list.length == 0) {
+				if (!this.update_select?.length) {
+					// 字段不存在或者长度为0
 					result2 = false;
 				}
 				this.upgrade_rules.select.show = !result2;
@@ -411,7 +369,7 @@ new Vue({
 						this.token,
 						{
 							chunkSizeKB: this.upgrade_form.size,
-							deviceIds: this.upgrade_form.select_list,
+							deviceIds: this.update_select.map((e) => e.id),
 							firmwareId: this.firmware_id,
 							force: this.upgrade_form.force,
 						},
@@ -471,6 +429,7 @@ new Vue({
 							firmwareVersion: res.data.data.firmwareVersion,
 							partCount: res.data.data.partCount,
 							productId: this.firmware_form.product,
+							upgradeMode: this.firmware_form.model,
 						};
 						this.request('post', edit_firmware_url, this.token, data, (res) => {
 							this.html.popover_loading = false;
@@ -489,15 +448,26 @@ new Vue({
 		// 获取同一产品下在线设备列表
 		get_product_device_list(params) {
 			this.html.popover_loading = true;
-			this.request('post', device_list_url, this.token, { condition: { productId: this.product_id, statusValue: 1 }, pageNum: params, pageSize: this.upgrade_form.page_size }, (res) => {
-				console.log('同一产品设备', res);
-				this.html.popover_loading = false;
-				if (res.data.head.code != 200) {
-					return;
+			this.upgrade_form.cur_page = params;
+			this.request(
+				'post',
+				device_list_url,
+				this.token,
+				{ condition: { productId: this.product_id, statusValue: 1 }, pageNum: params, pageSize: this.upgrade_form.page_size, keyword: this.upgrade_form.search },
+				(res) => {
+					console.log('同一产品设备', res);
+					this.html.popover_loading = false;
+					if (res.data.head.code != 200) {
+						return;
+					}
+					this.upgrade_form.list = res.data.data.data;
+					this.upgrade_form.total = res.data.data.total;
 				}
-				this.upgrade_form.list = res.data.data.data;
-				this.upgrade_form.total = res.data.data.total;
-			});
+			);
+		},
+		// 升级勾选设备事件
+		select_device(val) {
+			this.update_select = val;
 		},
 	},
 });

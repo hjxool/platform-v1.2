@@ -31,6 +31,11 @@
         <el-table-column prop="id" label="固件ID"></el-table-column>
         <el-table-column prop="firmwareName" label="固件版本名称"></el-table-column>
         <el-table-column prop="productName" label="产品名称"></el-table-column>
+        <el-table-column label="模式" width="100">
+          <template slot-scope="scope">
+            <span>{{scope.row.upgradeMode?'链接':'分片'}}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="firmwareVersion" label="固件版本号"></el-table-column>
         <el-table-column prop="firmwareUrl" label="文件路径"></el-table-column>
         <el-table-column label="操作" width="150">
@@ -89,6 +94,23 @@
               </div>
               <div class="verify_text" v-show="firmware_rules.file.show">{{firmware_rules.file.message}}</div>
             </el-form-item>
+            <el-form-item label="模式" required>
+              <div class="row_layout" style="height: 40px;">
+                <el-radio-group v-model="firmware_form.model">
+                  <el-radio :label="0">分片</el-radio>
+                  <el-radio :label="1">链接</el-radio>
+                </el-radio-group>
+
+                <el-tooltip effect="light" content="Top Center 提示文字" placement="top">
+                  <div slot="content">
+                    分片：适用于单片机等小存储设备，将文件切片成小文件后使用MQTT升级
+                    <br />
+                    链接：适用于无存储压力的设备，将只传输URL给设备，设备自行下载
+                  </div>
+                  <i class="el-icon-info" style="font-size: 16px;margin-left: 20px;color: #5cb6ff;"></i>
+                </el-tooltip>
+              </div>
+            </el-form-item>
           </div>
           <el-form-item>
             <el-button type="primary" @click="firm_sub('firmware_form')">确定</el-button>
@@ -99,7 +121,7 @@
     </div>
     <!-- 选择升级设备 -->
     <div class="popover" v-if="html.upgrade_display">
-      <el-card class="form_layout" style="width: 600px;" v-loading="html.popover_loading">
+      <el-card class="form_layout" style="width: 50%;min-width: 600px;" v-loading="html.popover_loading">
         <div class="form_head">
           <span class="title">选择固件升级设备</span>
           <div class="button" @click="html.upgrade_display=false">
@@ -124,21 +146,23 @@
           </el-form-item>
           <el-form-item label="选择要升级的设备" required>
             <div v-if="upgrade_form.list.length>0" style="display: flex;flex-direction: column;">
-              <!-- <el-checkbox :indeterminate="upgrade_form.not_all" v-model="upgrade_form.checkAll" @change="check_all"
-                style="align-self: start;">
-                全选
-              </el-checkbox> -->
-              <div class="scroll_box2">
-                <el-checkbox-group v-model="upgrade_form.select_list" @change="check_change">
-                  <el-checkbox v-for="item in upgrade_form.list" :label="item.id" :key="item.id"
-                    :title="item.deviceName" class="row_layout text_ellipsis"
-                    style="max-width: 80%;padding-bottom: 10px;">
-                    {{item.deviceName}}
-                  </el-checkbox>
-                </el-checkbox-group>
-              </div>
-              <el-pagination class="paging" style="justify-content: start;" @current-change="get_product_device_list"
-                layout="prev, pager, next" :total="upgrade_form.total"
+              <el-input v-model="upgrade_form.search" prefix-icon="el-icon-search" size="mini">
+              </el-input>
+
+              <el-table class="flex_shrink" :data="upgrade_form.list" max-height="300" @selection-change="select_device"
+                style="width: 100%;">
+                <el-table-column type="selection" width="30"></el-table-column>
+                <el-table-column prop="deviceName" label="设备名"></el-table-column>
+                <el-table-column prop="deviceIp" label="设备IP"></el-table-column>
+                <el-table-column label="当前固件版本">
+                  <template slot-scope="scope">
+                    <span>{{scope.row.hardwareVersion||'无'}}</span>
+                  </template>
+                </el-table-column>
+              </el-table>
+
+              <el-pagination class="paging" @current-change="get_product_device_list" layout="prev, pager, next"
+                :current-page="upgrade_form.cur_page" :total="upgrade_form.total"
                 :page-size="upgrade_form.page_size"></el-pagination>
             </div>
             <el-empty v-show="upgrade_form.list.length==0" description="无设备" :image-size="100"

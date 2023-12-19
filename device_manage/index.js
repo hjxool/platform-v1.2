@@ -7,6 +7,7 @@ let set_place_url = `${url}api-portal/place/set`;
 let limits_url = `${url}api-user/menus/current`; //获取菜单权限
 let place_type_url = `${url}api-portal/place/placeType`;
 let user_list = `${url}api-user/users/tenantSimple`;
+let curent_user_name_url = `${url}api-auth/oauth/user/tenant`;
 
 new Vue({
 	el: '#index',
@@ -31,6 +32,7 @@ new Vue({
 			type_offline: 0, //离线数
 			// is_check_all: false, //是否点击了全选
 			page_size: 10, //一页最大显示条数
+			current_page: 1, //分页 当前页
 		},
 		// 设备监控
 		status: {
@@ -119,10 +121,18 @@ new Vue({
 			});
 		},
 		// 租户列表
-		req_user_list() {
-			this.request('get', user_list, this.token, (res) => {
+		async req_user_list() {
+			await this.request('get', user_list, this.token, (res) => {
 				if (typeof res.data.data == 'object' && res.data.data != null) {
 					this.status.user_list = res.data.data;
+				}
+			});
+			return this.request('put', curent_user_name_url, this.token, (res) => {
+				for (let val of this.status.user_list) {
+					if (val.companyName == res.data.data) {
+						this.cur_user_id = val.tenantId;
+						break;
+					}
 				}
 			});
 		},
@@ -151,6 +161,7 @@ new Vue({
 			} else {
 				data.pageNum = 1;
 			}
+			this.devices.current_page = data.pageNum;
 			data.keyword = this.devices.search;
 			switch (this.devices.type) {
 				case 1:
@@ -185,11 +196,10 @@ new Vue({
 			this.status.place_id = '';
 		},
 		// 新增场所
-		add_place(user_id) {
+		add_place() {
 			this.add_or_edit = 'add';
 			this.edit_place_form.type = 1;
 			this.edit_place_form.name = '';
-			this.add_user_id = user_id;
 			this.html.edit_place_display = true;
 		},
 		// table勾选事件
@@ -260,7 +270,7 @@ new Vue({
 			this.$refs.edit_place_form.validate((result) => {
 				if (result) {
 					if (this.add_or_edit == 'add') {
-						this.request('post', `${place_list}/${this.add_user_id}/add`, this.token, { placeName: this.edit_place_form.name, placeType: this.edit_place_form.type }, (res) => {
+						this.request('post', `${place_list}/${this.cur_user_id}/add`, this.token, { placeName: this.edit_place_form.name, placeType: this.edit_place_form.type }, (res) => {
 							this.html.edit_place_display = false;
 							if (res.data.head.code == 200) {
 								this.$message.success(`新增 ${this.edit_place_form.name} 场所成功`);
