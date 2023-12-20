@@ -3,7 +3,7 @@ let components_url = `${url}api-portal/device-topo/panel`; //根据场所id查�
 let get_data_url = url + 'api-device/device/status'; //查询组件数据
 let sendCmdtoDevice = url + 'api-device/device/panel/operation'; // 下发指令
 let user_info_url = `${url}api-auth/oauth/userinfo`; //获取用户信息
-let decive_report_url = `${url}api-device/device/panel/operation`; //获取用户信息
+let decive_report_url = `${url}api-device/device/panel/switch`; //设备开始上报
 
 new Vue({
 	el: '#index',
@@ -17,6 +17,7 @@ new Vue({
 		customImg,
 		customLine,
 		customVideo,
+		customDeviceStatus,
 	},
 	data: {
 		html: {

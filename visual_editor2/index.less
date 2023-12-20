@@ -194,7 +194,8 @@
 	stroke: rgb(24, 144, 255);
 	stroke-width: 5;
 	stroke-dasharray: 15;
-	marker-end: url(#arrow);
+	// 多个svg画布 有重复id 不能在css中写死
+	// marker-end: url(#arrow);
 	animation: 30s linear 0s infinite normal none running path_line;
 }
 @keyframes path_line {
@@ -203,8 +204,9 @@
 	}
 }
 .path2 {
-	marker-end: url(#dot);
+	// marker-end: url(#dot);
 	stroke: rgb(24, 144, 255);
+	fill: none;
 }
 // 文本框
 .custom_text {
@@ -224,4 +226,13 @@ video::-webkit-media-controls-timeline {
 }
 video::-webkit-media-controls-play-button {
 	display: none;
+}
+// 设备状态显示框
+.device_status {
+	overflow-x: hidden;
+	background-color: rgb(43, 50, 59);
+	color: rgb(204, 204, 204);
+	> .box {
+		max-width: 100%;
+	}
 }

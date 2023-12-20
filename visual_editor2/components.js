@@ -29,6 +29,18 @@ const fn = {
 						}
 						break;
 				}
+			} else if (this.obj.type === 'model-stat-list') {
+				// 本质是多属性回显 以往组件是单属性回显
+				if (this.obj.deviceId !== res.device_id) {
+					return;
+				}
+				// 只要设备id匹配 把原先的单属性解析改为遍历取出每个属性解析并并存到数组下而不是this.value
+				for (let val of this.status) {
+					// analysis_path原先没设计有多属性回显 因此用的全局变量 这里设置全局变量 用完后置空
+					// this.data_type = val.type;
+					val.value = this.analysis_path(val.path, 0, res.data);
+					// this.data_type = null;
+				}
 			} else {
 				// 有回显数据时 传入的是一个原始结构对象 根据path属性解析路径取任意层级的值
 				// 此时是在组件挂载完毕时接收到的数据 path已经有了
@@ -126,7 +138,7 @@ const fn = {
 							switch (this.obj.type) {
 								case 'slider':
 								case 'sliderV':
-									if (this.data_type !== 'int' && this.data_type !== 'float' && this.data_type !== 'float' && this.data_type !== 'any') {
+									if (this.data_type !== 'int' && this.data_type !== 'float' && this.data_type !== 'double' && this.data_type !== 'any') {
 										return;
 									}
 									// data_type为any时能转数字转数字
@@ -145,12 +157,13 @@ const fn = {
 									// 所有值转化成字符串匹配
 									this.value = value + '';
 									break;
+								case 'model-stat-list':
+									return value;
 							}
 						} else {
 							// 否则继续递归
-							this.analysis_path(path, ++path_index, value);
+							return this.analysis_path(path, ++path_index, value);
 						}
-						break;
 					}
 				}
 			}
@@ -501,16 +514,16 @@ let customLine = {
     <svg :style="cus_style(obj,page)">
       <!-- 预设的箭头图标 -->
       <defs>
-        <marker id="arrow" refX="-3" orient="auto" markerUnits="userSpaceOnUse" overflow="visible">
+        <marker :id="cus_id('arrow')" refX="-3" orient="auto" markerUnits="userSpaceOnUse" overflow="visible">
           <path :style="mark_style(obj.lineStyle)" transform="rotate(180)" d="M 0 0 L 8 -4 L 6 0 L 8 4 Z"></path>
         </marker>
 
-        <marker id="err" markerUnits="userSpaceOnUse" overflow="visible" orient="auto" refY="20" refX="10">
+        <marker :id="cus_id('err')" markerUnits="userSpaceOnUse" overflow="visible" orient="auto" refY="20" refX="10">
           <path d="M10 10 L30 30 M30 10 L10 30" stroke="red" stroke-width="3"></path>
         </marker>
 
-        <marker id="dot" markerUnits="userSpaceOnUse" overflow="visible" refX="5" refY="5">
-          <circle cx="10" cy="10" r="10"></circle>
+        <marker :id="cus_id('dot')" markerUnits="userSpaceOnUse" overflow="visible" refX="10" refY="5">
+          <circle cx="10" cy="10" r="10" :style="mark_style(obj.lineStyle)"></circle>
         </marker>
       </defs>
 
@@ -550,10 +563,12 @@ let customLine = {
 				// 流动线才需要判断连接标识
 				// 如果断连 则添加标识
 				if (!this.connect) {
-					t.markerMid = `url(#err)`;
+					t.markerMid = `url(#${this.obj.id}-err)`;
 				}
+				t.markerEnd = `url(#${this.obj.id}-arrow)`;
 			} else {
 				t.stroke = `${style.stroke}`;
+				t.markerEnd = `url(#${this.obj.id}-dot)`;
 			}
 			return t;
 		},
@@ -568,6 +583,10 @@ let customLine = {
 				t.fill = `${style.stroke}`;
 			}
 			return t;
+		},
+		// 自定义id 多个svg画布 有重复id 要做区分
+		cus_id(type) {
+			return `${this.obj.id}-${type}`;
 		},
 	},
 	computed: {
@@ -597,7 +616,7 @@ let customLine = {
 				} else {
 					// 横线
 					let t = (list[2].value - list[0].value) / 2 + list[0].value;
-					mid = `L ${t} ${list[0].value} `;
+					mid = `L ${t} ${list[1].value} `;
 				}
 			}
 			// 将原始字符串处理成数组
@@ -634,6 +653,38 @@ let customLine = {
 			// 有connection属性说明是流动线 有banEdit属性说明是实线 两个属性互斥
 			return this.obj.lineStyle.banEdit !== undefined;
 		},
+	},
+};
+// 设备节点状态显示
+let customDeviceStatus = {
+	template: `
+    <div class="device_status center" :style="style(obj)">
+      <div class="box">
+        <div class="text_ellipsis" v-for="item in status">
+          {{item.label}}：{{item.value}}
+        </div>
+      </div>
+    </div>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			status: [], // 设备状态列表
+		};
+	},
+	beforeMount() {
+		// 初始化状态列表
+		if (this.obj.data?.list) {
+			for (let val of this.obj.data.list) {
+				let t = {
+					label: val.attrName,
+					path: this.init_path(val.attrPath),
+					value: '', //初始为空 等收到消息解析后赋值
+					// type: val.attrType, // 只是文本显示 不需要格式转换
+				};
+				this.status.push(t);
+			}
+		}
 	},
 };
 

@@ -24,6 +24,8 @@
         <custom-img v-if="item.type=='image'||item.shapeNickname=='设备节点'" :obj="item" :radio="page.radio"></custom-img>
         <custom-line v-if="item.type=='连线'" :obj="item" :radio="page.radio" :page="page"></custom-line>
         <custom-video v-if="item.type=='videoPlayer'" :obj="item" :radio="page.radio"></custom-video>
+        <custom-device-status v-if="item.type=='model-stat-list'" :obj="item"
+          :radio="page.radio"></custom-device-status>
       </template>
     </div>
   </div>

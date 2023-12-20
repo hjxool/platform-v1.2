@@ -72,12 +72,10 @@ const fn = {
 						if (Array.isArray(source)) {
 							value = source[key];
 						} else {
-							if (source[key]?.propertyValue) {
-								value = source[key]?.propertyValue;
-							} else if (source[key]?.propertyValue === 0) {
-								value = source[key]?.propertyValue;
-							} else {
+							if (source[key]?.propertyValue === undefined) {
 								value = source[key];
+							} else {
+								value = source[key]?.propertyValue;
 							}
 						}
 						if (path_index == path.length - 1) {
@@ -214,7 +212,7 @@ const fn = {
 					break;
 				}
 				if (val?.key?.type === 'int') {
-					val.value = Number(val.value);
+					val.value = isNaN(Number(val.value)) ? 0 : Number(val.value);
 				}
 				t[val.key.path] = val.value;
 			}
@@ -382,6 +380,9 @@ let customSwitch = {
 				this.value = this.off_value;
 			} else if (this.value === this.off_value) {
 				this.value = this.on_value;
+			} else {
+				// 上报的值不一定是开或关值 所以默认设为关值
+				this.value = this.off_value;
 			}
 			let data;
 			switch (this.data_type) {
@@ -389,7 +390,7 @@ let customSwitch = {
 				case 'float':
 				case 'double':
 				case 'any':
-					data = parseInt(this.value);
+					data = isNaN(parseInt(this.value)) ? 0 : parseInt(this.value);
 					break;
 				case 'array':
 				case 'struct':
@@ -444,6 +445,9 @@ let customButtonSwitch = {
 				this.value = this.off_value;
 			} else if (this.value === this.off_value) {
 				this.value = this.on_value;
+			} else {
+				// 上报的值不一定是开或关值 所以默认设为关值
+				this.value = this.off_value;
 			}
 			let data;
 			switch (this.data_type) {
@@ -451,7 +455,7 @@ let customButtonSwitch = {
 				case 'float':
 				case 'double':
 				case 'any':
-					data = parseInt(this.value);
+					data = isNaN(parseInt(this.value)) ? 0 : parseInt(this.value);
 					break;
 				case 'array':
 				case 'struct':
