@@ -8,6 +8,8 @@ let del_firmware_url = `${url}api-device/firmware/delete`;
 let export_firmware_url = `${url}api-device/firmware/export`;
 let device_list_url = `${url}api-device/device/search`;
 let limits_url = `${url}api-user/menus/current`; //获取菜单权限
+let history_url = `${url}api-device/firmware/upgrade-record`; // 查询升级历史
+let history_task_url = `${url}api-device/firmware/upgrade-record/details`; // 查询升级历史详情
 
 new Vue({
 	el: '#index',
@@ -65,6 +67,23 @@ new Vue({
 			edit_show: false,
 			export_show: false,
 			create_show: false,
+			history_show: true, //升级历史
+		},
+		history: {
+			show: false, // 升级历史显示
+			time_range: null, //时间范围
+			type: 2, // 按模式检索 0分片 1链接 2全部
+			type_options: [
+				{ label: '全部', value: 2 },
+				{ label: '分片', value: 0 },
+				{ label: '链接', value: 1 },
+			],
+			task_list: [], //任务列表
+			device_list: [], // 单条任务下设备列表
+			task_cur: 1, //任务列表当前页
+			task_total: 0, //任务总数
+			task_d_cur: 1, //任务详情当前页
+			task_d_total: 0, //任务详情总数
 		},
 	},
 	async mounted() {
@@ -106,8 +125,12 @@ new Vue({
 		this.get_product_list();
 		this.get_firmware_list();
 		// mounted只是挂载节点 元素还没渲染前大小都是0
-		window.addEventListener('resize', this.table_height);
-		this.$nextTick(this.table_height);
+		window.addEventListener('resize', () => {
+			this.table_height();
+		});
+		this.$nextTick(() => {
+			this.table_height();
+		});
 	},
 	methods: {
 		// 解析权限树
@@ -468,6 +491,56 @@ new Vue({
 		// 升级勾选设备事件
 		select_device(val) {
 			this.update_select = val;
+		},
+		// 升级历史查询
+		async update_history(page) {
+			this.history.show = true;
+			this.html.popover_loading = true;
+			let body = {
+				pageNum: page,
+				pageSize: 20,
+				condition: {},
+			};
+			// 时间选择器置空时为null
+			if (this.history.time_range?.length) {
+				let s = this.history.time_range[0];
+				body.condition.startTime = `${s.getFullYear()}-${s.getMonth() + 1}-${s.getDate()} ${s.toString().split(' ')[4]}`;
+				let e = this.history.time_range[1];
+				body.condition.endTime = `${e.getFullYear()}-${e.getMonth() + 1}-${e.getDate()} ${e.toString().split(' ')[4]}`;
+			}
+			if (this.history.type !== 2) {
+				body.condition.upgradeMode = this.history.type;
+			}
+			let { data: res } = await this.request('post', history_url, this.token, body);
+			this.html.popover_loading = false;
+			if (res.head.code !== 200) {
+				return;
+			}
+			this.history.task_cur = page;
+			this.history.task_total = res.data.total;
+			this.history.task_list = res.data.data;
+		},
+		// 查看任务详情
+		async task_detail(page, id) {
+			this.history.detail_show = true;
+			// 如果传了id就记录下
+			if (id) {
+				this.task_id = id;
+			}
+			let body = {
+				pageNum: page,
+				pageSize: 20,
+				condition: {
+					upgradeId: this.task_id,
+				},
+			};
+			let { data: res } = this.request('post', history_task_url, this.token, body);
+			if (res.head.code !== 200) {
+				return;
+			}
+			this.history.task_d_cur = page;
+			this.history.task_d_total = res.data.total;
+			this.history.device_list = res.data.data;
 		},
 	},
 });
