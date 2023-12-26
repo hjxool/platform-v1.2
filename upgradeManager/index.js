@@ -52,6 +52,7 @@ new Vue({
 			page_size: 10, //单页显示设备数
 			cur_page: 1, //当前页
 			search: '', //升级搜索设备
+			type: 0, //0分片 1链接
 		},
 		upgrade_rules: {
 			size: [
@@ -79,11 +80,12 @@ new Vue({
 				{ label: '链接', value: 1 },
 			],
 			task_list: [], //任务列表
-			device_list: [], // 单条任务下设备列表
 			task_cur: 1, //任务列表当前页
 			task_total: 0, //任务总数
+			task_d_show: false, //任务详情显示
 			task_d_cur: 1, //任务详情当前页
 			task_d_total: 0, //任务详情总数
+			device_list: [], // 单条任务下设备列表
 		},
 	},
 	async mounted() {
@@ -340,6 +342,8 @@ new Vue({
 					});
 					break;
 				case 'upgrade':
+					// 升级时分链接还是分片
+					this.upgrade_form.type = row_obj.upgradeMode;
 					for (let key in this.upgrade_form) {
 						if (typeof this.upgrade_form[key] == 'string') {
 							this.upgrade_form[key] = '';
@@ -521,11 +525,16 @@ new Vue({
 			this.history.task_list = res.data.data;
 		},
 		// 查看任务详情
-		async task_detail(page, id) {
-			this.history.detail_show = true;
+		async task_detail(page, task_id, firmwareId) {
+			this.history.device_list = [];
+			this.history.task_d_show = true;
 			// 如果传了id就记录下
-			if (id) {
-				this.task_id = id;
+			if (task_id) {
+				this.task_id = task_id;
+			}
+			// 保存固件id用于重试
+			if (firmwareId) {
+				this.firmwareId = firmwareId;
 			}
 			let body = {
 				pageNum: page,
@@ -534,13 +543,36 @@ new Vue({
 					upgradeId: this.task_id,
 				},
 			};
-			let { data: res } = this.request('post', history_task_url, this.token, body);
+			let { data: res } = await this.request('post', history_task_url, this.token, body);
 			if (res.head.code !== 200) {
 				return;
 			}
 			this.history.task_d_cur = page;
 			this.history.task_d_total = res.data.total;
 			this.history.device_list = res.data.data;
+		},
+		// 设备任务重试
+		async task_retry(deviceId) {
+			let res1 = await this.$confirm('确定重新升级？', '提示', {
+				confirmButtonText: '确定',
+				cancelButtonText: '取消',
+				type: 'info',
+				center: true,
+			}).then(
+				() => true,
+				() => false
+			);
+			if (!res1) {
+				return;
+			}
+			let { data: res2 } = await this.request('post', upgrade_url, this.token, { isRetry: true, upgradeId: this.task_id, deviceIds: [deviceId], firmwareId: this.firmwareId });
+			if (res2.head.code == 200) {
+				this.$message.success('重试成功');
+				// 重试后刷新列表
+				this.task_detail(1);
+			} else {
+				this.$message.error('重试失败');
+			}
 		},
 	},
 });

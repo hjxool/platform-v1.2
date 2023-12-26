@@ -122,21 +122,23 @@
     </div>
     <!-- 选择升级设备 -->
     <div class="popover" v-if="html.upgrade_display">
-      <el-card class="form_layout" style="width: 50%;min-width: 600px;" v-loading="html.popover_loading">
+      <div class="history_window form_layout col_layout" style="width: 50%;min-width: 600px;"
+        v-loading="html.popover_loading">
         <div class="form_head">
           <span class="title">选择固件升级设备</span>
           <div class="button" @click="html.upgrade_display=false">
             <i class="el-icon-close icon"></i>
           </div>
         </div>
+
         <el-form ref="upgrade_form" :model="upgrade_form" :rules="upgrade_rules" label-width="auto" class="up_form">
-          <el-form-item label="文件切片传输大小" prop="size">
+          <el-form-item v-if="!upgrade_form.type" label="文件切片传输大小" prop="size">
             <div class="row_layout">
               <el-input v-model="upgrade_form.size" size="mini" placeholder="请输入切片大小" clearable></el-input>
               <span style="margin:0 10px">KB</span>
             </div>
           </el-form-item>
-          <el-form-item label="是否强制重传" required>
+          <el-form-item v-if="!upgrade_form.type" label="是否强制重传" required>
             <div class="row_layout" style="height: 40px;">
               <el-radio-group v-model="upgrade_form.force">
                 <el-radio :label="false">否</el-radio>
@@ -171,12 +173,13 @@
             </el-empty>
             <div class="verify_text" v-show="upgrade_rules.select.show">{{upgrade_rules.select.message}}</div>
           </el-form-item>
-          <el-form-item>
-            <el-button type="primary" @click="up_sub('upgrade_form')">确定</el-button>
-            <el-button @click="html.upgrade_display=false">取消</el-button>
-          </el-form-item>
         </el-form>
-      </el-card>
+
+        <div class="row_layout" style="margin: 0 auto;">
+          <el-button type="primary" @click="up_sub('upgrade_form')">确定</el-button>
+          <el-button @click="html.upgrade_display=false">取消</el-button>
+        </div>
+      </div>
     </div>
     <!-- 升级历史 -->
     <div class="popover" v-if="history.show">
@@ -214,13 +217,48 @@
           <el-table-column prop="firmwareVersion" label="升级版本"></el-table-column>
           <el-table-column label="操作" width="150">
             <template slot-scope="scope">
-              <el-button @click="task_detail(1,scope.row.id)" size="small">查看详情</el-button>
+              <el-button @click="task_detail(1,scope.row.id,scope.row.firmwareId)" size="small">查看详情</el-button>
             </template>
           </el-table-column>
         </el-table>
         <!-- 分页 -->
         <el-pagination @current-change="update_history" background layout="total, prev, pager, next" :page-size="20"
           :current-page="history.task_cur" :total="history.task_total" style="align-self: center;"></el-pagination>
+      </div>
+    </div>
+    <!-- 升级历史详情 -->
+    <div class="popover" v-if="history.task_d_show">
+      <div class="history_window form_layout col_layout" style="width: 70%;min-width: 600px;">
+        <div class="form_head flex_shrink">
+          <span class="title">升级历史详情</span>
+          <div class="button" @click="history.task_d_show=false">
+            <i class="el-icon-close icon"></i>
+          </div>
+        </div>
+        <!-- 列表 -->
+        <el-table class="task_table" :data="history.device_list" max-height="400" style="margin-bottom: 20px;">
+          <el-table-column prop="deviceId" label="设备ID"></el-table-column>
+          <el-table-column prop="deviceName" label="设备名称"></el-table-column>
+          <el-table-column label="升级状态" width="100">
+            <template slot-scope="scope">
+              <span v-if="scope.row.status==-1">失败</span>
+              <span v-if="scope.row.status==0">未开始</span>
+              <span v-if="scope.row.status==1">下载中</span>
+              <span v-if="scope.row.status==2">升级中</span>
+              <span v-if="scope.row.status==3">已完成</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="150">
+            <template slot-scope="scope">
+              <!-- 只有升级失败可以重试 -->
+              <el-button @click="task_retry(scope.row.deviceId)" :disabled="scope.row.status!=-1"
+                size="small">重试</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <!-- 分页 -->
+        <el-pagination @current-change="task_detail" background layout="total, prev, pager, next" :page-size="20"
+          :current-page="history.task_d_cur" :total="history.task_d_total" style="align-self: center;"></el-pagination>
       </div>
     </div>
   </div>

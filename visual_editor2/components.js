@@ -518,7 +518,7 @@ let customLine = {
           <path :style="mark_style(obj.lineStyle)" transform="rotate(180)" d="M 0 0 L 8 -4 L 6 0 L 8 4 Z"></path>
         </marker>
 
-        <marker :id="cus_id('err')" markerUnits="userSpaceOnUse" overflow="visible" orient="auto" refY="20" refX="10">
+        <marker :id="cus_id('err')" markerUnits="userSpaceOnUse" overflow="visible" orient="auto" refY="20" refX="40">
           <path d="M10 10 L30 30 M30 10 L10 30" stroke="red" stroke-width="3"></path>
         </marker>
 
@@ -560,12 +560,12 @@ let customLine = {
 				t.stroke = this.connect ? `${style.stroke}` : 'red';
 				// 流动线才有虚线样式
 				t.strokeDasharray = `${style.strokeDasharray}`;
+				t.markerEnd = `url(#${this.obj.id}-arrow)`;
 				// 流动线才需要判断连接标识
 				// 如果断连 则添加标识
 				if (!this.connect) {
-					t.markerMid = `url(#${this.obj.id}-err)`;
+					t.markerEnd = `url(#${this.obj.id}-err)`;
 				}
-				t.markerEnd = `url(#${this.obj.id}-arrow)`;
 			} else {
 				t.stroke = `${style.stroke}`;
 				t.markerEnd = `url(#${this.obj.id}-dot)`;

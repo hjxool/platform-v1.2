@@ -11,7 +11,7 @@
 </head>
 
 <body>
-  <div id="index" @drop="drop($event)" @dragover.prevent>
+  <div id="index" v-cloak @drop="drop($event)" @dragover.prevent>
     <div class="page2_body">
       <!-- 场所列表 -->
       <div :class="[html.place_fold?'place_list2':'place_list']">

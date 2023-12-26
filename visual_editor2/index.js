@@ -143,7 +143,9 @@ new Vue({
 				return;
 			}
 			// 将整个数据对象发给每个组件 让其自己解析路径 获取对应的值
-			this.$bus.$emit('get_value', { data: res.data.data.properties, device_id: res.data.data.deviceId });
+			// status 1在线 2离线 除了在线 其他都算离线
+			let device_status = res.data.data.status === 1 ? 5 : 4;
+			this.$bus.$emit('get_value', { data: res.data.data.properties, device_id: res.data.data.deviceId, device_status });
 		},
 		// 获取用户信息包括 id 连接stomp用户名和密码
 		async get_user_info() {
@@ -168,7 +170,7 @@ new Vue({
 					`/exchange/device-report/device-report.${val}`,
 					(res) => {
 						let data = JSON.parse(res.body);
-						this.$bus.$emit('get_value', { data: data.contents[0].attributes, device_id: val, device_status: data.essageBizType });
+						this.$bus.$emit('get_value', { data: data.contents[0].attributes, device_id: val, device_status: data.messageBizType });
 					},
 					{ 'auto-delete': true }
 				);

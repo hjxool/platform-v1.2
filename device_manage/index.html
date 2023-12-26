@@ -11,7 +11,7 @@
 </head>
 
 <body>
-  <div id="index" v-loading="html.page_loading">
+  <div id="index" v-cloak v-loading="html.page_loading">
     <!-- 搜索框等功能 -->
     <div class="header">
       <el-input class="search" placeholder="模糊搜索" v-model="devices.search" size="small"
