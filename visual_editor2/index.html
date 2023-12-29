@@ -26,6 +26,8 @@
         <custom-video v-if="item.type=='videoPlayer'" :obj="item" :radio="page.radio"></custom-video>
         <custom-device-status v-if="item.type=='model-stat-list'" :obj="item"
           :radio="page.radio"></custom-device-status>
+        <custom-button v-if="item.type=='button'" :obj="item" :radio="page.radio"
+          :current_page="page_id"></custom-button>
       </template>
     </div>
   </div>

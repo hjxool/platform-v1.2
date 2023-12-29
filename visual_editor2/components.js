@@ -687,44 +687,44 @@ let customDeviceStatus = {
 		}
 	},
 };
+// 按钮
+let customButton = {
+	template: `
+    <div :style="style(obj)" class="center button_box" @click="distinguish_operation">
+      <img v-show="current_page==obj.url" src="./img/icon1.png" class="bg_img">
+      <span :style="size(obj)">{{text}}</span>
+    </div>
+  `,
+	mixins: [common_functions, fn],
+	props: ['current_page'],
+	data() {
+		return {
+			text: this.obj.value || '',
+		};
+	},
+	methods: {
+		size(obj_data) {
+			let t = (203 / 22) * 16; //计算多少容器大小下 字体是16px
+			let fz = (obj_data.w * this.radio) / t;
+			return {
+				color: '#fff',
+				fontSize: fz + 'rem',
+				zIndex: 1,
+			};
+		},
+		// 按钮分下发指令和切换页面两种
+		distinguish_operation() {
+			// 有跳转id 的不触发下发指令
+			// this.obj.url ? this.$bus.$emit('turn_to_page', this.obj.url) : this.send_order(undefined);
+			// 有没有跳转都检测有命令就下发
+			this.send_order(undefined);
+			if (this.obj.url) {
+				this.$bus.$emit('turn_to_page', this.obj.url);
+			}
+		},
+	},
+};
 
-// // 按钮
-// let customButton = {
-// 	template: `
-//     <div :style="style(obj)" class="center button_box" @click="distinguish_operation">
-//       <img v-show="current_page==obj.url" src="./img/icon1.png" class="bg_img">
-//       <span :style="size(obj)">{{text}}</span>
-//     </div>
-//   `,
-// 	mixins: [common_functions, fn],
-// 	props: ['current_page'],
-// 	data() {
-// 		return {
-// 			text: this.obj.value || '',
-// 		};
-// 	},
-// 	methods: {
-// 		size(obj_data) {
-// 			let t = (203 / 22) * 16; //计算多少容器大小下 字体是16px
-// 			let fz = (obj_data.w * this.radio) / t;
-// 			return {
-// 				color: '#fff',
-// 				fontSize: fz + 'rem',
-// 				zIndex: 1,
-// 			};
-// 		},
-// 		// 按钮分下发指令和切换页面两种
-// 		distinguish_operation() {
-// 			// 有跳转id 的不触发下发指令
-// 			// this.obj.url ? this.$bus.$emit('turn_to_page', this.obj.url) : this.send_order(undefined);
-// 			// 有没有跳转都检测有命令就下发
-// 			this.send_order(undefined);
-// 			if (this.obj.url) {
-// 				this.$bus.$emit('turn_to_page', this.obj.url);
-// 			}
-// 		},
-// 	},
-// };
 // // 按钮开关
 // let customButtonSwitch = {
 // 	template: `

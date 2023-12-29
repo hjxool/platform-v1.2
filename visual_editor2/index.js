@@ -18,6 +18,7 @@ new Vue({
 		customLine,
 		customVideo,
 		customDeviceStatus,
+		customButton,
 	},
 	data: {
 		html: {
