@@ -1208,7 +1208,7 @@ new Vue({
 			let bottom = dom.bottom - 10; //减去10 是滚动条高度
 			let right = dom.right;
 			if (event.clientX > this.first_block_position && event.clientX < right && event.clientY > top + 10 && event.clientY < bottom) {
-				this.mouse.enter = true;
+				// this.mouse.enter = true;
 				// 在面板滑动时要计算行的值 列由时间块的mouseenter事件定位 mouseenter第一次定位行列肯定是准的
 				// 但是在指示条滑动鼠标时 行发生变化 要计算这个值需要之前定位到的行值 与当前鼠标位置
 				// this.block_top = this.time_box_array[this.mouse.row_index * 34 + this.mouse.col_index].getBoundingClientRect().top;

@@ -543,7 +543,8 @@ let customLine = {
 		cus_style(obj, page) {
 			return {
 				position: 'absolute',
-				zIndex: obj.z_index,
+				// zIndex: obj.z_index,
+				zIndex: -10,
 				left: 0,
 				top: 0,
 				width: '100%',
@@ -699,7 +700,7 @@ let customButton = {
 	props: ['current_page'],
 	data() {
 		return {
-			text: this.obj.value || '',
+			text: this.obj.dataConfig?.buttonLabel || '',
 		};
 	},
 	methods: {
