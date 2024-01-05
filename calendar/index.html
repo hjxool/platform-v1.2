@@ -39,23 +39,6 @@
           :class="['box2','center','button',html.time_option==index?'box_light':'box_dark']">{{item}}</div>
       </div>
       <!-- 不同时间选项 不同页面 -->
-      <!-- 天 -->
-      <!-- <div v-show="html.time_option==0" class="body1">
-          <div v-for="i in 17" class="box1 day">
-            <span class="title center">{{i+5}}:30</span>
-            <div class="box2">
-              <div class="line"></div>
-            </div>
-          </div>
-          <div class="day_block meeting_block" v-for="item in day_meeting" :style="block_position(item)">
-            <div class="time">
-              <span class="text">{{item.start}}</span>
-              <span class="text">-</span>
-              <span class="text">{{item.end}}</span>
-            </div>
-            <div class="center text_ellipsis">{{item.theme}}</div>
-          </div>
-        </div> -->
       <!-- 周 -->
       <div v-show="html.time_option==0" class="body2">
         <div class="week_box">

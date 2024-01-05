@@ -51,7 +51,8 @@
           </div>
 
           <div
-            :class="['box2','row_layout',!meeting.status?'box2_border0':meeting.status==1?'box2_border1':'box2_border2']">
+            :class="['box2','row_layout',!meeting.status?'box2_border0':meeting.status==1?'box2_border1':'box2_border2']"
+            @click="turn_to(meeting.id)">
             <div class="box2_1">
               <div class="box2_1_1 row_layout">
                 <el-tag :type="!meeting.status?'success':meeting.status==1?'':'info'"
@@ -68,7 +69,7 @@
               </div>
             </div>
 
-            <div v-show="config.check_show" class="flex_shrink button" @click="turn_to(meeting.id)">
+            <div v-show="config.check_show" class="flex_shrink button">
               <img src="./img/icon3.png" class="bg_img">
             </div>
           </div>
