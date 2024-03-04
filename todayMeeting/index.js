@@ -264,7 +264,8 @@ new Vue({
 						return false;
 					}
 				case '转交':
-					if (this.config.pass_on_show && row_obj.status === 0) {
+					// 有权限 会议未开始 未转交
+					if (this.config.pass_on_show && row_obj.status === 0 && !row_obj.transferFlag) {
 						return true;
 					} else {
 						return false;

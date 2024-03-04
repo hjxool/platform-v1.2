@@ -208,12 +208,12 @@ new Vue({
 		// 页面选择
 		page_switch(page_index) {
 			this.html.page_select = page_index;
-			let type = page_index.split('-')[0];
-			if (type == 2) {
-				this.joint_select();
-			} else if (type == 3) {
-				this.polling_select();
-			}
+			// let type = page_index.split('-')[0];
+			// if (type == 2) {
+			// 	this.joint_select();
+			// } else if (type == 3) {
+			// 	this.polling_select();
+			// }
 		},
 		// 联检选择
 		joint_select(current_page) {

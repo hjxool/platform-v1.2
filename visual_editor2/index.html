@@ -21,14 +21,35 @@
           :radio="page.radio"></custom-switch>
         <custom-slider v-if="item.type=='sliderV'" :obj="item" :radio="page.radio"></custom-slider>
         <custom-slider2 v-if="item.type=='slider'" :obj="item" :radio="page.radio"></custom-slider2>
-        <custom-img v-if="item.type=='image'||item.shapeNickname=='设备节点'" :obj="item" :radio="page.radio"></custom-img>
+        <custom-img v-if="item.type=='image'" :obj="item" :radio="page.radio"></custom-img>
         <custom-line v-if="item.type=='连线'" :obj="item" :radio="page.radio" :page="page"></custom-line>
         <custom-video v-if="item.type=='videoPlayer'" :obj="item" :radio="page.radio"></custom-video>
-        <custom-device-status v-if="item.type=='model-stat-list'" :obj="item"
-          :radio="page.radio"></custom-device-status>
+        <!-- <custom-device-status v-if="item.type=='model-stat-list'" :obj="item"
+          :radio="page.radio"></custom-device-status> -->
+        <custom-device-status v-if="item.shapeNickname=='设备节点'" :obj="item" :radio="page.radio"
+          :page_width="page.mb.w"></custom-device-status>
         <custom-button v-if="item.type=='button'" :obj="item" :radio="page.radio"
           :current_page="page_id"></custom-button>
       </template>
+    </div>
+    <!-- 设备状态栏 -->
+    <div class="device_status" v-show="device_status.show" :style="device_status_style(device_status.style)"
+      @mouseenter="device_status.show=true" @mouseleave="device_status.show=false">
+      <!-- 节点信息 头部 -->
+      <div class="head row_layout">
+        <div class="row_layout">
+          <span class="title">{{device_status.name}}</span>
+          <el-tag :type="device_status.is_normal?'success':'danger'" size="mini">
+            {{device_status.is_normal?'在线':'异常'}}
+          </el-tag>
+        </div>
+      </div>
+      <!-- 属性列表 -->
+      <div class="body">
+        <div class="text_ellipsis" v-for="item in device_status.list">
+          {{item.label}}：{{item.value}}
+        </div>
+      </div>
     </div>
   </div>
 
@@ -37,7 +58,7 @@
   <script src="../module/vue.js"></script>
   <script src="../module/element-ui.js"></script>
   <script src="../module/axios.min.js"></script>
-  <script src="../../js/flv.js"></script>
+  <script src="../module/flv.js"></script>
   <script src="../module/common_function.js"></script>
   <script src="./components.js"></script>
   <script src="./index.js"></script>

@@ -10,6 +10,9 @@
 	display: flex;
 	flex-direction: column;
 }
+.flex_grow {
+	flex-grow: 1;
+}
 .row_layout {
 	display: flex;
 	align-items: center;
@@ -27,6 +30,7 @@
 	overflow-x: hidden;
 	padding-right: 4px;
 }
+// 服务框
 .server_box {
 	max-height: 310px;
 	overflow: hidden;
@@ -93,6 +97,30 @@
 			margin-bottom: 22px;
 		}
 	}
+}
+// 阈值框
+.threshold_box {
+	min-height: 200px;
+	overflow: hidden;
+	border: 1px solid;
+	border-radius: 6px;
+	display: flex;
+	> .buttons {
+		padding: 22px 24px 0 24px;
+		> .icon {
+			width: 80px;
+			height: 36px;
+			margin-bottom: 22px;
+		}
+	}
+}
+// 设置条件弹窗标题
+.set_condition {
+	padding: 10px 20px;
+	display: grid;
+	grid-template-columns: repeat(3, 1fr) 60px;
+	align-items: center;
+	justify-items: center;
 }
 .foot {
 	padding-top: 28px;

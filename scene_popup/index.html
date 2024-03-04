@@ -50,9 +50,11 @@
           <el-select v-model="form.condition_type">
             <el-option label="场所活动开始前" :value="0"></el-option>
             <el-option label="场所活动结束后" :value="1"></el-option>
+            <!-- <el-option label="传感器" :value="2"></el-option> -->
           </el-select>
         </el-form-item>
-        <el-form-item :label="form.condition_type?'结束后':'开始前'" prop="time_unit">
+        <!-- 场所活动 -->
+        <el-form-item v-show="form.condition_type<2" :label="form.condition_type?'结束后':'开始前'" prop="time_unit">
           <div class="row_layout">
             <el-input-number size="small" v-model="form.pre_after_time" :step="1" :min="0"
               step-strictly></el-input-number>
@@ -65,6 +67,49 @@
           </div>
         </el-form-item>
       </template>
+      <!-- 阈值 -->
+      <el-form-item v-show="form.type===4" label="阈值">
+        <div class="threshold_box" :style="theme_border()">
+          <el-table class="flex_grow" :data="form.threshold" max-height="300" style="border-right: 1px solid;"
+            @selection-change="threshold_select">
+            <el-table-column type="selection" width="30"></el-table-column>
+
+            <el-table-column type="expand">
+              <template slot-scope="props">
+                <el-form label-position="left">
+                  <el-form-item v-for="item in props.row.condition" :label="item.name">
+                    <el-select v-model="item.ct" size="mini" style="width: 100px;">
+                      <el-option v-for="op in html.operators" :key="op.value" :label="op.label"
+                        :value="op.value"></el-option>
+                    </el-select>
+
+                    <el-input v-model="item.value" clearable size="mini" style="width: 100px;"></el-input>
+                  </el-form-item>
+                </el-form>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="设备id" prop="id"></el-table-column>
+            <el-table-column label="设备名称" prop="name"></el-table-column>
+            <el-table-column label="关联方式">
+              <template slot-scope="scope">
+                <el-select v-model="scope.row.type" size="mini" style="width: 100px;">
+                  <el-option label="全部与" :value="true"></el-option>
+                  <el-option label="全部或" :value="false"></el-option>
+                </el-select>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <!-- 功能按钮 -->
+          <div class="buttons flex_shrink col_layout">
+            <img class="icon flex_shrink button" @click="threshold_tool(0)" :src="threshold_button_img('添加')">
+            <img class="icon flex_shrink" @click="threshold_tool(1)" :style="threshold_button_style()"
+              :src="threshold_button_img('删除')">
+          </div>
+        </div>
+      </el-form-item>
+
       <!-- 服务列表 -->
       <div class="server_box flex_shrink" :style="theme_border()">
         <div class="list_box" :style="theme_border()">
@@ -103,21 +148,9 @@
       <div class="place_box" :style="theme_bg_border()" v-loading="devices.loading">
         <div class="head flex_shrink" :style="theme_pophead()">智慧设备</div>
 
-        <!-- <div class="search flex_shrink row_layout">
-          <el-checkbox class="flex_shrink" :indeterminate="devices.isIndeterminate" v-model="devices.checkAll"
-            @change="device_checkall">全选
-          </el-checkbox>
-          <el-input class="search_input" @keyup.enter.native="get_place_device" placeholder="模糊搜索"
-            v-model="devices.search" size="small" clearable>
-            <i slot="suffix" class="el-input__icon el-icon-search"></i>
-          </el-input>
-        </div> -->
-
         <div v-if="devices.list.length" class="scroll" style="padding-left: 20px;">
           <div v-for="place in devices.list">
             <div class="place_box2 row_layout" @click="select_place(place)">
-              <!-- <el-checkbox :indeterminate="place.isIndeterminate" v-model="place.checkAll"
-                @change="place_check_all(place)" style="margin-right:10px;"></el-checkbox> -->
               <i class="el-icon-caret-right icon" v-show="devices.place_id!=place.id" :style="theme_font()"></i>
               <i class="el-icon-caret-bottom icon" v-show="devices.place_id==place.id" :style="theme_font()"></i>
               <span class="text" :style="theme_font()">{{place.placeName}}</span>
@@ -125,9 +158,6 @@
             <el-collapse-transition>
               <div style="padding-left: 20px;" v-show="devices.place_id==place.id">
                 <div class="device_box row_layout" v-for="device in place.devices">
-                  <!-- <el-checkbox class="flex_shrink" v-model="device.check"
-                    @change="select_device(device,place,'el')"></el-checkbox> @click="select_device(device,place)"-->
-
                   <span class="text text_ellipsis" :title="device.deviceName"
                     :style="theme_font()">{{device.deviceName}}</span>
 
@@ -140,7 +170,6 @@
         <div v-show="!devices.list.length" class="center" :style="theme_font()">无设备</div>
 
         <div class="foot flex_shrink">
-          <!-- <el-button @click="device_submit" type="primary" size="small">确定</el-button> -->
           <el-button @click="devices.show=false" size="small">关闭</el-button>
         </div>
       </div>
@@ -215,6 +244,48 @@
         </div>
 
         <iframe :src="html.page_url" frameborder="0" scrolling="no" style="flex-grow:1;"></iframe>
+      </div>
+    </div>
+    <!-- 传感器条件设置弹窗 -->
+    <div class="popover" v-if="devices.model_show">
+      <div class="server_box2" :style="theme_bg_border()">
+        <div class="head flex_shrink" :style="theme_pophead()">设置条件</div>
+        <!-- 按钮 -->
+        <div class="search flex_shrink row_layout">
+          <el-button @click="add_condition" icon="el-icon-plus" size="small">添加条件</el-button>
+
+          <el-select v-model="devices.is_and" placeholder="条件" size="small" style="width: 100px;margin-left: 30px;">
+            <el-option label="全部与" :value="true"></el-option>
+            <el-option label="全部或" :value="false"></el-option>
+          </el-select>
+        </div>
+        <!-- 列标题 -->
+        <div class="set_condition flex_shrink" :style="theme_font()">
+          <div>绑定属性</div>
+          <div>选择条件</div>
+          <div>阈值</div>
+        </div>
+        <!-- 条件列表 -->
+        <div class="scroll">
+          <div class="set_condition" v-for="item,index in condition_list">
+            <el-cascader v-model="item.path" :options="devices.model" :props="{ checkStrictly: true }" clearable
+              size="mini"></el-cascader>
+
+            <el-select v-model="item.operator" placeholder="条件" size="mini" style="width: 100px;">
+              <el-option v-for="op in html.operators" :key="op.value" :label="op.label" :value="op.value"></el-option>
+            </el-select>
+
+            <el-input v-model="item.value" clearable size="mini" style="width: 100px;"></el-input>
+
+            <el-button @click="del_device_condition(index)" type="danger" icon="el-icon-delete" circle
+              size="mini"></el-button>
+          </div>
+        </div>
+
+        <div class="foot flex_shrink">
+          <el-button @click="threshold_submit" type="primary" size="small">确定</el-button>
+          <el-button @click="devices.model_show=false" size="small">取消</el-button>
+        </div>
       </div>
     </div>
   </el-form>

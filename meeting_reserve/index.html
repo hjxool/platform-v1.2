@@ -62,23 +62,20 @@
                 <el-tag size="mini" v-if="item.approve==0">无需审批</el-tag>
               </div>
 
-              <div class="row_layout" style="justify-content:space-between;">
+              <div class="row_layout">
+                <div>会议室类型：</div>
                 <span class="type">{{item.type==0?'视频':item.type==1?'综合':'无纸化'}}</span>
-                <span v-if="item.approve==1" class="type" style="margin-right:40px;">审核人</span>
               </div>
 
-              <div class="box2">
-                <img src="./img/icon1.png" class="icon" draggable="false">
-                <span class="type" style="margin-right:auto;"> {{item.num}}</span>
+              <div class="box2" style="justify-content: space-between;">
+                <div class="row_layout">
+                  <div>会议室容量：</div>
+                  <span class="type" style="margin-right:auto;"> {{item.num}}</span>
+                </div>
 
-                <span v-if="item.approve==1" class="type text_ellipsis" style="max-width:150px;"
-                  :title="auditor_title(item)">{{item.approveUserickName||'空'}}({{item.approveUserPhone||'空'}})</span>
+                <el-button @click="place_detail(item.id)" type="text" size="mini">详情</el-button>
               </div>
             </div>
-            <!-- <div class="center">
-              <img v-if="item.photoUrl!=null" :src="item.photoUrl" class="icon2">
-              <i v-if="item.photoUrl==null" class="el-icon-picture-outline"></i>
-            </div> -->
           </div>
           <!-- @mousedown="area_start(index,index2)" @mouseover="area_enter(index,index2)" @mouseenter="query_meeting_info($event,index,index2)" -->
           <div v-for="i,index2 in html.time_num" class="time_box" @mouseenter="area_enter(index,index2,$event)">
@@ -134,19 +131,23 @@
                   <el-form-item prop="time_start" class="margin" style="width: 100px;">
                     <el-time-select v-model="new_meeting_form.time_start" @change="change_reserve_type"
                       style="width: 100px;"
-                      :picker-options="{start: '06:00',step: '00:15',end: '23:00',maxTime:new_meeting_form.time_end}"
-                      placeholder="选择起始时间">
+                      :picker-options="{start: '06:00',step: '00:15',end: '23:00',maxTime:new_meeting_form.time_end}">
                     </el-time-select>
                   </el-form-item>
                   <span class="margin">&#10140</span>
                   <el-form-item prop="time_end" class="margin" style="width: 100px;">
                     <el-time-select v-model="new_meeting_form.time_end" @change="change_reserve_type"
                       style="width: 100px;"
-                      :picker-options="{start: '06:00',step: '00:15',end: '23:00',minTime: new_meeting_form.time_start}"
-                      placeholder="选择结束时间">
+                      :picker-options="{start: '06:00',step: '00:15',end: '23:00',minTime: new_meeting_form.time_start}">
                     </el-time-select>
                   </el-form-item>
                 </div>
+              </el-form-item>
+
+              <el-form-item label="第三方会议">
+                <el-checkbox-group v-model="new_meeting_form.platform">
+                  <el-checkbox label="dingTalk">钉钉</el-checkbox>
+                </el-checkbox-group>
               </el-form-item>
 
               <el-form-item label="预约方式">
@@ -208,34 +209,7 @@
                       <!-- 人数统计 -->
                       <div class="box2">{{new_meeting_form.search_person.length}}人</div>
                     </div>
-                    <!-- <el-tooltip effect="dark" :content="new_meeting_form.guest_show?'收起':'添加来宾人员'" placement="top">
-                      <div class="add_button center flex_shrink"
-                        @click="new_meeting_form.guest_show=!new_meeting_form.guest_show">
-                        <i v-show="!new_meeting_form.guest_show" class="el-icon-arrow-down" style="font-size:14px;"></i>
-                        <i v-show="new_meeting_form.guest_show" class="el-icon-arrow-up" style="font-size:14px;"></i>
-                      </div>
-                    </el-tooltip> -->
                   </div>
-                  <!-- 来宾人员 -->
-                  <!-- <div v-show="new_meeting_form.guest_show" style="display:flex;align-items:start;margin-top:10px;">
-                    <input type="file" style="display:none;" id="upload" @change="upload_visitor">
-                    <div class="person_box">
-                      <div class="box1">
-                        <div class="person button flex_shrink" @click="upload_click">
-                          <i class="el-icon-plus icon1"></i>
-                          <span class="name">批量添加</span>
-                        </div>
-                        <div class="person flex_shrink" v-for="item,index in new_meeting_form.guestList">
-                          <span class="name text_ellipsis" :title="item.guestName">{{item.guestName}}</span>
-                          <i @click="del_guest(index)" class="el-icon-close button"></i>
-                        </div>
-                        <div v-show="new_meeting_form.guestList.length==0" class="placeholder">来宾人员</div>
-                      </div>
-                      <div class="box2">{{new_meeting_form.guestList.length}}人</div>
-                    </div>
-                    <el-button @click="download" size="mini" type="text" class="flex_shrink"
-                      style="margin:8px 10px 0 10px;">Excel模板</el-button>
-                  </div> -->
                 </div>
               </el-form-item>
 
@@ -258,6 +232,20 @@
                   </div>
                   <el-button @click="download" size="mini" type="text" class="flex_shrink"
                     style="margin:8px 10px 0 10px;">Excel模板</el-button>
+                </div>
+              </el-form-item>
+
+              <el-form-item label="会议物品">
+                <div class="list_box">
+                  <div class="person button flex_shrink" @click="goods_show">
+                    <i class="el-icon-plus icon1"></i>
+                    <span class="name">批量添加</span>
+                  </div>
+
+                  <div class="person flex_shrink" v-for="item,index in new_meeting_form.goods" style="width: 140px;">
+                    <span class="name text_ellipsis" :title="item.name">{{item.name}}({{item.num}})</span>
+                    <i @click="del_goods(index)" class="el-icon-close button"></i>
+                  </div>
                 </div>
               </el-form-item>
 
@@ -384,6 +372,76 @@
         <span class="text" v-if="index==3">{{meeting_info.type}}</span>
       </div>
     </el-card>
+    <!-- 物品弹窗 -->
+    <div class="popover" v-show="goods.show">
+      <div class="add_person_window" v-loading="html.add_person_loading" style="width: 80vw;">
+        <div class="head">
+          <span style="font-weight:bold;">选择会议物品</span>
+          <el-button @click="goods.show=false" type="danger" icon="el-icon-close" circle size="mini"></el-button>
+        </div>
+        <div class="body goods_box">
+          <div class="left">
+            <el-input v-model="goods.search" @change="get_goods_list()" size="small" clearable
+              style="width: 40%;align-self: center;">
+              <i @click="get_goods_list()" slot="suffix" class="el-input__icon el-icon-search button"></i>
+            </el-input>
+
+            <div class="goods_list_box">
+              <el-table id="goods_table" ref="goods_table" :data="goods.list" :max-height="goods.max_h"
+                @selection-change="select_goods">
+                <el-table-column type="selection" width="30"></el-table-column>
+                <el-table-column prop="name" label="物品名称"></el-table-column>
+                <el-table-column label="数量" width="100">
+                  <template slot-scope="scope">
+                    <el-input v-model="scope.row.num" @blur="is_num(scope.row.num,true)" placeholder="数量"
+                      size="mini"></el-input>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="unit" label="单位" width="60"></el-table-column>
+                <el-table-column prop="remark" label="备注"></el-table-column>
+              </el-table>
+
+              <el-pagination class="paging flex_shrink" @current-change="get_goods_list" layout="prev, pager, next"
+                :total="goods.total" :page-size="goods.pageSize" :current-page="goods.page"></el-pagination>
+            </div>
+
+          </div>
+
+          <div class="right">
+            <span class="margin1">已选择</span>
+
+            <div class="scroll">
+              <div class="person flex_shrink" v-for="item,index in goods.select">
+                <span class="name text_ellipsis" :title="item.name">{{item.name}}({{item.num?item.num:0}})</span>
+                <i class="el-icon-close" @click="del_goods(index)"></i>
+              </div>
+            </div>
+
+            <div class="submit">
+              <el-button @click="goods.show=false" style="margin-right:20px;" size="small">取消</el-button>
+              <el-button @click="add_goods" type="primary" size="small">确定</el-button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 会议室详情 -->
+    <div class="popover" v-show="place.show">
+      <div class="add_person_window" v-loading="html.add_person_loading"
+        style="height: auto;max-height: 60vh;min-height: auto;">
+        <div class="head">
+          <span style="font-weight:bold;">会议室详情</span>
+          <el-button @click="place.show=false" type="danger" icon="el-icon-close" circle size="mini"></el-button>
+        </div>
+
+        <div class="body" style="overflow: auto;padding: 0 40px 20px 40px;">
+          <div class="place_detail_row" v-for="item in place.list" v-show="item.content">
+            <div class="title">{{item.title}}</div>
+            <div>{{item.content}}</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="../../运维人员部署请修改我.js"></script>

@@ -7,6 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title></title>
   <link rel="stylesheet" href="../module/element-ui.css">
+  <!-- <link rel="stylesheet" href="../../dlc2/components/style/common.css"> -->
   <link rel="stylesheet" href="../module/common_style.css">
   <link rel="stylesheet" href="index.css">
 </head>
@@ -66,6 +67,11 @@
         <el-table-column label="转交状态" width="100">
           <template slot-scope="scope">
             <el-tag :type="scope.row.transferFlag?'warning':''">{{scope.row.transferFlag?'已转交':'未转交'}}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="审批流程" width="100">
+          <template slot-scope="scope">
+            <el-button @click="get_audit_process(scope.row)" type="primary" plain size="mini">查看</el-button>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="300">
@@ -135,7 +141,7 @@
             </div>
 
             <div class="person flex_shrink" v-for="item,index in pass.list">
-              <span class="name text_ellipsis" :title="item.username">{{item.username}}</span>
+              <span class="name text_ellipsis" :title="item.name">{{item.name}}</span>
               <i class="el-icon-close" @click="del_person(index)"></i>
             </div>
 
@@ -157,6 +163,30 @@
         <iframe class="user_list" :src="pass.url" frameborder="0" scrolling="no"></iframe>
       </div>
     </div>
+    <!-- 审核流程 -->
+    <div class="popover" v-if="process.show">
+      <div class="process pop_bg" v-loading="html.pop_loading">
+        <div class="head row_layout">
+          <span class="text">审核流程</span>
+          <el-button @click="process.show=false" type="danger" size="small" icon="el-icon-close" circle></el-button>
+        </div>
+
+        <div id="aduit_process" class="flex_grow">
+          <el-table :max-height="process.table_h" :data="process.list" border>
+            <el-table-column prop="date" label="审核时间"></el-table-column>
+            <el-table-column prop="process" label="审核环节"></el-table-column>
+            <el-table-column prop="auditor" label="审核人"></el-table-column>
+            <el-table-column prop="status" label="审核状态"></el-table-column>
+            <el-table-column prop="remark" label="备注"></el-table-column>
+          </el-table>
+
+          <!-- <div v-if="process.room_id" style="overflow: auto;">
+            <component_audit-process :meeting-room-id="process.room_id" :process-type="200001"
+              :preview-mode="true"></component_audit-process>
+          </div> -->
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="../../运维人员部署请修改我.js"></script>
@@ -164,6 +194,7 @@
   <script src="../module/element-ui.js"></script>
   <script src="../module/axios.min.js"></script>
   <script src="../module/common_function.js"></script>
+  <!-- <script src="../../dlc2/components/components.js"></script> -->
   <script src="index.js"></script>
 </body>
 

@@ -7,6 +7,7 @@ let cancel_url = `${url}api-portal/meeting/cancel`;
 let limits_url = `${url}api-user/menus/current`; //获取菜单权限
 let remind_url = `${url}api-portal/meeting/urge`; //提醒审核
 let meeting_pass_url = `${url}api-portal/meeting/transfer`; //转交会议
+let audit_process_url = `${url}api-portal/audit-operation/query`; // 根据业务ID查询审核流水
 
 new Vue({
 	el: '#index',
@@ -83,6 +84,12 @@ new Vue({
 			all_show: false, // 总人员弹窗
 			list: [], //转交人
 			url: '', //总人员页
+		},
+		process: {
+			show: false, //审核流程弹窗显示
+			list: [], // 审核流程数据
+			table_h: 0, // 表格高度
+			room_id: '', // 审核流程配图
 		},
 	},
 	async mounted() {
@@ -280,6 +287,7 @@ new Vue({
 							id: t.moderatorId,
 						},
 					],
+					platform: t.meetingThirdProviderList?.length || [],
 				};
 				for (let val of t.users) {
 					if (val.isGuest) {
@@ -336,8 +344,8 @@ new Vue({
 						return true;
 					}
 				case '转交':
-					if (meeting_obj.status === 0 && meeting_obj.auditStatus === 2) {
-						// 会议未开始 审核通过
+					if (meeting_obj.status === 0 && meeting_obj.auditStatus === 2 && !meeting_obj.transferFlag) {
+						// 会议未开始 审核通过 未转交
 						return false;
 					} else {
 						return true;
@@ -408,10 +416,6 @@ new Vue({
 		add_person() {
 			this.pass.all_show = true;
 			let dom = document.querySelector('.user_list');
-			for (let val of this.pass.list) {
-				val.name = val.username;
-				val.type = 'person';
-			}
 			dom.contentWindow.postMessage(this.pass.list);
 		},
 		// 删除转交人员
@@ -436,6 +440,38 @@ new Vue({
 				}
 				this.pass.show = false;
 				this.get_data();
+			});
+		},
+		// 查询、显示审核流程弹窗
+		async get_audit_process(obj) {
+			this.process.room_id = '';
+			this.process.show = true;
+			this.html.pop_loading = true;
+			this.process.list = [];
+			let { data: res } = await this.request('post', `${audit_process_url}/${obj.id}`, this.token);
+			this.html.pop_loading = false;
+			if (res.head.code !== 200 || !res.data) {
+				return;
+			}
+			this.process.room_id = obj.roomId;
+			for (let index = 0; index < res.data.length; index++) {
+				let t = res.data[index];
+				let t2 = {
+					date: t.modified,
+					process: t.auditConfigName,
+					status: t.statusName,
+					remark: t.remark || '',
+				};
+				let t3 = t.actualAuditUserVOList;
+				if (t3) {
+					// 如果是正在审核环节 显示审核人联系方式
+					t2.auditor = `${t3[0].nickname}${t.status === 1 ? `(${t3[0].phone || t3[0].email || ''})` : ''}`;
+				}
+				this.process.list.push(t2);
+			}
+			this.$nextTick(() => {
+				let dom = document.querySelector('#aduit_process');
+				this.process.table_h = dom.offsetHeight;
 			});
 		},
 	},

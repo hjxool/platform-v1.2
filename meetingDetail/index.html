@@ -39,6 +39,13 @@
           <div class="text1 text_ellipsis">{{meeting_detail.time||'空'}}</div>
           <div class="text1 text_ellipsis" :title="meeting_detail.place">会议地点：{{meeting_detail.place}}</div>
           <div class="text1 text_ellipsis">主持人：{{meeting_detail.user}}</div>
+          <template v-if="meeting_detail.ding.show">
+            <div class="row_layout text1">
+              <div>钉钉：</div>
+              <a target="_blank" :href="meeting_detail.ding.url">点击跳转</a>
+            </div>
+            <div class="text1 text_ellipsis">钉钉会议号：{{meeting_detail.ding.code}}</div>
+          </template>
         </el-card>
         <!-- 会议附件 -->
         <el-card class="box1" style="margin-left: 10px;" shadow="never">
@@ -148,7 +155,8 @@
           <div class="margin">请与会人员签到扫码</div>
           <div class="margin text1">时间 {{meeting_detail.time}}</div>
         </el-card>
-        <el-card shadow="never">
+
+        <el-card shadow="never" style="margin-bottom:20px;">
           <div slot="header" class="clearfix">
             <i class="el-icon-s-data title_icon" style="color: #0770FF;"></i>
             <span class="title">会议统计</span>
@@ -159,6 +167,29 @@
           <div class="echart1"></div>
           <!-- 统计迟到 -->
           <div class="echart1"></div>
+        </el-card>
+
+        <el-card shadow="never">
+          <div slot="header" class="row_layout" style="justify-content: space-between;">
+            <div class="row_layout">
+              <i class="el-icon-goods title_icon" style="color: #90EE90;"></i>
+              <span class="title">物品清单</span>
+            </div>
+
+            <el-button @click="download_goods" type="primary" size="mini">导出</el-button>
+          </div>
+
+          <div class="goods_title">
+            <div>物品名称</div>
+            <div>数量</div>
+            <div>单位</div>
+          </div>
+
+          <div class="goods" v-for="item in goods.list">
+            <div>{{item.name}}</div>
+            <div>{{item.num}}</div>
+            <div>{{item.unit}}</div>
+          </div>
         </el-card>
       </div>
     </div>

@@ -3,7 +3,7 @@ let components_url = `${url}api-device/device/controlPanel/PC`; //根据设备id
 let get_data_url = url + 'api-device/device/status'; //查询数据
 let sendCmdtoDevice = url + 'api-device/device/panel/operation'; // 下发指令
 let user_info_url = `${url}api-auth/oauth/userinfo`; //获取用户信息
-let decive_report_url = `${url}api-device/device/panel/operation`; //打开设备上报
+let decive_report_url = `${url}api-device/device/panel/switch`; //打开设备上报
 
 new Vue({
 	el: '#index',
@@ -256,7 +256,7 @@ new Vue({
 		},
 		// 让设备开始上报
 		start_report(device_id) {
-			this.request('put', `${decive_report_url}/${device_id}`);
+			this.request('put', `${decive_report_url}/${device_id}`, this.token);
 		},
 	},
 });

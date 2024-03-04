@@ -11,6 +11,9 @@ let limits_url = `${url}api-user/menus/current`; //获取菜单权限
 let get_scene_url = `${url}api-portal/scene-rule/available`; //查询场所可用场景
 let meeting_type_url = `${url}api-portal/meeting-type/search`; // 查询会议类型列表
 let get_template_list_url = `${url}api-portal/displayBoard/template/list`; //获取模板列表
+let get_goods_list_url = `${url}api-portal/things/search`; // 查询物品列表
+let place_detail_url = `${url}api-portal/room/search`; // 查询会议室详情
+let user_name_url = `${url}api-user/users/nickName`; // 查询所有用户名
 
 Vue.config.productionTip = false;
 new Vue({
@@ -82,6 +85,8 @@ new Vue({
 				{ label: '自定义模板', options: [] },
 			],
 			door_password: 2, //开门码 0人脸 1随机码 2默认人脸+随机码
+			platform: [], //第三方平台
+			goods: [], // 物品清单
 		},
 		// 当前用户信息
 		user: {
@@ -129,6 +134,30 @@ new Vue({
 		},
 		config: {
 			reserve_show: false,
+		},
+		goods: {
+			show: false, //物品弹窗显示
+			page: 1, // 当前页
+			pageSize: 20, // 单页数量
+			total: 0, // 总数
+			search: '', // 物品搜索
+			list: [], // 总列表
+			select: [], // 已选物品
+			max_h: 1000, // 表格最大高度
+		},
+		place: {
+			show: false, // 会议室详情弹窗
+			list: [
+				{ title: '会议室名称', content: '' },
+				{ title: '会议室地址', content: '' },
+				{ title: '会议室设备', content: '' },
+				{ title: '功能定位', content: '' },
+				{ title: '会议室容量', content: '' },
+				{ title: '会议室类型', content: '' },
+				{ title: '管理员', content: '' },
+				{ title: '是否需审批', content: '' },
+				{ title: '审批流程', content: '' },
+			],
 		},
 	},
 	async mounted() {
@@ -766,6 +795,8 @@ new Vue({
 				this.new_meeting_form.type = this.default_meeting_type;
 				this.new_meeting_form.template = '';
 				this.new_meeting_form.door_password = 2;
+				this.new_meeting_form.platform = [];
+				this.new_meeting_form.goods = [];
 			}
 			this.start_move = false;
 		},
@@ -910,6 +941,21 @@ new Vue({
 			// 会议模板
 			if (form.template) {
 				data.templateId = form.template;
+			}
+			// 第三方会议
+			if (form.platform.length) {
+				data.meetingThirdProvider = form.platform;
+			}
+			// 会议物品
+			if (form.goods.length) {
+				data.meetingThings = [];
+				for (let val of form.goods) {
+					let t = {
+						quantity: Number(val.num),
+						thingsId: val.id,
+					};
+					data.meetingThings.push(t);
+				}
 			}
 			this.html.form_loading = true;
 			this.request('post', meeting_reserve, this.token, data, (res) => {
@@ -1145,6 +1191,10 @@ new Vue({
 		del_guest(index) {
 			this.new_meeting_form.guestList.splice(index, 1);
 		},
+		// 物品清单删除
+		del_guest(index) {
+			this.new_meeting_form.goods.splice(index, 1);
+		},
 		// 删除参会人员
 		del_person(index, type) {
 			this.new_meeting_form[type === 'join' ? 'search_person' : 'emcee'].splice(index, 1);
@@ -1342,6 +1392,7 @@ new Vue({
 			this.new_meeting_form.type = data.type; // 会议类型
 			this.new_meeting_form.step = 0; //重置步骤
 			this.new_meeting_form.template = data.template; //临时 暂无存模板字段
+			this.new_meeting_form.platform = data.platform; // 回显第三方平台
 		},
 		// 拖动下方横向滚动条 会连带上边的滚动条移动
 		link_scroll() {
@@ -1356,10 +1407,6 @@ new Vue({
 				}, 30);
 			}
 			this.scroll = true;
-		},
-		// 鼠标悬浮显示审核人信息
-		auditor_title(obj) {
-			return `${obj.approveUserickName || '空'}(${obj.approveUserPhone || '空'})`;
 		},
 		// 部门人员去重
 		async de_weight(list) {
@@ -1387,6 +1434,176 @@ new Vue({
 				return false;
 			}
 			return data.data;
+		},
+		// 查询并打开物品弹窗
+		async goods_show() {
+			this.goods.show = true;
+			// 清空选项
+			this.goods.search = '';
+			this.goods.list = [];
+			// 将当前选的物品列表深拷贝给临时编辑列表
+			this.goods.select = JSON.parse(JSON.stringify(this.new_meeting_form.goods));
+			await this.get_goods_list();
+			setTimeout(() => {
+				let dom = document.getElementById('goods_table');
+				this.goods.max_h = dom.offsetHeight;
+			}, 500);
+		},
+		// 查询物品
+		async get_goods_list(page) {
+			this.html.add_person_loading = true;
+			this.goods.page = page || 1;
+			let { data: res } = await this.request('post', get_goods_list_url, this.token, {
+				condition: {},
+				pageNum: this.goods.page,
+				pageSize: this.goods.pageSize,
+				keyword: this.goods.search,
+			});
+			this.html.add_person_loading = false;
+			if (res.head.code !== 200 || !res.data.data) {
+				return;
+			}
+			this.goods.total = res.data.total;
+			this.goods.list = [];
+			for (let val of res.data.data) {
+				let t = {
+					name: val.name,
+					id: val.id,
+					num: '', // 物品数量由用户选择要几个
+					remark: val.remark,
+					unit: val.unit,
+				};
+				this.goods.list.push(t);
+			}
+			// 回显输入数量
+			let list = [];
+			for (let val of this.goods.list) {
+				for (let val2 of this.goods.select) {
+					if (val.id === val2.id) {
+						val.num = val2.num;
+						list.push(val);
+						break;
+					}
+				}
+			}
+			this.$nextTick(() => {
+				// 回显所选物品
+				list.forEach((e) => {
+					this.$refs.goods_table.toggleRowSelection(e);
+				});
+			});
+		},
+		// 删除物品
+		del_goods(index) {
+			if (this.goods.show) {
+				let t = this.goods.select[index];
+				this.goods.select.splice(index, 1);
+				// 删除完后 要取消当前页物品列表的勾选
+				this.$refs.goods_table.toggleRowSelection(t, false);
+			} else {
+				this.new_meeting_form.goods.splice(index, 1);
+			}
+		},
+		// 选择物品
+		select_goods(selects) {
+			// 找出未在当前页勾选列表中的项 再到总勾选列表中找
+			// 与自己写的列表不同点在于 自己写的列表可以绑定事件 知道是哪一条触发点击 从而只对这一条进行增减
+			// 而element列表 勾选项改变后 只知道哪些勾选了 所以要筛出未勾选的 再与总勾选列表对比
+			let list2 = [];
+			for (let val of this.goods.list) {
+				let find = false;
+				for (let val2 of selects) {
+					if (val.id === val2.id) {
+						find = true;
+						break;
+					}
+				}
+				if (!find) {
+					list2.push(val);
+				}
+			}
+			for (let val of list2) {
+				for (let i = 0; i < this.goods.select.length; i++) {
+					if (val.id === this.goods.select[i].id) {
+						this.goods.select.splice(i, 1);
+						break;
+					}
+				}
+			}
+			// 当前页已选列表对比总勾选列表 未找到的就添加到总勾选列表
+			let list = [];
+			for (let val of selects) {
+				let find = false;
+				for (let val2 of this.goods.select) {
+					if (val.id === val2.id) {
+						find = true;
+						break;
+					}
+				}
+				if (!find) {
+					list.push(val);
+				}
+			}
+			this.goods.select.push(...list);
+		},
+		// 确认添加选择的物品
+		add_goods() {
+			for (let val of this.goods.select) {
+				if (!this.is_num(val.num, false)) {
+					// 提交校验时 不能有不合规的数量
+					this.$message.error('物品数量不正确');
+					return;
+				}
+			}
+			this.new_meeting_form.goods = this.goods.select;
+			this.goods.show = false;
+		},
+		// 不能输入非数字及小数点
+		is_num(input, type) {
+			let reg = /^[1-9][0-9]*$/;
+			let result = reg.test(input);
+			// 只有失去焦点时才提示消息 提交验证时不提示
+			if (!result && type) {
+				this.$message.error('只能填入整数！');
+			}
+			return result;
+		},
+		// 查询会议室详情
+		async place_detail(room_id) {
+			this.place.show = true;
+			this.html.add_person_loading = true;
+			for (let val of this.place.list) {
+				val.content = '';
+			}
+			let {
+				data: {
+					data: { data: users },
+				},
+			} = await this.request('post', user_name_url, this.token, {
+				condition: {},
+				pageNum: 1,
+				pageSize: 999,
+			});
+			let { data: res } = await this.request('get', `${place_detail_url}/${room_id}`, this.token);
+			this.html.add_person_loading = false;
+			if (res.head.code !== 200 || !res.data) {
+				return;
+			}
+			this.place.list[0].content = res.data.roomName;
+			this.place.list[1].content = res.data.address;
+			this.place.list[2].content = res.data.conferencingEquipment;
+			this.place.list[3].content = res.data.functionalPosition;
+			this.place.list[4].content = res.data.num;
+			this.place.list[5].content = res.data.typeName;
+			for (let val of users) {
+				if (val.id === res.data.managementUser) {
+					this.place.list[6].content = val.username;
+				}
+			}
+			this.place.list[7].content = res.data.approve ? '是' : '否';
+			if (res.data.approve) {
+				this.place.list[8].content = res.data.auditBranchName;
+			}
 		},
 	},
 	computed: {

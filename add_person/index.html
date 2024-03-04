@@ -72,7 +72,8 @@
         </div>
 
         <el-pagination class="paging" @current-change="get_person_data(form.option_select,$event)"
-          layout="prev, pager, next" :total="form.total_person" :page-size="form.page_size"></el-pagination>
+          layout="prev, pager, next" :total="form.total_person" :page-size="form.page_size"
+          :current-page="form.cur_page"></el-pagination>
       </div>
     </div>
     <div class="right">

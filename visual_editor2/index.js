@@ -28,6 +28,13 @@ new Vue({
 		component_list: [], //组件列表
 		// data_and_path: [], //对象数组 存储数据和路径
 		radio: 0, //所有组件缩放比例
+		device_status: {
+			show: false, //设备状态显示
+			style: {}, // 面板样式
+			name: '', //设备名
+			is_normal: true, //设备状态
+			list: [], //属性列表
+		},
 	},
 	beforeCreate() {
 		Vue.prototype.$bus = this;
@@ -60,6 +67,13 @@ new Vue({
 		});
 		this.$bus.$on('turn_to_page', (page_id) => {
 			this.page_id = page_id;
+		});
+		this.$bus.$on('device_status', ({ list, show, style, name, is_normal }) => {
+			this.device_status.list = list;
+			this.device_status.show = show;
+			this.device_status.style = style;
+			this.device_status.name = name;
+			this.device_status.is_normal = is_normal;
 		});
 	},
 	methods: {
@@ -310,7 +324,11 @@ new Vue({
 		},
 		// 让设备开始上报
 		start_report(device_id) {
-			this.request('put', `${decive_report_url}/${device_id}`);
+			this.request('put', `${decive_report_url}/${device_id}`, this.token);
+		},
+		// 设备属性面板 自定义样式
+		device_status_style(style) {
+			return style;
 		},
 	},
 });

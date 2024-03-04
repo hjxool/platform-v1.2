@@ -12,6 +12,7 @@ let get_vote_result_url = `${url}api-portal/meeting-voting/result`; //查询投�
 let download_vote_result_url = `${url}api-portal/meeting-voting/download`; //下载投票结果
 let operate_vote_url = `${url}api-portal/meeting-voting/option`; //操作投票
 let pass_on_detail_url = `${url}api-portal/meeting/user/transfer`; //查询参会人员转交记录
+let download_goods_url = `${url}api-portal/things/download`; // 下载会议物品
 
 new Vue({
 	el: '#index',
@@ -32,6 +33,11 @@ new Vue({
 			qr_src: '', //签到二维码
 			status: -1, //会议状态
 			open_door_code: '', //开门码
+			ding: {
+				show: false, // 是否显示钉钉
+				url: '', // 钉钉会议号
+				code: '', // 钉钉会议号
+			},
 		},
 		user_list: [], //参会人员列表
 		id: '', //会议id
@@ -47,6 +53,9 @@ new Vue({
 		pass: {
 			show: false, //弹窗
 			list: [],
+		},
+		goods: {
+			list: [], // 物品列表
 		},
 	},
 	beforeCreate() {
@@ -110,7 +119,10 @@ new Vue({
 		get_data() {
 			this.html.user_type = 0;
 			for (let key in this.meeting_detail) {
-				this.meeting_detail[key] = '';
+				// ding不重置
+				if (key !== 'ding') {
+					this.meeting_detail[key] = '';
+				}
 			}
 			this.user_list = [];
 			return new Promise((resolve, reject) => {
@@ -222,6 +234,26 @@ new Vue({
 					// 有开门码则显示
 					if (this.meeting_obj.doorCode) {
 						this.meeting_detail.open_door_code = this.meeting_obj.doorCode;
+					}
+					// 会议物品
+					if (this.meeting_obj.meetingThings) {
+						this.goods.list = [];
+						for (let val of this.meeting_obj.meetingThings) {
+							this.goods.list.push({
+								name: val.name,
+								num: val.quantity,
+								unit: val.unit,
+							});
+						}
+					}
+					// 钉钉相关字段中有值才显示钉钉信息
+					this.meeting_detail.ding.show = false;
+					for (let val of this.meeting_obj.meetingThirdProviderList) {
+						if (val.serviceProvider === 'dingTalk' && val.content) {
+							this.meeting_detail.ding.show = true;
+							this.meeting_detail.ding.code = val.content.roomCode;
+							this.meeting_detail.ding.url = val.content.url;
+						}
 					}
 					this.$nextTick(() => {
 						// 编辑器
@@ -554,6 +586,32 @@ new Vue({
 			await this.get_vote_list();
 			await this.get_data();
 			this.refreshing = false;
+		},
+		// 下载会议物品
+		download_goods() {
+			axios({
+				method: 'get',
+				url: `${download_goods_url}/${this.meeting_obj.id}`,
+				responseType: 'blob',
+				headers: { Authorization: `Bearer ${this.token}` },
+			}).then((res) => {
+				let a = document.createElement('a');
+				let href = URL.createObjectURL(res.data);
+				a.href = href;
+				a.target = '_blank';
+				let filename;
+				let t = res.headers['content-disposition'].replace(/\s/g, '').split(';');
+				for (let val of t) {
+					if (val.match(/^filename/) != null) {
+						filename = decodeURIComponent(val.split('=')[1]);
+					}
+				}
+				a.download = filename || '';
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+				URL.revokeObjectURL(href);
+			});
 		},
 	},
 });

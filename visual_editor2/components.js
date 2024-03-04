@@ -29,17 +29,18 @@ const fn = {
 						}
 						break;
 				}
-			} else if (this.obj.type === 'model-stat-list') {
+			} else if (this.obj.shapeNickname == '设备节点') {
 				// 本质是多属性回显 以往组件是单属性回显
-				if (this.obj.deviceId !== res.device_id) {
-					return;
-				}
-				// 只要设备id匹配 把原先的单属性解析改为遍历取出每个属性解析并并存到数组下而不是this.value
-				for (let val of this.status) {
-					// analysis_path原先没设计有多属性回显 因此用的全局变量 这里设置全局变量 用完后置空
-					// this.data_type = val.type;
-					val.value = this.analysis_path(val.path, 0, res.data);
-					// this.data_type = null;
+				if (this.obj.dataConfig.deviceId === res.device_id) {
+					// 设备状态
+					this.is_normal = res.device_status === 5;
+					// 只要设备id匹配 把原先的单属性解析改为遍历取出每个属性解析并并存到数组下而不是this.value
+					for (let val of this.status) {
+						// analysis_path原先没设计有多属性回显 因此用的全局变量 这里设置全局变量 用完后置空
+						// this.data_type = val.type;
+						val.value = this.analysis_path(val.path, 0, res.data);
+						// this.data_type = null;
+					}
 				}
 			} else {
 				// 有回显数据时 传入的是一个原始结构对象 根据path属性解析路径取任意层级的值
@@ -157,7 +158,7 @@ const fn = {
 									// 所有值转化成字符串匹配
 									this.value = value + '';
 									break;
-								case 'model-stat-list':
+								default:
 									return value;
 							}
 						} else {
@@ -232,6 +233,8 @@ let customText = {
 			let t = this.style(obj_data);
 			if (obj_data.style.fontSize) {
 				t['fontSize'] = obj_data.style.fontSize * this.radio + 'px';
+			} else {
+				t['fontSize'] = 14 * this.radio + 'px';
 			}
 			if (obj_data.style.fontWeight) {
 				t['fontWeight'] = obj_data.style.fontWeight;
@@ -242,11 +245,8 @@ let customText = {
 			if (obj_data.style.backgroundColor) {
 				t['backgroundColor'] = obj_data.style.backgroundColor;
 			}
-			if (obj_data.style.fontColor) {
-				t['fontColor'] = obj_data.style.fontColor;
-			}
 			if (obj_data.style.strokeWidth) {
-				t['borderWidth'] = obj_data.style.strokeWidth;
+				t['borderWidth'] = obj_data.style.strokeWidth + 'px';
 			}
 			if (obj_data.style.stroke) {
 				t['borderColor'] = obj_data.style.stroke;
@@ -659,24 +659,25 @@ let customLine = {
 // 设备节点状态显示
 let customDeviceStatus = {
 	template: `
-    <div class="device_status center" :style="style(obj)">
-      <div class="box">
-        <div class="text_ellipsis" v-for="item in status">
-          {{item.label}}：{{item.value}}
-        </div>
-      </div>
-    </div>
-  `,
+  <div :style="style(obj)" @mouseenter="hover(true)" @mouseleave="hover(false)" @click="go_to">
+    <img class="bg_img" :src="obj.imageUrl">
+    <!-- 设备名称 -->
+    <div class="device_name">{{obj.nickName}}</div>
+  </div>
+`,
+	props: ['page_width'],
 	mixins: [common_functions, fn],
 	data() {
 		return {
-			status: [], // 设备状态列表
+			status: [], // 设备属性列表
+			is_normal: true, //设备是否异常
+			has_status: this.obj.dataConfig.showStat || false, // 设备节点是否开启状态面板
 		};
 	},
 	beforeMount() {
 		// 初始化状态列表
-		if (this.obj.data?.list) {
-			for (let val of this.obj.data.list) {
+		if (this.obj.dataConfig?.nodeData) {
+			for (let val of this.obj.dataConfig.nodeData) {
 				let t = {
 					label: val.attrName,
 					path: this.init_path(val.attrPath),
@@ -686,6 +687,44 @@ let customDeviceStatus = {
 				this.status.push(t);
 			}
 		}
+	},
+	methods: {
+		// 跳转到设备页
+		// 设备页需要区分可视化等参数 只需要返回给外层页面设备id 由外层页面查
+		go_to() {
+			window.parent.postMessage({ device_id: this.obj.dataConfig.deviceId });
+		},
+		// 悬浮在设备节点时创造并显示 属性面板
+		hover(show) {
+			// 没有开启不执行
+			if (!this.has_status) {
+				return;
+			}
+			let { backgroundColor, h, textColor, w } = this.obj.dataConfig.statPanelStyle;
+			// 浏览器缩放时 里面元素会等比例变化 只要对比原始大小是否超出宽度
+			let left;
+			let parent_left = this.obj.x + this.obj.w * 0.5;
+			if (this.obj.dataConfig.w + parent_left > this.page_width) {
+				left = `${(this.obj.x - w) * this.radio}px`;
+			} else {
+				left = `${(this.obj.w + this.obj.x) * this.radio}px`;
+			}
+			this.$bus.$emit('device_status', {
+				list: this.status,
+				show,
+				style: {
+					width: `${w * this.radio}px`,
+					// 默认显示在中心点右下
+					// 因为父元素图层可能在下面 所以悬浮面板会被遮盖 所以要用fixed定位 需要计算父元素定位
+					top: `${(this.obj.h / 2 + this.obj.y) * this.radio}px`,
+					backgroundColor,
+					color: textColor,
+					left,
+				},
+				name: this.obj.nickName,
+				is_normal: this.is_normal,
+			});
+		},
 	},
 };
 // 按钮

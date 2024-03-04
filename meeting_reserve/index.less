@@ -424,6 +424,69 @@
 			flex-grow: 1;
 			overflow: hidden;
 		}
+		// 物品样式
+		> .goods_box {
+			display: grid;
+			grid-template-columns: 2fr 1fr;
+			> .left {
+				display: flex;
+				flex-direction: column;
+				overflow: hidden;
+				padding: 10px;
+				border-right: 1px solid #e2e4e5;
+				> .goods_list_box {
+					flex-grow: 1;
+					overflow: hidden;
+					display: flex;
+					flex-direction: column;
+				}
+			}
+			> .right {
+				padding: 10px;
+				overflow: hidden;
+				display: flex;
+				flex-direction: column;
+				> .margin1 {
+					margin-bottom: 10px;
+				}
+				> .scroll {
+					flex-grow: 1;
+					padding-right: 10px;
+					overflow: auto;
+					display: flex;
+					flex-wrap: wrap;
+					align-content: start;
+					> .person {
+						background: rgba(105, 105, 105, 0.2);
+						padding: 6px 10px;
+						width: 140px;
+						margin: 6px 0 6px 8px;
+						display: flex;
+						align-items: center;
+						overflow: hidden;
+						border-radius: 6px;
+						> .name {
+							flex-grow: 1;
+							font-size: 14px;
+							margin-right: auto;
+						}
+					}
+				}
+				> .submit {
+					padding-top: 10px;
+					align-self: end;
+				}
+			}
+		}
+		// 会议室详情样式
+		.place_detail_row {
+			padding: 10px 0;
+			display: flex;
+			> .title {
+				width: 100px;
+				font-weight: bold;
+			}
+		}
 	}
 }
 .meeting_info_box {
@@ -448,6 +511,37 @@
 	align-self: center;
 	padding: 20px 0;
 }
+// 列表框
+.list_box {
+	width: 100%;
+	min-height: 40px;
+	border: 1px solid #eaebed;
+	border-radius: 6px;
+	display: flex;
+	flex-wrap: wrap;
+	overflow-x: hidden;
+	.person {
+		background-color: #f2f2f7;
+		padding: 6px 10px;
+		width: 100px;
+		margin: 6px 0 6px 8px;
+		display: flex;
+		align-items: center;
+		overflow: hidden;
+		border-radius: 6px;
+		> .icon1 {
+			font-weight: bold;
+			font-size: 12px;
+			margin-right: 6px;
+		}
+		> .name {
+			flex-grow: 1;
+			font-size: 14px;
+			margin-right: auto;
+			line-height: initial; //element的行高会影响内部未设置行高的字体元素
+		}
+	}
+}
 
 ::-webkit-scrollbar {
 	/*滚动条整体样式*/
@@ -465,9 +559,13 @@
 	background: #404755;
 }
 .el-scrollbar__wrap {
-	overflow: hidden;
+	overflow-x: hidden;
 }
 #add_person {
 	width: 100%;
 	height: 100%;
+}
+// 物品
+#goods_table {
+	flex-grow: 1;
 }
