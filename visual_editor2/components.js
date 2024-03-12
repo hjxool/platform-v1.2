@@ -240,7 +240,7 @@ let customText = {
 				t['fontWeight'] = obj_data.style.fontWeight;
 			}
 			if (obj_data.style.fontColor) {
-				t['fontColor'] = obj_data.style.fontColor;
+				t['color'] = obj_data.style.fontColor;
 			}
 			if (obj_data.style.backgroundColor) {
 				t['backgroundColor'] = obj_data.style.backgroundColor;

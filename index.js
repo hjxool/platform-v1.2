@@ -124,6 +124,12 @@ new Vue({
 				case 'app_add_person':
 					location.href = `./移动端/add_person/index.html${location.search}`;
 					return;
+				case 'wirelessmircophone':
+					path = 'wirelessmircophone';
+					break;
+				case 'DS-CS310M':
+					path = 'other/DS-CS310M';
+					break;
 				default:
 					location.href = `${this.path}${location.search}`;
 					return;
