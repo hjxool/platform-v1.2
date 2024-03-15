@@ -48,7 +48,7 @@ new Vue({
 				],
 			},
 			date: null, //日期范围
-			status: 'all', //会议状态
+			status: 'all', //审核状态
 			status_options: [
 				// 状态类型
 				{ value: 'all', label: '全部' },
@@ -56,6 +56,15 @@ new Vue({
 				{ value: 0, label: '已撤回' },
 				{ value: 1, label: '审核中' },
 				{ value: 2, label: '审核通过' },
+			],
+			meeting_status: 'all', // 会议状态
+			meeting_status_options: [
+				{ value: 'all', label: '全部' },
+				{ value: '-1', label: '已取消' },
+				{ value: '0', label: '未开始' },
+				{ value: '1', label: '进行中' },
+				{ value: '2', label: '已结束' },
+				{ value: '3', label: '已过期' },
 			],
 			size: 20, //一页显示条数
 			delay_set_show: false, // 延迟弹窗显示
@@ -153,6 +162,11 @@ new Vue({
 				this.pass.list = data.data;
 			}
 		};
+		if (sessionStorage.meetingStatus) {
+			// 获取其他页面跳转过来的参数
+			this.html.meeting_status = sessionStorage.meetingStatus;
+			sessionStorage.removeItem('meetingStatus');
+		}
 		this.get_data();
 		this.$nextTick(() => {
 			this.table_height();
@@ -208,8 +222,10 @@ new Vue({
 				let t2 = this.html.date[1];
 				c.endTime = `${t2.getFullYear()}-${t2.getMonth() + 1 < 10 ? '0' + (t2.getMonth() + 1) : t2.getMonth() + 1}-${t2.getDate() < 10 ? '0' + t2.getDate() : t2.getDate()} 23:59:59`;
 			}
+			if (this.html.meeting_status !== 'all') {
+				c.meetingStatus = this.html.meeting_status;
+			}
 			this.request('post', search_meeting_url, this.token, { condition: c, pageNum: this.current_page || 1, pageSize: this.html.size, keyword: this.html.search }, (res) => {
-				console.log('会议列表', res);
 				this.html.loading = false;
 				if (res.data.head.code != 200) {
 					return;

@@ -252,7 +252,8 @@ new Vue({
 						if (val.serviceProvider === 'dingTalk' && val.content) {
 							this.meeting_detail.ding.show = true;
 							this.meeting_detail.ding.code = val.content.roomCode;
-							this.meeting_detail.ding.url = val.content.url;
+							let t = val.content.url.split('/j/');
+							this.meeting_detail.ding.url = `${t[0]}/app/room?linkId=${t[1]}`;
 						}
 					}
 					this.$nextTick(() => {

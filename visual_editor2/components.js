@@ -703,11 +703,11 @@ let customDeviceStatus = {
 			let { backgroundColor, h, textColor, w } = this.obj.dataConfig.statPanelStyle;
 			// 浏览器缩放时 里面元素会等比例变化 只要对比原始大小是否超出宽度
 			let left;
-			let parent_left = this.obj.x + this.obj.w * 0.5;
-			if (this.obj.dataConfig.w + parent_left > this.page_width) {
+			let parent_left = this.obj.x + this.obj.w;
+			if (w + parent_left > this.page_width) {
 				left = `${(this.obj.x - w) * this.radio}px`;
 			} else {
-				left = `${(this.obj.w + this.obj.x) * this.radio}px`;
+				left = `${parent_left * this.radio}px`;
 			}
 			this.$bus.$emit('device_status', {
 				list: this.status,
@@ -715,7 +715,6 @@ let customDeviceStatus = {
 				style: {
 					width: `${w * this.radio}px`,
 					// 默认显示在中心点右下
-					// 因为父元素图层可能在下面 所以悬浮面板会被遮盖 所以要用fixed定位 需要计算父元素定位
 					top: `${(this.obj.h / 2 + this.obj.y) * this.radio}px`,
 					backgroundColor,
 					color: textColor,
