@@ -71,6 +71,12 @@
                 <div class="box3">
                   <el-tag class="margin" type="info">{{item.fileTypeString}}</el-tag>
                   <!-- <el-tag class="margin">{{item.size}}</el-tag> -->
+
+                  <!-- 图片配置 -->
+                  <div class="row_layout" v-show="item.fileTypeString==='图片'">
+                    <div class="margin">是否拉伸</div>
+                    <el-switch v-model="item.is_stretch" size="mini"></el-switch>
+                  </div>
                 </div>
               </div>
             </div>

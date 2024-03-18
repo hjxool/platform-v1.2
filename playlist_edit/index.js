@@ -134,6 +134,10 @@ new Vue({
 									this.$set(val, 'docTotalPage', res.data.data);
 								});
 							}
+							// 兼容老数据 图片新增拉伸属性
+							if (val.fileTypeString === '图片') {
+								val.is_stretch = val.is_stretch || false;
+							}
 							list.push(val);
 						}
 					}
@@ -159,6 +163,9 @@ new Vue({
 							val.check = false; // 添加属性
 							val.time_format = this.format_time(Number(val.fileDuration || 0) || Number(val.duration || (val.fileTypeString.indexOf('模板') == -1 ? 5 : 0))); // 添加属性
 							val.img = val.thumbnailUrl || './img/icon.png'; //重定向属性 改成统一字段
+							if (val.fileTypeString === '图片') {
+								val.is_stretch = val.isStretch || false;
+							}
 						}
 						this.form.list = data.fileList;
 					});
@@ -931,6 +938,10 @@ new Vue({
 					// 添加新属性
 					this.$set(val, 'cycleNum', 1);
 					this.$set(val, 'time_format', this.format_time(Number(val.fileDuration || '') || Number(val.duration || (val.fileTypeString.indexOf('模板') == -1 ? 5 : 0))));
+					// 图片配置
+					if (val.fileTypeString === '图片') {
+						this.$set(val, 'is_stretch', false);
+					}
 					this.form.list.push(val);
 				}
 			}
@@ -1092,6 +1103,9 @@ new Vue({
 						duration: val.fileDuration || val.duration,
 						fileId: val.fileId,
 					};
+					if (val.fileTypeString === '图片') {
+						t.isStretch = val.is_stretch;
+					}
 					body.fileList.push(t);
 				}
 				this.html.loading = true;
