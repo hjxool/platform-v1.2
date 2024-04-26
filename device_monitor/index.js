@@ -143,6 +143,8 @@ let vm = new Vue({
 		get_place_devices(id) {
 			if (id) {
 				this.status.place_id = id;
+				// 只有点击场所时才会传入id 也只有此时才需要给父页面发送消息
+				window.parent.postMessage({ id, type: '设备监控切换场所' });
 			}
 			this.status.place_devices = [];
 			this.status.place_types = [

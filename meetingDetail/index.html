@@ -30,115 +30,126 @@
     </div>
     <div class="body" v-loading="html.loading">
       <div class="left">
-        <!-- 会议信息 -->
-        <el-card class="box1" shadow="never">
+        <template v-if="!html.is_parperless">
+          <!-- 会议信息 -->
+          <el-card class="box1" shadow="never">
+            <div slot="header" class="row_layout">
+              <i class="el-icon-info title_icon" style="color: #f02424;"></i>
+              <span class="title">会议信息</span>
+            </div>
+            <div class="text1 text_ellipsis">{{meeting_detail.time||'空'}}</div>
+            <div class="text1 text_ellipsis" :title="meeting_detail.place">会议地点：{{meeting_detail.place}}</div>
+            <div class="text1 text_ellipsis">主持人：{{meeting_detail.user}}</div>
+            <template v-if="meeting_detail.ding.show">
+              <div class="row_layout text1">
+                <div>钉钉：</div>
+                <a target="_blank" :href="meeting_detail.ding.url">点击跳转</a>
+              </div>
+              <div class="text1 text_ellipsis">钉钉会议号：{{meeting_detail.ding.code}}</div>
+            </template>
+          </el-card>
+          <!-- 会议附件 -->
+          <el-card class="box1" style="margin-left: 10px;" shadow="never">
+            <div slot="header" class="row_layout" style="justify-content:space-between;">
+              <div>
+                <i class="el-icon-folder-opened title_icon" style="color: #0770FF;"></i>
+                <span class="title">会议附件</span>
+              </div>
+              <el-button @click="click_add" type="primary" round size="mini">添加</el-button>
+              <input id="add_file" @change="add_file" type="file" style="display: none;">
+            </div>
+            <div class="text2" v-if="!meeting_detail.files.length">无</div>
+            <div style="overflow-x: hidden;">
+              <div class="text2 row_layout" v-for="item in meeting_detail.files">
+                <span :title="item.fileName" class="text_ellipsis">文件名：{{item.fileName}}</span>
+                <el-button @click="download_files(item)" class="flex_shrink" style="margin-left: auto;" size="small"
+                  type="text">下载</el-button>
+                <i @click="del_file(item)" class="el-icon-close button" style="margin-left:20px;"></i>
+              </div>
+            </div>
+          </el-card>
+          <!-- 参会人 -->
+          <el-card class="box2" shadow="never">
+            <div slot="header" class="row_layout">
+              <i class="el-icon-user-solid title_icon" style="color: #00CD41;"></i>
+              <span class="title">参会人</span>
+              <el-radio-group v-model="html.user_type" size="mini" style="margin-left: auto;">
+                <el-radio-button :label="0">所有</el-radio-button>
+                <el-radio-button :label="1">已签到</el-radio-button>
+                <el-radio-button :label="2">未签到</el-radio-button>
+                <el-radio-button :label="3">未回复</el-radio-button>
+                <el-radio-button :label="4">已回复</el-radio-button>
+              </el-radio-group>
+            </div>
+            <el-table :data="user_list[html.user_type]" max-height="250">
+              <el-table-column prop="username" label="姓名" width="200"></el-table-column>
+              <el-table-column prop="phone" label="电话" width="200"></el-table-column>
+              <el-table-column label="签到状态" width="100">
+                <template slot-scope="scope">
+                  <el-tag v-if="!scope.row.signIn" size="medium">未签到</el-tag>
+                  <el-tag v-if="scope.row.signIn==1" type="success" size="medium">已签到</el-tag>
+                  <el-tag v-if="scope.row.signIn==2" type="warning" size="medium">迟到</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="转交记录" width="100">
+                <template slot-scope="scope">
+                  <el-button @click="pass_on_detail(scope.row)" :disabled="scope.row.isGuest"
+                    size="small">查看</el-button>
+                </template>
+              </el-table-column>
+              <el-table-column label="回复状态及原因">
+                <template slot-scope="scope">
+                  <div class="row_layout">
+                    <div class="flex_shrink" style="margin-right: 10px;">
+                      <el-tag v-if="scope.row.reply===0" type="warning" size="medium">不参加</el-tag>
+                      <el-tag v-if="scope.row.reply===1" type="success" size="medium">参加</el-tag>
+                      <el-tag v-if="scope.row.reply===null" size="medium">未回复</el-tag>
+                    </div>
+
+                    <span style="margin-right: 4px;">{{scope.row.reply===0?'原因:':''}}</span>
+
+                    <span v-if="scope.row.reply===0">{{scope.row.replyMsg?scope.row.replyMsg:'空'}}</span>
+                  </div>
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-card>
+          <!-- 投票 -->
+          <el-card class="box2" shadow="never" :body-style="{padding:'0 20px'}">
+            <div slot="header" class="row_layout">
+              <i class="el-icon-thumb title_icon" style="color: #00CD41;"></i>
+              <span class="title">会议投票</span>
+
+              <div class="row_layout flex_shrink" style="margin-left: auto;">
+                <el-button @click="edit_vote_show()" type="primary" round size="mini">新增投票</el-button>
+                <el-button v-show="vote.list.length" @click="export_result" type="primary" round
+                  size="mini">导出投票结果</el-button>
+              </div>
+            </div>
+
+            <component_meeting-vote-list :max-height="300" :vote-list="vote.list"
+              :meeting-status="meeting_detail.status" :meeting-id="id"></component_meeting-vote-list>
+          </el-card>
+          <!-- 会议纪要 -->
+          <el-card class="box2" v-show="meeting_detail.save" shadow="never">
+            <div slot="header" class="row_layout">
+              <i class="el-icon-s-order title_icon" style="color: #00CD41;"></i>
+              <span class="title">会议纪要</span>
+              <el-button @click="save_summary(0)" style="margin-left:auto;" type="primary" round>保存</el-button>
+              <el-button @click="save_summary(1)" style="margin-left:20px;" round>提交</el-button>
+              <el-button @click="download_summary" style="margin-left:20px;" type="warning" size="small">导出</el-button>
+            </div>
+            <div id="editor_tool"></div>
+            <div id="editor_input"></div>
+          </el-card>
+        </template>
+
+        <el-card v-if="html.is_parperless" class="paperless_box" :body-style="{padding:0,flexGrow:1}" shadow="never">
           <div slot="header" class="row_layout">
             <i class="el-icon-info title_icon" style="color: #f02424;"></i>
             <span class="title">会议信息</span>
           </div>
-          <div class="text1 text_ellipsis">{{meeting_detail.time||'空'}}</div>
-          <div class="text1 text_ellipsis" :title="meeting_detail.place">会议地点：{{meeting_detail.place}}</div>
-          <div class="text1 text_ellipsis">主持人：{{meeting_detail.user}}</div>
-          <template v-if="meeting_detail.ding.show">
-            <div class="row_layout text1">
-              <div>钉钉：</div>
-              <a target="_blank" :href="meeting_detail.ding.url">点击跳转</a>
-            </div>
-            <div class="text1 text_ellipsis">钉钉会议号：{{meeting_detail.ding.code}}</div>
-          </template>
-        </el-card>
-        <!-- 会议附件 -->
-        <el-card class="box1" style="margin-left: 10px;" shadow="never">
-          <div slot="header" class="row_layout" style="justify-content:space-between;">
-            <div>
-              <i class="el-icon-folder-opened title_icon" style="color: #0770FF;"></i>
-              <span class="title">会议附件</span>
-            </div>
-            <el-button @click="click_add" type="primary" round size="mini">添加</el-button>
-            <input id="add_file" @change="add_file" type="file" style="display: none;">
-          </div>
-          <div class="text2" v-if="!meeting_detail.files.length">无</div>
-          <div style="overflow-x: hidden;">
-            <div class="text2 row_layout" v-for="item in meeting_detail.files">
-              <span :title="item.fileName" class="text_ellipsis">文件名：{{item.fileName}}</span>
-              <el-button @click="download_files(item)" class="flex_shrink" style="margin-left: auto;" size="small"
-                type="text">下载</el-button>
-              <i @click="del_file(item)" class="el-icon-close button" style="margin-left:20px;"></i>
-            </div>
-          </div>
-        </el-card>
-        <!-- 参会人 -->
-        <el-card class="box2" shadow="never">
-          <div slot="header" class="row_layout">
-            <i class="el-icon-user-solid title_icon" style="color: #00CD41;"></i>
-            <span class="title">参会人</span>
-            <el-radio-group v-model="html.user_type" size="mini" style="margin-left: auto;">
-              <el-radio-button :label="0">所有</el-radio-button>
-              <el-radio-button :label="1">已签到</el-radio-button>
-              <el-radio-button :label="2">未签到</el-radio-button>
-              <el-radio-button :label="3">未回复</el-radio-button>
-              <el-radio-button :label="4">已回复</el-radio-button>
-            </el-radio-group>
-          </div>
-          <el-table :data="user_list[html.user_type]" max-height="250">
-            <el-table-column prop="username" label="姓名" width="200"></el-table-column>
-            <el-table-column prop="phone" label="电话" width="200"></el-table-column>
-            <el-table-column label="签到状态" width="100">
-              <template slot-scope="scope">
-                <el-tag v-if="!scope.row.signIn" size="medium">未签到</el-tag>
-                <el-tag v-if="scope.row.signIn==1" type="success" size="medium">已签到</el-tag>
-                <el-tag v-if="scope.row.signIn==2" type="warning" size="medium">迟到</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="转交记录" width="100">
-              <template slot-scope="scope">
-                <el-button @click="pass_on_detail(scope.row)" :disabled="scope.row.isGuest" size="small">查看</el-button>
-              </template>
-            </el-table-column>
-            <el-table-column label="回复状态及原因">
-              <template slot-scope="scope">
-                <div class="row_layout">
-                  <div class="flex_shrink" style="margin-right: 10px;">
-                    <el-tag v-if="scope.row.reply===0" type="warning" size="medium">不参加</el-tag>
-                    <el-tag v-if="scope.row.reply===1" type="success" size="medium">参加</el-tag>
-                    <el-tag v-if="scope.row.reply===null" size="medium">未回复</el-tag>
-                  </div>
-
-                  <span style="margin-right: 4px;">{{scope.row.reply===0?'原因:':''}}</span>
-
-                  <span v-if="scope.row.reply===0">{{scope.row.replyMsg?scope.row.replyMsg:'空'}}</span>
-                </div>
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-card>
-        <!-- 投票 -->
-        <el-card class="box2" shadow="never" :body-style="{padding:'0 20px'}">
-          <div slot="header" class="row_layout">
-            <i class="el-icon-thumb title_icon" style="color: #00CD41;"></i>
-            <span class="title">会议投票</span>
-
-            <div class="row_layout flex_shrink" style="margin-left: auto;">
-              <el-button @click="edit_vote_show()" type="primary" round size="mini">新增投票</el-button>
-              <el-button v-show="vote.list.length" @click="export_result" type="primary" round
-                size="mini">导出投票结果</el-button>
-            </div>
-          </div>
-
-          <component_meeting-vote-list :max-height="300" :vote-list="vote.list" :meeting-status="meeting_detail.status"
-            :meeting-id="id"></component_meeting-vote-list>
-        </el-card>
-        <!-- 会议纪要 -->
-        <el-card class="box2" v-show="meeting_detail.save" shadow="never">
-          <div slot="header" class="row_layout">
-            <i class="el-icon-s-order title_icon" style="color: #00CD41;"></i>
-            <span class="title">会议纪要</span>
-            <el-button @click="save_summary(0)" style="margin-left:auto;" type="primary" round>保存</el-button>
-            <el-button @click="save_summary(1)" style="margin-left:20px;" round>提交</el-button>
-            <el-button @click="download_summary" style="margin-left:20px;" type="warning" size="small">导出</el-button>
-          </div>
-          <div id="editor_tool"></div>
-          <div id="editor_input"></div>
+          <iframe :src="html.paperless_url" style="width: 100%;height: 100%;" frameborder="0" scrolling="no"></iframe>
         </el-card>
       </div>
 

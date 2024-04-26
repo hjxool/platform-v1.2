@@ -13,6 +13,8 @@ let download_vote_result_url = `${url}api-portal/meeting-voting/download`; //下
 let operate_vote_url = `${url}api-portal/meeting-voting/option`; //操作投票
 let pass_on_detail_url = `${url}api-portal/meeting/user/transfer`; //查询参会人员转交记录
 let download_goods_url = `${url}api-portal/things/download`; // 下载会议物品
+let paperless_url = `${无纸化第三方地址}/#/ExternalMeetingDetail`; // 无纸化会议信息
+let paperless_data_url = `${url}api-portal/paperless/cache`; // 无纸化会议缓存数据
 
 new Vue({
 	el: '#index',
@@ -22,6 +24,8 @@ new Vue({
 			loading: false, //页面加载
 			user_type: 0, //参会人栏筛选条件
 			end_display: false, // 结束会议按钮显示
+			is_parperless: false, // 是否是无纸化会议
+			paperless_url: '', // 嵌入的无纸化会议
 		},
 		meeting_detail: {
 			time: '', //时间
@@ -76,12 +80,17 @@ new Vue({
 		} else {
 			await this.get_current_user();
 		}
-		await this.get_vote_list();
 		let dom = document.querySelectorAll('.echart1');
 		this.e1 = echarts.init(dom[0]);
 		this.e2 = echarts.init(dom[1]);
 		this.e3 = echarts.init(dom[2]);
+		// 右侧还有统计 必须要查一下
 		await this.get_data();
+		if (this.html.is_parperless) {
+			this.get_code();
+		} else {
+			this.get_vote_list();
+		}
 		// console.log(this.tool.getConfig().toolbarKeys); // 查看默认配置键
 		window.addEventListener('resize', this.resize);
 		this.$bus.$on('vote_detail', this.edit_vote_show);
@@ -248,14 +257,18 @@ new Vue({
 					}
 					// 钉钉相关字段中有值才显示钉钉信息
 					this.meeting_detail.ding.show = false;
-					for (let val of this.meeting_obj.meetingThirdProviderList) {
-						if (val.serviceProvider === 'dingTalk' && val.content) {
-							this.meeting_detail.ding.show = true;
-							this.meeting_detail.ding.code = val.content.roomCode;
-							let t = val.content.url.split('/j/');
-							this.meeting_detail.ding.url = `${t[0]}/app/room?linkId=${t[1]}`;
+					if (this.meeting_obj.meetingThirdProviderList) {
+						for (let val of this.meeting_obj.meetingThirdProviderList) {
+							if (val.serviceProvider === 'dingTalk' && val.content) {
+								this.meeting_detail.ding.show = true;
+								this.meeting_detail.ding.code = val.content.roomCode;
+								let t = val.content.url.split('/j/');
+								this.meeting_detail.ding.url = `${t[0]}/app/room?linkId=${t[1]}`;
+							}
 						}
 					}
+					// 无纸化
+					this.html.is_parperless = this.meeting_obj.meetingType == '5';
 					this.$nextTick(() => {
 						// 编辑器
 						if (this.meeting_detail.save) {
@@ -613,6 +626,16 @@ new Vue({
 				document.body.removeChild(a);
 				URL.revokeObjectURL(href);
 			});
+		},
+		// 无纸化传入数据
+		async get_code() {
+			let {
+				data: { data: code },
+			} = await this.request('post', paperless_data_url, this.token, {
+				meetingId: this.id,
+			});
+			// 无纸化配置页面 传入token
+			this.html.paperless_url = `${paperless_url}?token=${this.token}&code=${code}`;
 		},
 	},
 });

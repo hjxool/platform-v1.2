@@ -17,6 +17,10 @@
 	display: flex;
 	align-items: center;
 }
+.col_layout {
+	display: flex;
+	flex-direction: column;
+}
 // 面板固定样式
 .panel {
 	width: 100%;
@@ -145,10 +149,6 @@
 		z-index: 10;
 	}
 }
-.popup_text {
-	padding: 10px 0;
-	cursor: pointer;
-}
 // 矩阵
 .matrix {
 	display: grid;
@@ -269,5 +269,179 @@ video::-webkit-media-controls-play-button {
 }
 // 图片伸缩
 .bg_img {
-	object-fit: contain;
+	// object-fit: contain;
+}
+// 当前会议及下场会议
+.cur_meeting {
+	padding: 1rem 1.5rem;
+	justify-content: space-between;
+	.icon1 {
+		width: 0.8rem;
+		height: 1rem;
+		margin-right: 0.6rem;
+	}
+	.text1 {
+		color: #3675ff;
+	}
+	.text2 {
+		font-size: 1.5rem;
+		color: #31313d;
+	}
+	> .box {
+		position: relative;
+		padding: 0.5rem 1rem;
+		width: 50%;
+		overflow: hidden;
+		color: #fff;
+		border-radius: 1000px;
+	}
+	.bg_img {
+		// object-fit: none;
+	}
+}
+// 会议结束倒计时
+.count_down {
+	align-items: center;
+	padding: 10px 0;
+	> .title {
+		color: #ffffff;
+	}
+	> .time_box {
+		font-size: 1.2rem;
+		color: #31313d;
+		margin-top: 10px;
+		> .time {
+			position: relative;
+			padding: 5px;
+			& + .time {
+				margin-left: 10px;
+			}
+			> .icon {
+				position: relative;
+				padding: 5px;
+				& + .icon {
+					margin-left: 5px;
+				}
+			}
+		}
+	}
+	.bg_img {
+		object-fit: none;
+	}
+}
+// 当前日期
+.current_date {
+	// background: linear-gradient(65deg, #c8ddfb 0%, #e4f1ff 100%);
+	border-radius: 10px;
+	// color: #31313d;
+	justify-content: center;
+}
+// 弹窗
+.popup_box {
+	position: fixed;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	z-index: 990;
+	background-color: rgba(0, 0, 0, 0.2);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	// 一键巡检弹窗
+	> .online_check {
+		width: 60%;
+		max-height: 100%;
+		overflow: hidden;
+		padding: 0 20px 20px 20px;
+		background: #fff;
+		border-radius: 10px;
+		> .head {
+			padding: 20px 0;
+			> .title {
+				margin: 0 auto;
+				font-weight: bold;
+			}
+		}
+	}
+	// 音视频矩阵容器
+	> .matrix_box {
+		border-radius: 10px;
+		background: #fff;
+		padding: 0 20px 20px 20px;
+		max-height: 100%;
+		overflow-x: hidden;
+		width: 80%;
+		min-width: 800px;
+		> .head {
+			padding: 20px 0;
+			> .title {
+				margin: 0 auto;
+				font-weight: bold;
+			}
+		}
+		// 音频矩阵
+		> .sound_matrix {
+			display: grid;
+			grid-template-rows: 30px auto;
+			> .head {
+				display: grid;
+				grid-template-columns: repeat(13, 1fr);
+				align-items: center;
+				justify-items: center;
+			}
+			> .body {
+				display: grid;
+				grid-template-columns: 1fr 12fr;
+				> .col {
+					display: grid;
+					grid-template-rows: repeat(9, 1fr);
+					align-items: center;
+					justify-items: center;
+				}
+				> .body {
+					display: grid;
+					grid-template-rows: repeat(9, 1fr);
+					> .row {
+						display: grid;
+						grid-template-columns: repeat(12, 1fr);
+						> .button {
+							min-height: 30px;
+						}
+					}
+				}
+			}
+			.title {
+				color: rgba(0, 0, 0, 0.8);
+			}
+		}
+		// 视频矩阵
+		> .video_matrix {
+			align-self: center;
+			display: grid;
+			grid-template-rows: repeat(4, 70px);
+			grid-template-columns: repeat(4, 140px);
+			> .button {
+				margin: 10px;
+				color: #fff;
+				font-weight: bold;
+				font-size: 14px;
+			}
+		}
+	}
+}
+// 下拉框
+.drop_down_box {
+	position: absolute;
+	z-index: 990;
+	background: #fff;
+	border-radius: 20px;
+	padding: 0 20px;
+	max-height: 200px;
+	max-width: 200px;
+	overflow-x: hidden;
+	> .item {
+		margin: 20px 0;
+	}
 }

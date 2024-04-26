@@ -17,10 +17,10 @@ new Vue({
 			list2: [], // 人员数组
 			stru_path: [], //组织结构路径 存储名字和索引id
 			select_list: [], //勾选的组织及人员列表
+			cur_path_id: '', //当前路径
 			page_size: 20,
 			total_person: 0,
 			option_select: 0, //按xxx搜索
-			cur_page: 1, //当前页
 		},
 		html: {
 			page_loading: false,
@@ -73,7 +73,6 @@ new Vue({
 					url = all_user_url;
 					c = {};
 				}
-				this.form.cur_page = page;
 				this.request('post', url, this.token, { pageNum: page, pageSize: this.form.page_size, condition: c, keyword: this.form.search }, (res) => {
 					console.log('检索结果', res);
 					this.html.page_loading = false;
@@ -134,7 +133,6 @@ new Vue({
 					url = all_layer_url;
 					c = { currentDeptId: id };
 				}
-				this.form.cur_page = page;
 				this.request('post', url, this.token, { pageNum: page, pageSize: this.form.page_size, condition: c }, (res) => {
 					console.log('检索结果', res);
 					this.html.page_loading = false;
@@ -142,6 +140,7 @@ new Vue({
 						return;
 					}
 					this.form.option_select = index;
+					this.form.cur_path_id = id;
 					let data = res.data.data;
 					this.form.list1 = [];
 					for (let val of data.sysDeptVOList) {
@@ -199,8 +198,8 @@ new Vue({
 		},
 		// 路径回退
 		path_back(obj, index) {
-			// 如果是当前展示的组织(末尾路径) 则不能再查
-			if (index != this.form.stru_path.length - 1) {
+			// 如果是当前展示的组织 则不能再查
+			if (this.form.cur_path_id !== obj.id) {
 				this.get_person_data(2, obj, index);
 			}
 		},
@@ -220,23 +219,30 @@ new Vue({
 		},
 		// 删除勾选的组织或人员
 		del_select(index) {
-			switch (obj.type) {
-				case 'person':
+			if (this.form.option_select == 1) {
+				for (let val of this.form.list2) {
+					if (val.id === this.form.select_list[index].id) {
+						val.check = false;
+						break;
+					}
+				}
+			} else if (this.form.option_select == 2) {
+				let find = false;
+				for (let val of this.form.list1) {
+					if (val.id === this.form.select_list[index].id) {
+						val.check = false;
+						find = true;
+						break;
+					}
+				}
+				if (!find) {
 					for (let val of this.form.list2) {
 						if (val.id === this.form.select_list[index].id) {
 							val.check = false;
 							break;
 						}
 					}
-					break;
-				case 'stru':
-					for (let val of this.form.list1) {
-						if (val.id === this.form.select_list[index].id) {
-							val.check = false;
-							break;
-						}
-					}
-					break;
+				}
 			}
 			this.form.select_list.splice(index, 1);
 		},
@@ -331,7 +337,6 @@ new Vue({
 						this.form.list2 = this.dep_backup[1].filter((val) => val.name.indexOf(this.form.search) !== -1);
 					} else {
 						this.form.list1 = this.dep_backup[0];
-						this.form.list2 = this.dep_backup[1];
 					}
 					break;
 			}

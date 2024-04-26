@@ -97,26 +97,32 @@
 
     <!-- 遮罩及新建会议弹窗 -->
     <div class="popover" v-if="html.new_meeting">
-      <div class="form_box" v-loading="html.form_loading">
+      <div id="reserve" class="form_box" v-loading="html.form_loading">
         <div class="form_head">
           <span class="text">预约会议</span>
-          <el-button @click="close_new" type="danger" icon="el-icon-close" circle size="mini"></el-button>
+          <div class="row_layout">
+            <el-button @click="full_screen" icon="el-icon-full-screen" circle title="放大" size="mini"></el-button>
+            <el-button @click="close_new" type="danger" icon="el-icon-close" circle size="mini"></el-button>
+          </div>
         </div>
 
-        <el-steps :active="new_meeting_form.step" finish-status="success" align-center>
+        <el-steps :active="new_meeting_form.step" finish-status="success" align-center simple>
           <el-step v-for="s in new_meeting_form.step_list" :title="step_text(s)"></el-step>
         </el-steps>
 
         <div class="form_body">
-          <el-form :model="new_meeting_form" :rules="new_rule" ref="new_meeting" label-width="110px">
+          <el-form v-show="new_meeting_form.step!==1" :model="new_meeting_form" :rules="new_rule" ref="new_meeting"
+            label-width="110px">
             <template v-if="!new_meeting_form.step">
               <el-form-item label="会议名称" prop="name">
                 <el-input v-model="new_meeting_form.name"></el-input>
               </el-form-item>
 
               <el-form-item label="会议类型" required>
-                <el-select v-model="new_meeting_form.type" :disabled="new_meeting_form.is_rebook">
-                  <el-option v-for="t in new_meeting_form.type_list" :key="t.id" :label="t.name" :value="t.id">
+                <el-select v-model="new_meeting_form.type" :disabled="new_meeting_form.is_rebook"
+                  @change="meeting_type_change">
+                  <el-option v-for="t in new_meeting_form.type_list" :key="t.id" :label="t.name" :value="t.id"
+                    :disabled="t.disabled">
                   </el-option>
                 </el-select>
               </el-form-item>
@@ -151,7 +157,8 @@
               </el-form-item>
 
               <el-form-item label="预约方式">
-                <el-select :disabled="new_meeting_form.is_rebook" v-model="new_meeting_form.method">
+                <el-select :disabled="new_meeting_form.is_rebook||new_meeting_form.type=='5'"
+                  v-model="new_meeting_form.method">
                   <el-option v-for="item,index in html.reserve_type" :label="item" :value="index">
                   </el-option>
                 </el-select>
@@ -166,6 +173,24 @@
                 <el-date-picker v-model="new_meeting_form.cycle_deadline" :picker-options="cycle_options()" type="date"
                   placeholder="选择日期">
                 </el-date-picker>
+              </el-form-item>
+
+              <el-form-item v-if="new_meeting_form.type=='5'" label="操作员" required>
+                <div class="person_box">
+                  <div class="box1">
+                    <div class="person button flex_shrink" @click="add_person_display('operator')">
+                      <i class="el-icon-plus icon1"></i>
+                      <span class="name">添加</span>
+                    </div>
+
+                    <div class="person flex_shrink" v-for="item,index in new_meeting_form.operator">
+                      <span class="name text_ellipsis" :title="item.name">{{item.name}}</span>
+                      <i class="el-icon-close" @click="del_person(index,'operator')"></i>
+                    </div>
+                  </div>
+                  <!-- 人数统计 -->
+                  <div class="box2">{{new_meeting_form.operator.length}}人</div>
+                </div>
               </el-form-item>
 
               <el-form-item label="主持人" required>
@@ -260,7 +285,7 @@
                 <el-input type="textarea" autosize v-model="new_meeting_form.description"></el-input>
               </el-form-item>
 
-              <el-form-item label="附件">
+              <el-form-item v-show="new_meeting_form.type!='5'" label="附件">
                 <el-upload :action="file.url" :headers="upload_header()" :file-list="file.list"
                   :before-remove="file_del" :on-success="upload_result" style="width: 50%;">
                   <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
@@ -268,7 +293,7 @@
               </el-form-item>
             </template>
 
-            <template v-if="new_meeting_form.step===1">
+            <template v-if="new_meeting_form.step===2">
               <el-form-item label="是否回复">
                 <el-select v-model="new_meeting_form.reply">
                   <el-option v-for="item,index in html.bool_options" :label="item" :value="index">
@@ -302,7 +327,8 @@
                         :disabled="index!=0&&index!=2">
                       </el-option>
                     </el-select> -->
-                    <i class="el-icon-close icon button" @click="del_alert_time(r)"></i>
+                    <i class="el-icon-close icon button" v-show="new_meeting_form.meetingReminds.length>1"
+                      @click="del_alert_time(r)"></i>
                   </div>
                 </div>
               </el-form-item>
@@ -315,7 +341,7 @@
               </el-form-item>
             </template>
 
-            <template v-if="new_meeting_form.step===2">
+            <template v-if="new_meeting_form.step===3">
               <el-form-item label="开门码">
                 <el-select v-model="new_meeting_form.door_password">
                   <el-option v-for="item,index in html.door_password_options" :label="item" :value="index">
@@ -333,19 +359,23 @@
                 </el-select>
               </el-form-item>
               <!-- 封面图 -->
-              <div style="height:300px;padding:0 20px;overflow:hidden;">
-                <img v-show="new_meeting_form.template" :src="template_img" style="width: 100%;height: 100%;">
+              <div style="height:500px;padding:0 20px;overflow:hidden;">
+                <img v-show="new_meeting_form.template" :src="template_img"
+                  style="width: 100%;height: 100%;object-fit: contain;">
                 <!-- 没有图片时替换 -->
                 <div v-show="!new_meeting_form.template" class="no_img center">暂无</div>
               </div>
             </template>
           </el-form>
+          <!-- 无纸化页面 -->
+          <iframe v-if="new_meeting_form.step===1" :src="html.paperless_url" frameborder="0" scrolling="no"
+            style="flex-grow: 1;"></iframe>
         </div>
 
         <div class="form_foot row_layout">
-          <el-button v-show="new_meeting_form.step" @click="new_meeting_form.step--" round>上一步</el-button>
+          <el-button v-show="new_meeting_form.step" @click="pre_step(new_meeting_form)" round>上一步</el-button>
           <el-button @click="step_pass(new_meeting_form)" type="primary"
-            round>{{new_meeting_form.step===2?'完成':'下一步'}}</el-button>
+            round>{{new_meeting_form.step===3?'完成':'下一步'}}</el-button>
         </div>
       </div>
     </div>

@@ -43,7 +43,7 @@ new Vue({
 					label: `In${col + 1}->Out${row + 1}`,
 					value: [col, row],
 				};
-				this.html.video_buttons.push(t);
+				this.video_buttons.push(t);
 			}
 		}
 		document.title = '智慧运算中心';
@@ -172,9 +172,7 @@ new Vue({
 						} else if (array[0] == 'SCALL') {
 							this.html.config_select = array[1][0];
 						} else if (array[0] == 'VSWT') {
-							if (array[1].length === 4) {
-								this.video_matrix = array[1];
-							}
+							this.video_matrix = array[1];
 						}
 					}
 				},
@@ -376,8 +374,20 @@ new Vue({
 			} else if (key == 'VSWT') {
 				attributes[key] = params[0].value;
 				let index = params[1];
-				this.video_matrix.splice(Math.floor(index / 4), 1, index % 4);
-				// attributes[key] = this.video_matrix;
+				switch (true) {
+					case index < 4:
+						this.video_matrix.splice(0, 1, index);
+						break;
+					case index < 8 && index >= 4:
+						this.video_matrix.splice(1, 1, index - 4);
+						break;
+					case index < 12 && index >= 8:
+						this.video_matrix.splice(2, 1, index - 8);
+						break;
+					case index >= 12:
+						this.video_matrix.splice(3, 1, index - 12);
+						break;
+				}
 			}
 			this.request('put', `${sendCmdtoDevice}/8`, this.token, { contentType: 0, contents: [{ deviceId: this.id, attributes: attributes }] }, (res) => {
 				// if (key == 'SCALL') {
@@ -387,10 +397,31 @@ new Vue({
 		},
 		// 视频矩阵回显
 		video_matrix_status(index) {
-			if (this.video_matrix[Math.floor(index / 4)] === index % 4) {
-				return true;
-			} else {
-				return false;
+			switch (true) {
+				case index < 4:
+					if (index === this.video_matrix[0]) {
+						return true;
+					} else {
+						return false;
+					}
+				case index < 8 && index >= 4:
+					if (index - 4 === this.video_matrix[1]) {
+						return true;
+					} else {
+						return false;
+					}
+				case index < 12 && index >= 8:
+					if (index - 8 === this.video_matrix[2]) {
+						return true;
+					} else {
+						return false;
+					}
+				case index >= 12:
+					if (index - 12 === this.video_matrix[3]) {
+						return true;
+					} else {
+						return false;
+					}
 			}
 		},
 		// 切换显示页

@@ -57,6 +57,7 @@ new Vue({
 			total: 0, // 播放总长
 			current: 0, //音视频的alreadyPlaySeconds表示当前播放进度 文档的alreadyPlaySeconds表示正在播放的图片的时间
 			status: 'pause', //播放暂停按钮状态显示
+			volume: 0, // 音量
 		},
 	},
 	async mounted() {
@@ -352,6 +353,7 @@ new Vue({
 				let data = res.data.data.properties.currentTask.propertyValue;
 				this.cur_task_name = data.taskName.propertyValue || '空';
 				this.cur_play_source = data.resName.propertyValue || '空';
+				this.play_ctrl.volume = Number(res.data.data.properties.volume.propertyValue); // 当前音量
 			});
 		},
 		// 获取设备当前任务

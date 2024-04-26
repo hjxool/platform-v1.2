@@ -1,6 +1,6 @@
 // 通用方法及变量
 const fn = {
-	props: ['obj', 'radio'],
+	props: ['obj', 'radio', 'token', 'device_id', 'inject_data'],
 	data() {
 		return {
 			service: this.obj.service, //下发指令调用服务
@@ -8,25 +8,69 @@ const fn = {
 		};
 	},
 	beforeMount() {
-		// 此处监听数据变化 根据路径判断是否赋值
-		this.$bus.$on('get_value', (data) => {
-			// 有回显数据时 传入的是一个原始结构对象 根据path属性解析路径取任意层级的值
-			// 此时是在组件挂载完毕时接收到的数据 path已经有了
-			if (!this.path) {
-				return;
-			}
-			let index = 0;
-			this.analysis_path(this.path_list, index, data);
-		});
-		this.$bus.$on('common_params', (...val) => {
-			this.token = val[0];
-			this.device_id = val[1];
-		});
+		//#region
+		// // 此处监听数据变化 根据路径判断是否赋值
+		// this.$bus.$on('get_value', (data) => {
+		// 	// 有回显数据时 传入的是一个原始结构对象 根据path属性解析路径取任意层级的值
+		// 	// 此时是在组件挂载完毕时接收到的数据 path已经有了
+		// 	if (!this.path) {
+		// 		return;
+		// 	}
+		// 	let index = 0;
+		// 	this.analysis_path(this.path_list, index, data);
+		// });
+		//#endregion
+		// 监听收集当前(弹窗)面板有值的组件的键值对
+		if (this.obj.是表单组件) {
+			this.$bus.$on('popup_data_collect', (mb_id, total, key_value) => {
+				if (!total) {
+					// 没有可提交表单组件 不执行
+					return;
+				}
+				// 判断当前组件是否在弹窗面板
+				if (this.obj.隶属面板ID === mb_id) {
+					// 所有下发值按组件绑定属性类型转换
+					let value;
+					switch (this.data_type) {
+						case 'int':
+						case 'float':
+						case 'double':
+						case 'any':
+							value = isNaN(parseInt(this.value)) ? 0 : parseInt(this.value);
+							break;
+						case 'array':
+						case 'struct':
+							value = JSON.parse(this.value);
+							break;
+						default:
+							value = this.value;
+							break;
+					}
+					// 有的组件可能没绑定属性
+					if (this.path && typeof this.path === 'string') {
+						key_value[this.path] = value;
+					}
+					// 绑定完判断是否达到总表单组件数
+					if (Object.entries(key_value).length === total) {
+						// 不能在统计结束的组件上下发 会带有组件自身的额外参数进去 必须要返回对应提交按钮再下发
+						this.$bus.$emit('popup_submit', mb_id, key_value);
+					}
+				}
+			});
+		}
 	},
+	// 卸载弹窗组件 监听的事件
+	beforeDestroy() {
+		// 只在弹窗内显示的组件才监听这一事件，所以可以一起销毁
+		if (this.obj.是表单组件) {
+			this.$bus.$off('popup_data_collect');
+		}
+	},
+	// 弹窗使用v-if 会卸载组件 但是组件监听事件不会消失 因此所有组件注销时一定要
 	methods: {
-		send_order(value) {
-			if (typeof value !== 'undefined' && !this.path) {
-				// 值不为空 且 未绑定属性才不继续执行
+		send_order(value, flag) {
+			if ((typeof value !== 'undefined' && !this.path) || this.obj.仅提交按钮下发数据) {
+				// 值不为空 且 未绑定属性 不允许下发 不继续执行
 				return;
 			}
 			let body = {
@@ -39,10 +83,17 @@ const fn = {
 				body.service = this.service;
 			}
 			// 有设置属性值则下发
+			let map = this.custom;
 			if (typeof value != 'undefined') {
-				this.custom[this.path] = value;
+				// 提交按钮会收集一整个面板组件数据 组成键值对 所以要区分是替换还是拼接
+				if (flag === 'replace') {
+					map = { ...this.custom, ...value };
+				} else {
+					this.custom[this.path] = value;
+					map = this.custom;
+				}
 			}
-			body.attributeMap = this.custom;
+			body.attributeMap = map;
 			// 有topic才能下发指令
 			if (this.topic) {
 				return this.request('put', `${sendCmdtoDevice}/${this.topic}`, this.token, body);
@@ -83,7 +134,7 @@ const fn = {
 							switch (this.obj.type) {
 								case 'matrix':
 									// 这里稍有特殊 矩阵所选的属性不对上传错误的数据格式时不能接收值
-									if (typeof value !== 'string') {
+									if (typeof value === 'string') {
 										return;
 									}
 									// 长度不够补零
@@ -122,6 +173,7 @@ const fn = {
 									this.value = Math.round(v * m) / m;
 									break;
 								case 'switch':
+								case 'switch2':
 								case 'switch_button':
 									// 所有值转化成字符串匹配
 									this.value = value + '';
@@ -156,6 +208,57 @@ const fn = {
 									}
 									this.value = value;
 									break;
+								case '状态组件':
+									if (typeof value !== 'string' && typeof value !== 'number') {
+										return;
+									}
+									// 所有值转化为字符串进行对比
+									this.value = value + '';
+									break;
+								case '折线图':
+									// 上报值中必须是 对象 有label字段 所有字段为数组
+									// 上报值特殊 值是对象 需要自己拆解内部字段
+									if (typeof value === 'object') {
+										let arr = Object.entries(value);
+										let flag;
+										if (arr[0][1]?.propertyValue === undefined) {
+											flag = 1;
+											for (let val of arr) {
+												if (!Array.isArray(val[1])) {
+													return;
+												}
+											}
+										} else {
+											flag = 0;
+											for (let val of arr) {
+												if (!Array.isArray(val[1].propertyValue)) {
+													return;
+												}
+											}
+										}
+										if (value.label) {
+											// 组成一个数组 每个元素里面有 图例名 对应值
+											this.y_data = [];
+											for (let val of arr) {
+												if (val[0] == 'label') {
+													if (flag) {
+														this.x_data = value.label;
+													} else {
+														this.x_data = value.label.propertyValue;
+													}
+												} else {
+													let t = {
+														name: val[0],
+														value: flag ? val[1] : val[1].propertyValue,
+													};
+													this.y_data.push(t);
+												}
+											}
+											// 所有条件满足 赋值完以后更新图表数据
+											this.update_echart();
+										}
+									}
+									break;
 							}
 						} else {
 							// 否则继续递归
@@ -171,7 +274,6 @@ const fn = {
 		path() {
 			let t = this.obj.attribute;
 			if (t && t.length > 0) {
-				// return this.obj.attribute[this.obj.attribute.length - 1].replace(/\.propertyValue/g, '');
 				let t2 = this.obj.attribute[this.obj.attribute.length - 1];
 				return t2?.path || t2;
 			} else {
@@ -218,6 +320,16 @@ const fn = {
 			}
 			return t;
 		},
+		// 因为改为父级注入响应式数据 且组件挂载时就要解析数据因此不能用watch
+		// 但是将value设为计算属性 组件就不能直接修改自身value属性会很麻烦
+		// 因此设置一个临时计算属性 用来监听注入数据变化 解析value值
+		temp() {
+			if (this.path) {
+				let index = 0;
+				this.analysis_path(this.path_list, index, this.inject_data);
+			}
+			return '';
+		},
 	},
 };
 // 滑块组件
@@ -225,7 +337,7 @@ let customSlider = {
 	template: `
     <div class="slider_box" :style="style(obj)">
       <img src="./img/icon6.png" class="bg_img">
-      <span class="text text_ellipsis flex_shrink" :title="value_text">{{value_text}}</span>
+      <span class="text text_ellipsis flex_shrink" :title="value_text">{{value_text + temp}}</span>
       <div class="box1">
         <img src="./img/icon5.png" class="bg_img">
         <el-slider v-model="value" @change="send_order($event)" vertical :show-tooltip="false" :min="obj.min" :max="obj.max" :step="step"></el-slider>
@@ -258,7 +370,7 @@ let customSlider = {
 let customText = {
 	template: `
     <div :style="text_style(obj)" @click="turn_to_page" :title="value">
-      {{value}}
+      {{value + temp}}
     </div>
   `,
 	data() {
@@ -362,8 +474,8 @@ let customButton = {
 let customSwitch = {
 	template: `
     <div :style="style(obj)" class="switch_box" @click="switch_fn">
-      <img v-show="value===on_value" :src="src(true)" class="bg_img" draggable="false">
-      <img v-show="value===off_value" :src="src(false)" class="bg_img" draggable="false">
+      <img v-show="value==on_value" :src="src(true)" class="bg_img" draggable="false">
+      <img v-show="value==off_value" :src="src(temp)" class="bg_img" draggable="false">
     </div>
   `,
 	mixins: [common_functions, fn],
@@ -425,7 +537,7 @@ let customSwitch = {
 let customButtonSwitch = {
 	template: `
     <div :style="style(obj)" class="center switch_box button" @click="switch_fn">
-      <div :style="bg()" class="bg_img"></div>
+      <div :style="bg(temp)" class="bg_img"></div>
       <span :style="size(obj)">{{value===on_value?text2:text}}</span>
     </div>
   `,
@@ -488,7 +600,7 @@ let customProgress = {
 	template: `
     <div class="progress_box" :style="style(obj)">
       <img src="./img/icon7.png" class="bg_img">
-      <span class="text" style="margin: 20px 0 10px 0;">{{obj.max}}</span>
+      <span class="text" style="margin: 20px 0 10px 0;">{{obj.max+temp}}</span>
       <div class="progress">
         <div class="lump flex_shrink" v-for="i in total_num" :style="color(i)"></div>
       </div>
@@ -555,24 +667,17 @@ let customSelector = {
 	template: `
     <div class="select_box" :style="style(obj)" @click.stop="popup">
       <img src="./img/icon8.png" class="bg_img">
-      <span class="text_ellipsis" :style="font_size(obj)" :title="label">{{label}}</span>
+      <span class="text_ellipsis" :style="font_size(obj)" :title="label">{{label+temp}}</span>
     </div>
   `,
 	mixins: [common_functions, fn],
-	props: ['group'],
+	props: ['select'],
 	data() {
 		return {
 			label: '',
 			value: '',
+			id: `drop-${this.obj.id}`, // 记录组件id 在传入值时匹配用
 		};
-	},
-	beforeMount() {
-		this.$bus.$on('selector', (...params) => {
-			if (params[0] == this.group) {
-				this.label = params[1].label;
-				this.value = params[1].value;
-			}
-		});
 	},
 	methods: {
 		// 字体样式
@@ -594,8 +699,13 @@ let customSelector = {
 		},
 		// 显示弹窗
 		popup() {
-			this.$bus.$emit('display_popup', this.group, true);
-			this.$bus.$emit('current_group', this.group);
+			this.$bus.$emit('drop_down_show', {
+				list: this.options, // 传自身存的下拉列表
+				// 计算弹窗显示位置
+				left: this.obj.x * this.radio,
+				top: (this.obj.y + this.obj.h) * this.radio + 14,
+				id: this.id,
+			});
 		},
 	},
 	computed: {
@@ -614,13 +724,19 @@ let customSelector = {
 					t.value = isNaN(Number(val.value)) ? val.value : Number(val.value);
 					arr.push(t);
 				}
+			} else {
+				for (let val of this.obj.option) {
+					let t = { label: val.label, value: val.value };
+					arr.push(t);
+				}
 			}
 			return arr;
 		},
 	},
 	watch: {
+		// 上报数据回显对应标签
 		value(newvalue, oldvalue) {
-			if (isNaN(newvalue)) {
+			if ((this.data_type === 'int' || this.data_type === 'float' || this.data_type === 'double') && isNaN(newvalue)) {
 				return;
 			}
 			for (let val of this.options) {
@@ -630,83 +746,20 @@ let customSelector = {
 				}
 			}
 		},
-	},
-};
-let customPopup = {
-	template: `
-    <el-card v-show="display" :style="position(obj)" :body-style="{overflow:'auto',maxHeight:'500px'}" shadow="never">
-      <div class="popup_text" :style="size(obj)" v-for="item,index in options" :key="index" @click="select(item)">{{item.label}}</div>
-    </el-card>
-  `,
-	mixins: [common_functions, fn],
-	props: ['group'],
-	beforeMount() {
-		this.$bus.$on('display_popup', (index, show) => {
-			if (index == this.group) {
-				this.display = show;
+		// 下拉框选的值不需要挂载时获取 所以可以在watch中监听 等值发生变化时处理
+		select(newvalue) {
+			// 对比当前组件id 匹配上了才更新值
+			if (this.id === newvalue.id) {
+				this.label = newvalue.label;
+				this.value = newvalue.value;
 			}
-		});
-	},
-	data() {
-		return {
-			display: false,
-		};
-	},
-	methods: {
-		// 弹窗定位
-		position(obj_data) {
-			// 当弹窗显示不下在反方向显示
-			let t = (obj_data.y + obj_data.h) * this.radio + 14;
-			let t2 = obj_data.x * this.radio;
-			return {
-				position: 'absolute',
-				zIndex: '990',
-				left: t2 + 'px',
-				top: t + 'px',
-			};
-		},
-		// 选择值
-		select(obj) {
-			this.$bus.$emit('selector', this.group, obj);
-			this.send_order(obj.value);
-		},
-		// 字体大小 控制弹窗缩放
-		size(obj) {
-			let t = (203 / 22) * 16; //计算多少容器大小下 字体是16px
-			let fz = (obj.w * this.radio) / t;
-			if (fz > 1) {
-				fz = 1;
-			}
-			return {
-				fontSize: fz + 'rem',
-			};
-		},
-	},
-	computed: {
-		options() {
-			let arr = [];
-			if (this.data_type === 'int' || this.data_type === 'float' || this.data_type === 'double') {
-				for (let val of this.obj.option) {
-					let t = { label: val.label };
-					// 选项中可能有字符
-					t.value = isNaN(Number(val.value)) ? 0 : Number(val.value);
-					arr.push(t);
-				}
-			} else if (this.data_type === 'any') {
-				for (let val of this.obj.option) {
-					let t = { label: val.label };
-					t.value = isNaN(Number(val.value)) ? val.value : Number(val.value);
-					arr.push(t);
-				}
-			}
-			return arr;
 		},
 	},
 };
 // 矩阵
 let customMatrix = {
 	template: `
-  <div class="matrix" :style="matrix_style(obj)">
+  <div class="matrix" :style="matrix_style(obj,temp)">
     <div class="matrix" v-for="row in obj.nh" :style="row_style(obj)">
       <div class="center button" v-for="col in obj.mw" @click="control(row-1,col-1)">
         <img v-show="value[row-1][col-1]" src="./img/icon9.png" class="bg_img">
@@ -763,7 +816,7 @@ let customMatrix = {
 let customRadioGroup = {
 	template: `
     <el-radio-group class="radio_group" :style="style(obj)" v-model="value" @change="send_order(value)">
-      <el-radio v-for="item,index in options" :key="index" :label="item.value">{{item.label}}</el-radio>
+      <el-radio v-for="item,index in options" :key="index" :label="item.value">{{item.label+temp}}</el-radio>
     </el-radio-group>
   `,
 	mixins: [common_functions, fn],
@@ -788,6 +841,11 @@ let customRadioGroup = {
 					t.value = isNaN(Number(val.value)) ? val.value : Number(val.value);
 					arr.push(t);
 				}
+			} else {
+				for (let val of this.obj.option) {
+					let t = { label: val.label, value: val.value };
+					arr.push(t);
+				}
 			}
 			return arr;
 		},
@@ -797,7 +855,7 @@ let customRadioGroup = {
 let customCheckBox = {
 	template: `
     <el-checkbox-group class="check_box" :style="style(obj)" v-model="value" @change="send_order(value)">
-      <el-checkbox v-for="item,index in options" :key="index" :label="item.value">{{item.label}}</el-checkbox>
+      <el-checkbox v-for="item,index in options" :key="index" :label="item.value">{{item.label+temp}}</el-checkbox>
     </el-checkbox-group>
   `,
 	mixins: [common_functions, fn],
@@ -822,6 +880,11 @@ let customCheckBox = {
 					t.value = isNaN(Number(val.value)) ? val.value : Number(val.value);
 					arr.push(t);
 				}
+			} else {
+				for (let val of this.obj.option) {
+					let t = { label: val.label, value: val.value };
+					arr.push(t);
+				}
 			}
 			return arr;
 		},
@@ -834,7 +897,7 @@ let customTable = {
       <el-table-column v-for="item in obj.option" :prop="item.value" :label="item.label"></el-table-column>
       <el-table-column label="操作">
         <template slot-scope="scope">
-          <el-button v-for="button in obj.button" @click="table_button_order(button)" size="mini">{{button.label}}</el-button>
+          <el-button v-for="button in obj.button" @click="table_button_order(button)" size="mini">{{button.label+temp}}</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -890,8 +953,8 @@ let customTable = {
 // 输入框
 let customInput = {
 	template: `
-    <el-input class="input_style" v-model="value" @change="comfirm_input" :style="style(obj)" 
-    :placeholder="obj.placeholder" type="text" :maxlength="obj.maxlength" show-word-limit></el-input>
+    <el-input class="input_style" v-model="value" @keyup.enter.native="comfirm_input" :style="style(obj)" 
+    :placeholder="obj.placeholder+temp" type="text" :maxlength="obj.maxlength" show-word-limit></el-input>
   `,
 	mixins: [common_functions, fn],
 	data() {
@@ -920,6 +983,8 @@ let customInput = {
 					// 如果是any类型 又转不成数字则变回字符串
 					value = this.value;
 				}
+			} else {
+				value = this.value;
 			}
 			let result = await this.$confirm(`确认下发指令${value}?`, '提示', {
 				confirmButtonText: '确定',
@@ -934,6 +999,166 @@ let customInput = {
 			if (result) {
 				this.send_order(value);
 			}
+		},
+	},
+};
+// 状态组件
+let customStatus = {
+	template: `
+  <div class="custom_status" :style="cus_style(obj)">
+    <div :style="{color:color}">{{label+temp}}</div>
+  </div>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			value: this.obj['状态列表'][0].value, // 实际值
+			label: this.obj['状态列表'][0].label, // 显示文字
+			color: this.obj['状态列表'][0].color, // 对应文字颜色
+		};
+	},
+	methods: {
+		cus_style(obj) {
+			let t = this.style(obj);
+			t.background = obj.background;
+			t.fontSize = obj.fontSize;
+			switch (obj.align) {
+				case 'left':
+					t.justifyContent = 'flex-start';
+					break;
+				case 'right':
+					t.justifyContent = 'flex-end';
+					break;
+				case 'center':
+					t.justifyContent = 'center';
+					break;
+			}
+			return t;
+		},
+	},
+	watch: {
+		// 每次值发生变化 计算新的显示文字和对应颜色
+		value(newvalue, oldvalue) {
+			for (let val of this.obj['状态列表']) {
+				if (val.value == newvalue) {
+					this.label = val.label;
+					this.color = val.color;
+				}
+			}
+		},
+	},
+};
+// 图表
+let customEchart = {
+	template: `
+    <div :id="id" :style="style(obj,temp)"></div>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			id: `echart-${this.obj.id}`, // 绑定唯一id
+		};
+	},
+	mounted() {
+		// 生成echart对象
+		this.echart = echarts.init(document.getElementById(this.id));
+		this.init_echart();
+	},
+	methods: {
+		// 初始化图表
+		init_echart() {
+			// 可能会有多条折线
+			let option = {
+				xAxis: {
+					type: 'category',
+					data: [],
+					axisTick: {
+						show: false, // 不显示坐标轴刻度线
+					},
+				},
+				yAxis: {
+					type: 'value',
+					axisLabel: {
+						formatter: '{value} ' + this.obj.units,
+					},
+				},
+				legend: {}, // 显示图例 默认上方居中显示
+				series: [],
+			};
+			this.echart.setOption(option);
+		},
+		// 更新图表数据 因为初始不知道有几条折线是根据上报数据决定 所以重写series配置项
+		update_echart() {
+			let series = [];
+			for (let val of this.y_data) {
+				let t = {
+					name: val.name, // 对应图例名称
+					data: val.value,
+					type: 'line',
+					label: {
+						show: true, // 显示数值
+						formatter: '{c} ' + this.obj.units, // 设置数值格式和单位
+					},
+				};
+				series.push(t);
+			}
+			this.echart.setOption({ xAxis: { data: this.x_data }, series });
+		},
+	},
+};
+// 打开弹窗按钮
+let customPopup = {
+	template: `
+    <div :style="style(obj)" class="popup_button center button_box" @click="open_popup">
+      <span :style="size()">{{obj.value || ''}}</span>
+    </div>
+  `,
+	mixins: [common_functions, fn],
+	methods: {
+		size() {
+			return {
+				color: '#fff',
+				zIndex: 1,
+			};
+		},
+		// 打开弹窗
+		open_popup() {
+			// 如果绑定了面板才触发事件
+			if (this.obj.popup_data) {
+				this.$bus.$emit('open_popup_data', this.obj.popup_data);
+			}
+		},
+	},
+};
+// 提交按钮
+let customSubmitButton = {
+	template: `
+    <div :style="style(obj)" class="popup_button center button_box" @click="submit">
+      <span :style="size()">{{obj.value || ''}}</span>
+    </div>
+  `,
+	mixins: [common_functions, fn],
+	beforeMount() {
+		this.$bus.$on('popup_submit', (mb_id, key_value) => {
+			if (this.obj.隶属面板ID === mb_id) {
+				// 是对应面板的提交按钮则将收集的数据下发
+				this.send_order(key_value, 'replace');
+			}
+		});
+	},
+	// 提交按钮只在弹窗中 可以一起销毁事件
+	beforeDestroy() {
+		this.$bus.$off('popup_submit');
+	},
+	methods: {
+		size() {
+			return {
+				color: '#fff',
+				zIndex: 1,
+			};
+		},
+		submit() {
+			this.$bus.$emit('popup_data_collect', this.obj.隶属面板ID, this.obj.total, {});
 		},
 	},
 };

@@ -4,6 +4,8 @@ let get_data_url = url + 'api-device/device/status'; //查询组件数据
 let sendCmdtoDevice = url + 'api-device/device/panel/operation'; // 下发指令
 let user_info_url = `${url}api-auth/oauth/userinfo`; //获取用户信息
 let decive_report_url = `${url}api-device/device/panel/switch`; //设备开始上报
+let online_check_url = `${url}api-portal/centralized-control/onlineCheck/devices`; // 一键巡检
+let device_detail_url = `${url}api-device/device`; // 查询单设备详情
 
 new Vue({
 	el: '#index',
@@ -19,21 +21,57 @@ new Vue({
 		customVideo,
 		customDeviceStatus,
 		customButton,
+		customOnlineCheck,
+		customVisualEditor1,
+		customSoundMatrix,
+		soundMatrix,
+		customVideoMatrix,
+		videoMatrix1,
+		videoMatrix2,
+		customButtonSwitch,
+		customProgress,
+		customInput,
 	},
 	data: {
 		html: {
 			page_loading: true,
+			random_num: Math.floor(Math.random() * 100),
 		},
 		page_id: '', //面板id
 		component_list: [], //组件列表
 		// data_and_path: [], //对象数组 存储数据和路径
 		radio: 0, //所有组件缩放比例
+		// 设备状态栏
 		device_status: {
 			show: false, //设备状态显示
 			style: {}, // 面板样式
 			name: '', //设备名
 			is_normal: true, //设备状态
 			list: [], //属性列表
+		},
+		// 巡检
+		online_check: {
+			show: false,
+			list: [], // 巡检列表
+			is_checking: false, // 节流标识
+		},
+		// 音视频矩阵
+		matrix: {
+			show: false,
+			list: [], // 矩阵值
+			title: '', // 弹窗标题
+			device_id: '', // 下发指令所需设备id
+		},
+		token: '',
+		inject_data: null, // 注入组件的数据
+		drop: {
+			show: false, // 下拉框显示
+			style: {
+				left: 0, // 下拉框定位
+				top: 0,
+			},
+			options: [], // 下拉框可选数据
+			select: null, // 传入下拉框组件的值
 		},
 	},
 	beforeCreate() {
@@ -43,37 +81,87 @@ new Vue({
 		if (!location.search) {
 			this.token = sessionStorage.token;
 			this.id = sessionStorage.id;
+			this.prePage = sessionStorage.prePage;
 		} else {
 			this.get_token();
 		}
 		try {
 			this.html.page_loading = true;
-
-			await this.get_components();
-
+			// 区分是跳转还是本地缓存数据
+			if (this.prePage === 'preview') {
+				this.render_components(JSON.parse(sessionStorage.tempPanelparam));
+				// sessionStorage.removeItem('tempPanelparam');
+			} else {
+				await this.get_components();
+			}
 			this.html.page_loading = false;
 		} catch (error) {
 			console.log('err', error);
 		}
 		window.addEventListener('resize', this.resize());
-		this.$bus.$on('current_group', (index) => {
-			// 重复点击当前的不操作
-			if (this.current_group !== index) {
-				// 点击其他下拉框会丢失之前下拉框索引 导致之前的下拉框无法消失
-				// 所以先清除再改变当前索引
-				this.close_popup();
-				this.current_group = index;
-			}
-		});
+		// // 监听下拉框事件
+		// this.$bus.$on('drop_down_show', ({ list, left, top, id }) => {
+		// 	this.drop.show = true;
+		// 	this.drop.style.left = left;
+		// 	this.drop.style.top = top;
+		// 	this.drop.options = list;
+		// 	// 记录当前显示的对应组件id
+		// 	this.drop.id = id;
+		// });
+		// 监听跳转页面事件
 		this.$bus.$on('turn_to_page', (page_id) => {
 			this.page_id = page_id;
 		});
+		// 监听设备状态弹窗
 		this.$bus.$on('device_status', ({ list, show, style, name, is_normal }) => {
 			this.device_status.list = list;
 			this.device_status.show = show;
 			this.device_status.style = style;
 			this.device_status.name = name;
 			this.device_status.is_normal = is_normal;
+		});
+		// 监听一件巡检弹窗
+		this.$bus.$on('online_check', ({ type, data }) => {
+			if (type === 'open') {
+				this.online_check.show = true;
+				this.online_check.list = data;
+			} else if (type === 'update') {
+				// 巡检按钮组件只需要遍历自身存的列表 找到对应消息 更新结果
+				for (let val of this.online_check.list) {
+					if (val.message_id == data.messageId) {
+						switch (data.replyType) {
+							case 1:
+								val.result = '巡检结果正常';
+								break;
+							default:
+								val.result = '巡检结果异常';
+								break;
+						}
+					}
+				}
+			}
+		});
+		// 监听矩阵弹窗
+		this.$bus.$on('matrix_popup', ({ type, data, title, device_id }) => {
+			if (type === 'open') {
+				if (!data) {
+					this.$message('没有对应数据');
+					return;
+				}
+				this.matrix.show = true;
+				this.matrix.title = title;
+				this.matrix.list = data;
+				this.matrix.device_id = device_id;
+			} else if (type === 'update') {
+				// 在父页面 判断弹窗打开的情况下再更新弹窗值
+				if (!this.matrix.show) {
+					return;
+				}
+				// 只更新当前打开的矩阵
+				if (this.matrix.title === title && this.matrix.device_id === device_id) {
+					this.matrix.list = data;
+				}
+			}
 		});
 	},
 	methods: {
@@ -85,17 +173,15 @@ new Vue({
 			}
 			let dom = document.documentElement;
 			let c_w = dom.clientWidth;
-			//#region
-			// if (c_w >= 1000 && w <= 1920) {
-			// 	let t = c_w / 1920;
-			// 	let fontsize = Math.ceil(t * 16);
-			// 	dom.style.fontSize = `${fontsize}px`;
-			// } else if (c_w < 1000) {
-			// 	dom.style.fontSize = `10px`;
-			// } else if (c_w > 1920) {
-			// 	dom.style.fontSize = `16px`;
-			// }
-			//#endregion
+			if (c_w >= 1000 && c_w <= 1920) {
+				let t = c_w / 1920;
+				let fontsize = Math.ceil(t * 16);
+				dom.style.fontSize = `${fontsize}px`;
+			} else if (c_w < 1000) {
+				dom.style.fontSize = `10px`;
+			} else if (c_w > 1920) {
+				dom.style.fontSize = `16px`;
+			}
 			for (let val of this.component_list) {
 				val.radio = Math.round((c_w / val.mb.w) * 100) / 100;
 			}
@@ -131,7 +217,6 @@ new Vue({
 			this.component_list = res.data.data.panelParam;
 			this.page_id = this.component_list[0].id;
 			this.$nextTick(async () => {
-				this.$bus.$emit('common_params', this.token);
 				await this.count_device_list();
 				// 开启设备实时数据上报
 				for (let val of this.list) {
@@ -185,7 +270,7 @@ new Vue({
 					`/exchange/device-report/device-report.${val}`,
 					(res) => {
 						let data = JSON.parse(res.body);
-						this.$bus.$emit('get_value', { data: data.contents[0].attributes, device_id: val, device_status: data.messageBizType });
+						this.$bus.$emit('get_value', { data: data.contents[0].attributes, device_id: val, device_status: data.messageBizType, message: data });
 					},
 					{ 'auto-delete': true }
 				);
@@ -283,9 +368,9 @@ new Vue({
 			}
 			return bg;
 		},
-		// 点击任意处关闭弹窗
+		// 关闭需要关闭的弹窗
 		close_popup() {
-			this.$bus.$emit('display_popup', this.current_group, false);
+			this.drop.show = false;
 		},
 		// 统计所有组件总共涉及的设备id
 		async count_device_list() {
@@ -329,6 +414,26 @@ new Vue({
 		// 设备属性面板 自定义样式
 		device_status_style(style) {
 			return style;
+		},
+		// 巡检节流事件
+		checking_event(flag) {
+			this.online_check.is_checking = flag;
+		},
+		// 根据缓存数据渲染组件 无需连websocket 加载初始数据即可
+		render_components(data) {
+			let dom = document.documentElement;
+			let c_w = dom.clientWidth;
+			data.radio = Math.round((c_w / data.mb.w) * 100) / 100;
+			this.component_list = [data];
+			this.page_id = this.component_list[0].id;
+		},
+		// 下拉框选择
+		drop_select(obj) {
+			this.drop.select = {
+				id: this.drop.id,
+				label: obj.label,
+				value: obj.value,
+			};
 		},
 	},
 });

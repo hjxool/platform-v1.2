@@ -43,23 +43,247 @@
       <el-page-header @back="html.detail_display=false" content="详情页面"></el-page-header>
       <!-- 页面切换按钮 -->
       <div class="flex_shrink">
-        <el-menu default-active="1" mode="horizontal" @select="page_switch">
-          <el-menu-item index="1">设备管理</el-menu-item>
-          <!-- <el-submenu index="2">
-            <template slot="title">设备联检</template>
-            <el-menu-item index="2-1">联检规则</el-menu-item>
-            <el-menu-item index="2-2">联检记录</el-menu-item>
-          </el-submenu>
-          <el-submenu index="3">
-            <template slot="title">设备巡检</template>
-            <el-menu-item index="3-1">巡检计划</el-menu-item>
-            <el-menu-item index="3-2">巡检规则</el-menu-item>
-            <el-menu-item index="3-3">巡检记录</el-menu-item>
-          </el-submenu> -->
+        <el-menu :default-active="config.default_menu" mode="horizontal" @select="page_switch">
+          <el-menu-item v-for="menu in config.menus" v-show="menu.show"
+            :index="menu.value">{{menu.label}}</el-menu-item>
         </el-menu>
       </div>
+      <!-- 集中控制 -->
+      <div class="flex_grow" v-show="html.page_select=='1'" style="overflow: auto;">
+        <div id="control_page" class="col_layout">
+          <!-- <div class="head flex_shrink">
+            <div class="box1 col_layout">
+              <img src="./img/icon3.png" class="bg_img">
+
+              <div class="row_layout">
+                <img src="./img/icon4.png" class="icon1">
+
+                <span class="text1">{{control.place_name}}</span>
+              </div>
+
+              <span class="text2">{{control.theme}}</span>
+
+              <div class="box row_layout">
+                <img src="./img/icon5.png" class="bg_img">
+
+                <span class="text_ellipsis">下场会议：{{control.next_meeting}}</span>
+              </div>
+            </div>
+
+            <div class="box2 col_layout">
+              <div class="head row_layout">
+                <img src="./img/icon6.png" class="icon">
+
+                <span style="margin: 0 20px;">2024年01月08日</span>
+
+                <span>星期二</span>
+              </div>
+
+              <div class="body flex_grow col_layout">
+                <img src="./img/icon7.png" class="bg_img">
+
+                <span class="text1">本场会议结束时间</span>
+
+                <div class="box1 row_layout">
+                  <div class="time row_layout" v-for="item in control.times">
+                    <img src="./img/icon37.png" class="bg_img">
+
+                    <div class="icon" v-for="num in item">
+                      <img src="./img/icon38.png" class="bg_img">
+
+                      <span>{{num}}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="box2 row_layout">
+                  <div class="button center" v-show="control.delay_show" @click="control.delay_pop_show = true">
+                    <img src="./img/icon8.png" class="bg_img">
+                    <span>延迟会议</span>
+                  </div>
+
+                  <div class="button center" v-show="control.end_show" @click="end_meeting">
+                    <img src="./img/icon8.png" class="bg_img">
+                    <span>结束会议</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div> -->
+          <component_header :place-id="place_id" @delay-meeting="delay_event" @end-meeting="end_meeting">
+          </component_header>
+
+          <div class="body flex_grow">
+            <div class="left box col_layout">
+              <span class="title">环境系统</span>
+
+              <div class="box1">
+                <img src="./img/icon13.png" class="bg_img">
+
+                <div class="col_layout" v-for="item in control.env_icon">
+                  <img :src="item.img" class="icon">
+
+                  <div class="row_laout">
+                    <span class="title">{{item.title}}</span>
+
+                    <span class="value">{{item.value}}{{item.unit}}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="box2 row_layout">
+                <img src="./img/icon24.png" class="bg_img">
+
+                <span class="title gap">灯光模式</span>
+                <img @click="send_order('light_switch')"
+                  :src="control.light_switch?'./img/icon21.png':'./img/icon20.png'" class="icon gap">
+                <div class="row_layout">
+                  <div class="button center" v-for="item in control.lights"
+                    @click="send_order('light_mode',item.value)">
+                    <img :src="control.light_mode===item.value?'./img/icon22.png':'./img/icon23.png'" class="bg_img">
+                    <span :class="[control.light_mode===item.value?'white':'']">{{item.title}}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="box2 row_layout">
+                <img src="./img/icon25.png" class="bg_img">
+
+                <span class="title gap">窗帘控制</span>
+                <div class="row_layout">
+                  <div class="button center" v-for="item in control.curtains"
+                    @click="send_order('curtain_mode',item.value)">
+                    <img :src="control.curtain_mode===item.value?'./img/icon22.png':'./img/icon23.png'" class="bg_img">
+                    <span :class="[control.curtain_mode===item.value?'white':'']">{{item.title}}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="box3 row_layout">
+                <div class="button center" @click="send_order('env_open')">一键开启</div>
+                <div class="button center" @click="send_order('env_close')">一键关闭</div>
+              </div>
+            </div>
+
+            <div class="mid col_layout">
+              <div class="box col_layout">
+                <div class="title row_layout" style="justify-content: space-between;">
+                  <span>扩声系统</span>
+                  <i class="el-icon-setting" @click="control.bind_device_show=true"></i>
+                </div>
+
+                <div class="box1">
+                  <img src="./img/icon26.png" class="bg_img">
+
+                  <div class="col_layout" v-for="item in control.sounds">
+                    <span>{{item.title}}</span>
+                    <span class="value">{{item.value}}</span>
+                    <div class="row_layout">
+                      <img @click="send_order(item.tag1)" src="./img/icon27.png" class="button">
+                      <img @click="send_order(item.tag3)" :src="item.switch?'./img/icon21.png':'./img/icon28.png'"
+                        class="icon">
+                      <img @click="send_order(item.tag2)" src="./img/icon29.png" class="button">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="box3 row_layout">
+                  <div class="button center" @click="send_order('sound_mute')">
+                    <!-- 取第一个元素判断 -->
+                    <img v-show="!control.sound_button_mute[0]" src="./img/icon30.png" class="bg_img">
+                    <img v-show="control.sound_button_mute[0]" src="./img/icon39.png" class="bg_img">
+                    <span>一键静音</span>
+                  </div>
+
+                  <div class="button center" v-for="item in control.sound_buttons" @click="send_order(item.tag)">
+                    <img src="./img/icon30.png" class="bg_img">
+
+                    <span>{{item.title}}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="box col_layout">
+                <span class="title">场景系统</span>
+
+                <div class="box2 row_layout">
+                  <div class="button col_layout" v-for="item in control.scenes" @click="control_window(item.tag)">
+                    <img :src="item.img" class="icon">
+                    <span>{{item.title}}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="right box col_layout">
+              <span class="title">麦克风系统</span>
+
+              <div class="box1 col_layout">
+                <img src="./img/icon34.png" class="bg_img">
+
+                <div class="row_layout" v-for="item in control.microphones">
+                  <span class="title">{{item.title}}</span>
+
+                  <el-select class="select_box" v-if="item.tag==='voice_person'" v-model="item.value"
+                    @change="send_order(item.tag)">
+                    <el-option v-for="op in control.mp_p_options" :key="op" :label="op=='ff'?'不限':op" :value="op">
+                    </el-option>
+                  </el-select>
+
+                  <div class="row_layout" v-if="item.tag!=='voice_person'">
+                    <img src="./img/icon27.png" class="button" @click="send_order(item.tag,'de')">
+                    <div class="center">
+                      <img src="./img/icon35.png" class="bg_img">
+                      <span>{{item.value}}dB</span>
+                    </div>
+                    <img src="./img/icon29.png" class="button" @click="send_order(item.tag,'add')">
+                  </div>
+                </div>
+              </div>
+
+              <div class="box2 row_layout">
+                <img src="./img/icon36.png" class="bg_img">
+
+                <span class="title">会议模式</span>
+
+                <div class="box1">
+                  <div :class="['button',control.microphone_mode===item.value?'white':'black']"
+                    v-for="item in control.mp_meetings" @click="send_order('会议模式',item.value)">
+                    {{item.title}}
+                  </div>
+                </div>
+              </div>
+
+              <div class="box3 row_layout">
+                <div class="button  center" @click="send_order('麦克风一键静音')">
+                  <!-- <img v-show="control.microphone_mute" src="./img/icon39.png" class="bg_img"> -->
+                  <span>一键静音</span>
+                </div>
+
+                <div class="button center" @click="send_order('麦克风一键开')">一键开启</div>
+                <div class="button center" @click="send_order('麦克风一键关')">一键关闭</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="foot row_layout">
+            <div class="button center" @click="send_order('一键静音')">
+              <img src="./img/icon10.png" class="bg_img">
+              <span>{{control.sound_button_mute[0]?'取消静音':'一键静音'}}</span>
+            </div>
+
+            <div class="button center" v-for="item in control.buttons" @click="send_order(item.title)">
+              <img :src="item.img" class="bg_img">
+              <span>{{item.title}}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 系统拓扑图 -->
+      <iframe v-if="html.page_select=='2'" :src="html.gplot_url" frameborder="0" scrolling="no"
+        style="flex-grow:1;"></iframe>
       <!-- 设备卡片页面 -->
-      <div class="page1" v-show="html.page_select=='1'">
+      <div class="page1" v-show="html.page_select=='3'">
         <el-card class="cards" shadow="hover" v-for="item in device.list">
           <div class="box1">
             <span class="text1 text_ellipsis">{{item.deviceName}}</span>
@@ -82,239 +306,8 @@
         </el-card>
         <el-empty v-show="device.list_empty" description="会议室下无设备" style="width: 100%;height: 100%;"></el-empty>
       </div>
-      <!-- 联检页面 -->
-      <div class="page2 flex_grow" v-if="html.page_select=='2-1'||html.page_select=='2-2'">
-        <!-- 按钮等功能 -->
-        <div class="button_layout">
-          <el-button class="buttons" v-show="html.page_select=='2-1'" @click="add_joint_rules" icon="el-icon-plus"
-            size="small">
-            添加规则
-          </el-button>
-
-          <el-input @keydown.enter.native="joint_select" style="width: 200px;" v-show="html.page_select=='2-2'"
-            size="small" placeholder="搜索" v-model="joint.log_search" clearable>
-          </el-input>
-        </div>
-        <div class="joint_table">
-          <!-- 规则表格 -->
-          <el-table v-show="html.page_select=='2-1'" :data="joint.rule_list" border :max-height="joint.table_height">
-            <el-table-column prop="onlineCheckName" label="名称" width="200"></el-table-column>
-            <el-table-column prop="createUserName" label="创建人" width="100"></el-table-column>
-            <el-table-column prop="placeName" label="会议室"></el-table-column>
-            <el-table-column prop="executeTime" label="执行时间" width="100"></el-table-column>
-            <el-table-column prop="planDatetimeStart" label="开始时间" width="200"></el-table-column>
-            <el-table-column prop="planDatetimeEnd" label="结束时间" width="200"></el-table-column>
-            <el-table-column label="操作" width="220">
-              <template slot-scope="scope">
-                <el-button type="text" size="small" @click="edit_joint_rule(scope.row)">编辑</el-button>
-                <el-button type="text" size="small" @click="del_joint_rule(scope.row)">删除
-                </el-button>
-                <el-button type="text" size="small" @click="ex_joint_rule(scope.row)" style="margin-right: 10px;">执行联检
-                </el-button>
-                <el-switch v-model="scope.row.status" @change="switch_joint_rule_status(scope.row)" :active-value="1"
-                  :inactive-value="0"></el-switch>
-              </template>
-            </el-table-column>
-          </el-table>
-          <!-- 记录表格 -->
-          <el-table v-show="html.page_select=='2-2'" :data="joint.record_list" border :max-height="joint.table_height"
-            :default-sort="{prop:'created',order: 'descending'}">
-            <el-table-column prop="onlineCheckName" label="名称" width="200"></el-table-column>
-            <el-table-column prop="placeName" label="会议室" width="200"></el-table-column>
-            <el-table-column prop="resultRemark" label="联检结果"></el-table-column>
-            <el-table-column prop="statusDesc" label="检测状态" width="150"></el-table-column>
-            <el-table-column prop="created" label="联检时间" sortable width="200"></el-table-column>
-            <el-table-column label="操作" width="100">
-              <template slot-scope="scope">
-                <el-button @click="check_record(scope.row)" type="text" size="small">查看</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </div>
-        <el-pagination class="footer" @current-change="joint_select" :current-page="current_page" :page-size="html.size"
-          background layout="total,prev,pager,next" :total="total_size"></el-pagination>
-      </div>
-      <!-- 巡检页面 -->
-      <div class="page3 flex_grow" v-if="html.page_select=='3-1'||html.page_select=='3-2'||html.page_select=='3-3'">
-        <div class="button_layout">
-          <el-button class="buttons" v-show="html.page_select=='3-1'" icon="el-icon-plus" size="small">新增巡检计划
-          </el-button>
-
-          <span class="buttons" v-show="html.page_select=='3-2'">应用会议室</span>
-          <el-select class="buttons" v-model="polling.apply_place" v-show="html.page_select=='3-2'" size="small">
-            <el-option v-for="item in option1" :value="item"></el-option>
-          </el-select>
-          <el-button class="buttons" v-show="html.page_select=='3-2'" icon="el-icon-plus" size="small">新增检查项
-          </el-button>
-
-          <el-radio-group v-show="html.page_select=='3-3'" v-model="polling.log_select" size="small">
-            <el-radio :label="0">全部</el-radio>
-            <el-radio :label="1">待巡检</el-radio>
-            <el-radio :label="2">正常完成</el-radio>
-          </el-radio-group>
-        </div>
-        <div class="polling_table">
-          <!-- 计划表格 -->
-          <el-table v-show="html.page_select=='3-1'" :data="tableData" border :max-height="polling.table_height">
-            <el-table-column prop="a" label="序号"></el-table-column>
-            <el-table-column prop="b" label="计划名称"></el-table-column>
-            <el-table-column prop="c" label="启用状态"></el-table-column>
-            <el-table-column prop="d" label="执行周期"></el-table-column>
-            <el-table-column label="操作" width="150">
-              <template slot-scope="scope">
-                <el-button type="text" size="small">编辑</el-button>
-                <el-button type="text" size="small">禁用</el-button>
-                <el-button type="text" size="small">删除</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <!-- 规则表格 -->
-          <el-table v-show="html.page_select=='3-2'" :data="tableData" border :max-height="polling.table_height"
-            style="width: 100%">
-            <el-table-column prop="a" label="序号"></el-table-column>
-            <el-table-column prop="b" label="规则名称"></el-table-column>
-            <el-table-column prop="c" label="应用会议室"></el-table-column>
-            <el-table-column prop="d" label="应用会议室"></el-table-column>
-            <el-table-column label="操作" width="150">
-              <template slot-scope="scope">
-                <el-button type="text" size="small">编辑</el-button>
-                <el-button type="text" size="small">删除</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <!-- 记录表格 -->
-          <el-table v-show="html.page_select=='3-3'" :data="tableData" border :max-height="polling.table_height"
-            style="width: 100%">
-            <el-table-column prop="a" label="序号"></el-table-column>
-            <el-table-column prop="b" label="计划名称"></el-table-column>
-            <el-table-column prop="c" label="结果"></el-table-column>
-            <el-table-column prop="d" label="巡检时间"></el-table-column>
-            <el-table-column prop="e" label="巡检人员"></el-table-column>
-            <el-table-column label="操作" width="120">
-              <template slot-scope="scope">
-                <el-button type="text" size="small">详情</el-button>
-                <el-button type="text" size="small">执行巡检</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </div>
-      </div>
     </div>
 
-    <!-- 添加/编辑规则弹窗 -->
-    <div class="popup" v-if="joint.add_rule_display">
-      <el-card class="add_rule_form">
-        <div class="form_head">
-          <span class="text">{{joint.rule_id?'编辑':'添加'}}规则</span>
-          <div class="icon center button" @click="joint.add_rule_display=false">
-            <i class="el-icon-close icon2"></i>
-          </div>
-        </div>
-        <el-form :model="joint.form" :rules="joint_rules" ref="joint_form" label-width="auto"
-          v-loading="html.popup_loading">
-          <el-form-item label="规则名称" prop="name">
-            <el-input v-model="joint.form.name" style="width: 250px;"></el-input>
-          </el-form-item>
-
-          <el-form-item label="有效期" prop="date">
-            <el-date-picker v-model="joint.form.date" :picker-options="joint_date_options()" type="daterange"
-              range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期"></el-date-picker>
-          </el-form-item>
-
-          <el-form-item label="周期" prop="cycle_week">
-            <el-checkbox-group v-model="joint.form.cycle_week">
-              <el-checkbox :label="2">周一</el-checkbox>
-              <el-checkbox :label="3">周二</el-checkbox>
-              <el-checkbox :label="4">周三</el-checkbox>
-              <el-checkbox :label="5">周四</el-checkbox>
-              <el-checkbox :label="6">周五</el-checkbox>
-              <el-checkbox :label="7">周六</el-checkbox>
-              <el-checkbox :label="1">周日</el-checkbox>
-            </el-checkbox-group>
-          </el-form-item>
-
-          <el-form-item label="时间" prop="select_time">
-            <el-time-picker v-model="joint.form.select_time" style="width: 150px;"></el-time-picker>
-          </el-form-item>
-
-          <el-form-item label="联检设备">
-            <div class="box1" v-if="joint.device_list.length>0">
-              <div class="box1_head">
-                <el-checkbox class="flex_shrink" :indeterminate="joint.form.isIndeterminate"
-                  v-model="joint.form.checkAll" @change="check_all">全选
-                </el-checkbox>
-                <el-input class="search" placeholder="模糊搜索" v-model="joint.form.search" size="mini"
-                  @keydown.enter.native="get_user_all_device" @change="get_user_all_device" clearable>
-                  <i slot="suffix" class="el-input__icon el-icon-search button" @click="get_user_all_device"></i>
-                </el-input>
-              </div>
-              <div class="overflow">
-                <div class="device_box" v-for="item in joint.device_list">
-                  <div class="icon" @click="check_change(item)">
-                    <i class="el-icon-check icon2" v-show="item.selected"></i>
-                  </div>
-                  <span class="text text_ellipsis" @click="check_change(item)"
-                    :title="item.deviceName">{{item.deviceName}}</span>
-                  <el-button type="text" @click="get_device_server(item)">配置</el-button>
-                </div>
-              </div>
-              <span class="verify_text"
-                v-show="joint_rules.device_selected.show">{{joint_rules.device_selected.message}}</span>
-              <el-pagination class="footer" @current-change="get_user_all_device" :current-page="current_page2"
-                :total="total_size2" layout="prev,pager,next"></el-pagination>
-            </div>
-            <el-empty v-show="joint.device_list.length==0" description="空" style="width: 100%;">
-            </el-empty>
-          </el-form-item>
-
-          <el-form-item class="buttons">
-            <el-button style="margin-right: 20px;" @click="joint_rule_submit(joint.form,0)">保存</el-button>
-            <el-button type="primary" @click="joint_rule_submit(joint.form,1)">保存并启用</el-button>
-          </el-form-item>
-        </el-form>
-      </el-card>
-    </div>
-    <!-- 设备服务列表二级弹窗 -->
-    <div class="popup" v-if="joint.device_setting_display">
-      <el-card class="device_setting">
-        <el-form :model="joint.form2" :rules="joint_rules" ref="joint_form2" label-width="auto">
-          <el-form-item label="物模型服务" prop="serviceIdentifier">
-            <el-select v-model="joint.form2.serviceIdentifier" placeholder="选择物模型服务" size="mini" style="width: 150px;">
-              <el-option v-for="item in joint.form2.server_list" :key="item.serviceId" :value="item.identifier"
-                :label="item.name">
-              </el-option>
-            </el-select>
-          </el-form-item>
-          <el-form-item class="buttons">
-            <el-button type="primary" @click="save_device_set">保存</el-button>
-            <el-button style="margin-left:20px;" @click="joint.device_setting_display=false">取消</el-button>
-          </el-form-item>
-        </el-form>
-      </el-card>
-    </div>
-    <!-- 联检记录详情 -->
-    <div class="popup" v-if="joint.record_detail_display">
-      <el-card class="record">
-        <div class="form_head">
-          <span class="text">设备检测结果</span>
-          <div class="icon center button" @click="joint.record_detail_display=false">
-            <i class="el-icon-close icon2"></i>
-          </div>
-        </div>
-        <el-descriptions v-for="item in joint.record_devices" :title="item.name" direction="vertical" :column="1"
-          border>
-          <el-descriptions-item label="项目检测状态">{{item.status}}</el-descriptions-item>
-          <el-descriptions-item label="检测项目" v-if="item.items.length>0">
-            <el-descriptions v-for="item2 in item.items" direction="vertical" :column="2">
-              <el-descriptions-item label="物模型属性">{{item2.property}}</el-descriptions-item>
-              <el-descriptions-item label="是否合格">{{item2.status}}</el-descriptions-item>
-            </el-descriptions>
-          </el-descriptions-item>
-        </el-descriptions>
-        <el-empty v-show="joint.record_empty" description="未上线">
-        </el-empty>
-      </el-card>
-    </div>
     <!-- 设备跳转弹窗 -->
     <div class="popup" v-show="html.turn_to_device">
       <div class="device_window">
@@ -330,16 +323,145 @@
         <iframe class="body" :src="html.device_url" frameborder="0" scrolling="no"></iframe>
       </div>
     </div>
+    <!-- 延迟会议窗 -->
+    <div class="popup" v-show="control.delay_pop_show">
+      <div class="pop_box col_layout" style="width: 50%;">
+        <div class="head row_layout">
+          <div class="title">延后会议</div>
+          <el-button @click="control.delay_pop_show=false" type="danger" icon="el-icon-close" circle
+            size="small"></el-button>
+        </div>
+
+        <el-slider v-model="control.delay" :step="15" :max="120" show-stops style="margin: 0 20px;"></el-slider>
+
+        <div class="delay_time">{{control.delay}}分钟</div>
+
+        <div class="foot row_layout">
+          <el-button @click="control.delay_pop_show=false" size="small">取消</el-button>
+          <el-button @click="delay_meeting" size="small" type="primary">确认</el-button>
+        </div>
+      </div>
+    </div>
+    <!-- 绑定设备 -->
+    <div class="popup" v-show="control.bind_device_show">
+      <div class="pop_box col_layout" style="width: 30%;">
+        <div class="head row_layout">
+          <div class="title">绑定设备</div>
+          <el-button @click="control.bind_device_show=false" type="danger" icon="el-icon-close" circle
+            size="small"></el-button>
+        </div>
+
+        <div class="row_layout" style="margin-bottom: 20px;">
+          <span class="bind_title">左侧音柱设备：</span>
+          <el-input v-model="control.bind.left_sound" size="mini"></el-input>
+        </div>
+
+        <div class="row_layout">
+          <span class="bind_title">右侧音柱设备：</span>
+          <el-input v-model="control.bind.right_sound" size="mini"></el-input>
+        </div>
+
+        <div class="foot row_layout">
+          <el-button @click="bind_device" size="small" type="primary">确认</el-button>
+        </div>
+      </div>
+    </div>
+    <!-- 场景矩阵 -->
+    <div class="popup" v-show="control.scene.show">
+      <div class="pop_box col_layout" style="width: 90%;min-width: 1000px;">
+        <div class="head row_layout">
+          <div class="title">{{control.scene.title}}</div>
+          <el-button @click="control.scene.show=false" type="danger" icon="el-icon-close" circle
+            size="small"></el-button>
+        </div>
+
+        <div v-if="control.scene.title==='音频矩阵'" id="sound_matrix">
+          <div class="head">
+            <div class="title" v-for="num,index in 13">
+              {{index>0?'IN'+index:''}}
+            </div>
+          </div>
+
+          <div class="body">
+            <div class="col">
+              <div class="title" v-for="num in 9">
+                {{'OUT'+num}}
+              </div>
+            </div>
+
+            <div class="body">
+              <div class="row" v-for="row,row_i in control.scene.sound">
+                <div class="button" v-for="col,col_i in row" @click="send_order('音频矩阵',{value:col,row_i,col_i})">
+                  <img v-show="col==1" src="./img/icon40.png" class="bg_img">
+                  <img v-show="col==0" src="./img/icon41.png" class="bg_img">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="control.scene.title==='视频矩阵'&&!control.scene.flag" id="video_matrix"
+          style="grid-template-rows: repeat(2, 70px)">
+          <div class="button center" v-for="item,index in control.scene.video1" @click="send_order('视频矩阵',index)">
+            <img v-show="!video_matrix_status(index)" src="./img/icon42.png" class="bg_img">
+            <img v-show="video_matrix_status(index)" src="./img/icon43.png" class="bg_img">
+            <span>{{item}}</span>
+          </div>
+        </div>
+
+        <div v-if="control.scene.title==='视频矩阵'&&control.scene.flag" id="video_matrix">
+          <div class="button center" v-for="item,index in control.scene.video"
+            @click="send_order('视频矩阵',{value:item.value, index})">
+            <img v-show="!video_matrix_status(index)" src="./img/icon42.png" class="bg_img">
+            <img v-show="video_matrix_status(index)" src="./img/icon43.png" class="bg_img">
+            <span>{{item.label}}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 临时 巡检弹窗 -->
+    <div class="popup" v-show="control.巡检.show">
+      <div class="pop_box col_layout" style="width: 90%;min-width: 1000px;">
+        <div class="head row_layout">
+          <div class="title">巡检详情</div>
+          <el-button @click="control.巡检.show=false" type="danger" icon="el-icon-close" circle size="small"></el-button>
+        </div>
+
+        <el-table :data="control.巡检.data">
+          <el-table-column prop="messageId" label="messageId"></el-table-column>
+          <el-table-column prop="deviceId" label="设备ID"></el-table-column>
+          <el-table-column prop="deviceName" label="设备名称"></el-table-column>
+          <el-table-column prop="placeName" label="场所名称"></el-table-column>
+          <el-table-column prop="serviceName" label="巡检服务"></el-table-column>
+          <el-table-column prop="operate" label="巡检状态" width="150"></el-table-column>
+          <el-table-column prop="operateStatus" label="巡检结果"></el-table-column>
+        </el-table>
+      </div>
+    </div>
+    <!-- 临时 巡检完成提示弹窗 -->
+    <div class="popup" v-show="control.巡检.show2">
+      <div class="pop_box col_layout" style="width: 400px;">
+        <div class="head row_layout">
+          <div class="title"></div>
+          <el-button @click="control.巡检.show2=false" type="danger" icon="el-icon-close" circle size="small"></el-button>
+        </div>
+
+        <div class="linshi">巡检完成</div>
+        <div class="linshi" style="margin-bottom: 40px;">系统无异常</div>
+      </div>
+    </div>
     <!-- 最小化窗口 -->
     <el-button v-if="html.iconize_device" @click="full_size" class="iconize_device_window" type="warning"
       size="mini">{{html.device_name}} 弹出窗</el-button>
   </div>
 
   <script src="../../运维人员部署请修改我.js"></script>
+  <script src="../../js/stomp.min.js"></script>
   <script src="../module/vue.js"></script>
   <script src="../module/element-ui.js"></script>
   <script src="../module/axios.min.js"></script>
   <script src="../module/common_function.js"></script>
+  <script src="../../dlc2/components/components.js"></script>
   <script src="./index.js"></script>
 </body>
 

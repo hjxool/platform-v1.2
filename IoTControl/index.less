@@ -5,6 +5,10 @@
 	display: flex;
 	align-items: center;
 }
+.col_layout {
+	display: flex;
+	flex-direction: column;
+}
 #index {
 	width: 100%;
 	height: 100%;
@@ -309,6 +313,27 @@
 			}
 		}
 	}
+	> .pop_box {
+		border-radius: 10px;
+		background: #fff;
+		padding: 16px;
+		max-height: 96%;
+		overflow-x: hidden;
+		> .head {
+			justify-content: space-between;
+			margin-bottom: 20px;
+			> .title {
+				font-weight: bold;
+			}
+		}
+		> .foot {
+			align-self: center;
+			margin-top: 20px;
+			> .button + .button {
+				margin-left: 20px;
+			}
+		}
+	}
 }
 .verify_text {
 	color: red;
@@ -350,6 +375,16 @@
 	right: 9px;
 	bottom: 9px;
 }
+// 延迟时间时间
+.delay_time {
+	margin: 20px;
+	font-weight: bold;
+	align-self: center;
+}
+// 绑定设备文字
+.bind_title {
+	margin-right: 20px;
+}
 
 .el-checkbox {
 	margin-right: 10px;
@@ -369,4 +404,393 @@
 	/*滚动条里面轨道*/
 	border-radius: 5px;
 	background: #404755;
+}
+// 集中控制
+#control_page {
+	overflow-x: hidden;
+	background: #eef2fe;
+	min-width: 1300px;
+	> .head {
+		padding: 10px 0;
+		background: #fff;
+		display: grid;
+		grid-template-columns: 70% auto;
+		overflow: hidden;
+		z-index: 10;
+		margin-bottom: 16px;
+		> .box1 {
+			position: relative;
+			padding: 20px 30px;
+			justify-content: space-around;
+			.icon1 {
+				width: 16px;
+				height: 20px;
+				margin-right: 14px;
+			}
+			.text1 {
+				color: #3675ff;
+			}
+			.text2 {
+				font-size: 30px;
+				color: #31313d;
+				margin: 16px 0;
+			}
+			> .box {
+				position: relative;
+				padding: 10px 20px;
+				width: 50%;
+				overflow: hidden;
+				color: #fff;
+			}
+		}
+		> .box2 {
+			margin: 0 30px;
+			> .head {
+				padding: 10px 0;
+				background: linear-gradient(65deg, #c8ddfb 0%, #e4f1ff 100%);
+				border-radius: 10px;
+				color: #31313d;
+				justify-content: center;
+				> .icon {
+					width: 20px;
+					height: 20px;
+				}
+			}
+			> .body {
+				margin-top: 10px;
+				position: relative;
+				align-items: center;
+				padding: 10px 0;
+				> .text1 {
+					font-size: 14px;
+					color: #ffffff;
+				}
+				> .box1 {
+					font-size: 24px;
+					color: #31313d;
+					margin: 10px 0;
+					> .time {
+						position: relative;
+						padding: 5px;
+						& + .time {
+							margin-left: 10px;
+						}
+						> .icon {
+							position: relative;
+							padding: 5px;
+							& + .icon {
+								margin-left: 5px;
+							}
+						}
+					}
+				}
+				> .box2 {
+					> .button {
+						font-size: 18px;
+						color: #31313d;
+						padding: 10px 20px;
+						& + .button {
+							margin-left: 20px;
+						}
+					}
+				}
+			}
+		}
+	}
+	> .body {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		.box {
+			background: #ffffff;
+			border-radius: 16px;
+			padding: 14px 20px;
+			z-index: 10;
+			> .title {
+				font-size: 16px;
+				color: #31313d;
+				margin-bottom: 16px;
+			}
+		}
+		> .left {
+			border-top-left-radius: unset;
+			border-bottom-left-radius: unset;
+			> .box1 {
+				position: relative;
+				display: grid;
+				grid-template-columns: repeat(3, 1fr);
+				grid-template-rows: 1fr 1fr;
+				align-items: center;
+				justify-items: center;
+				padding: 10px 16px;
+				margin-bottom: 16px;
+				> .col_layout {
+					align-items: center;
+					position: relative;
+					padding: 10px 0;
+					> .icon {
+						width: 50px;
+						height: 50px;
+						margin-bottom: 10px;
+					}
+					.title {
+						font-size: 16px;
+						color: #556996;
+						margin-right: 10px;
+					}
+					.value {
+						font-size: 16px;
+						color: #31313d;
+					}
+				}
+			}
+			> .box2 {
+				padding: 14px;
+				position: relative;
+				margin-bottom: 16px;
+				> .title {
+					color: #31313d;
+					white-space: nowrap;
+				}
+				> .icon {
+					width: 60px;
+					height: 30px;
+					cursor: pointer;
+				}
+				.button {
+					width: 80px;
+					height: 36px;
+					color: #31313d;
+					padding-bottom: 4px;
+					& + .button {
+						margin-left: 10px;
+					}
+					> .white {
+						color: #fff;
+					}
+				}
+				> .gap {
+					margin-right: 20px;
+				}
+			}
+			> .box3 {
+				align-self: center;
+				> .button {
+					width: 100px;
+					height: 40px;
+					background: #f4f6fa;
+					border: 1px solid #c9d9ef;
+					border-radius: 8px;
+					& + .button {
+						margin-left: 30px;
+					}
+				}
+			}
+		}
+		> .mid {
+			margin-left: 20px;
+			justify-content: space-between;
+			> .box {
+				> .box1 {
+					width: 96%;
+					position: relative;
+					padding: 30px 0 20px 0;
+					display: flex;
+					justify-content: space-evenly;
+					align-self: center;
+					margin-bottom: 16px;
+					> .col_layout {
+						align-items: center;
+						> .value {
+							margin: 20px 0;
+							font-size: 26px;
+							color: #31313d;
+						}
+						.button {
+							width: 30px;
+							height: 30px;
+						}
+						.icon {
+							width: 60px;
+							height: 30px;
+							margin: 0 10px;
+							cursor: pointer;
+						}
+					}
+				}
+				> .box3 {
+					align-self: center;
+					> .button {
+						width: 100px;
+						height: 40px;
+						& + .button {
+							margin-left: 20px;
+						}
+					}
+					> .col_layout + .col_layout {
+						margin-left: 30px;
+					}
+				}
+				> .box2 {
+					justify-content: space-evenly;
+					> .col_layout {
+						align-items: center;
+						font-size: 16px;
+						color: #31313d;
+						> .icon {
+							width: 80px;
+							height: 80px;
+						}
+					}
+				}
+			}
+		}
+		> .right {
+			margin-left: 20px;
+			border-top-right-radius: unset;
+			border-bottom-right-radius: unset;
+			> .box1 {
+				position: relative;
+				padding: 20px;
+				margin-bottom: 16px;
+				> .row_layout {
+					justify-content: space-between;
+					&:not(:last-child) {
+						margin-bottom: 16px;
+					}
+					> .title {
+						color: #31313d;
+					}
+					> .row_layout {
+						> .button {
+							width: 34px;
+							height: 34px;
+						}
+						> .center {
+							margin: 0 10px;
+							width: 110px;
+							padding: 10px;
+							position: relative;
+						}
+					}
+				}
+			}
+			> .box2 {
+				position: relative;
+				justify-content: space-around;
+				margin-bottom: 16px;
+				> .title {
+					font-size: 16px;
+					color: #31313d;
+				}
+				> .box1 {
+					display: grid;
+					grid-template-columns: 1fr 1fr;
+					grid-template-rows: 1fr 1fr;
+					align-items: start;
+					padding: 10px 0;
+					> .button {
+						padding: 6px 10px;
+						margin: 0 10px;
+						font-size: 14px;
+						&:nth-child(3),
+						&:nth-child(4) {
+							margin-top: 5px;
+						}
+					}
+					> .white {
+						color: #fff;
+						background: linear-gradient(90deg, #618eff, #115efb);
+						box-shadow: 0px 1px 3px 0px rgba(41, 84, 191, 0.47);
+						border-radius: 8px;
+					}
+					> .black {
+						color: #31313d;
+						background: #ffffff;
+						box-shadow: 0px 1px 3px 0px rgba(41, 84, 191, 0.47);
+						border-radius: 8px;
+					}
+				}
+			}
+			> .box3 {
+				align-self: center;
+				> .button {
+					width: 100px;
+					height: 40px;
+					background: #f4f6fa;
+					border: 1px solid #c9d9ef;
+					border-radius: 8px;
+					& + .button {
+						margin-left: 30px;
+					}
+				}
+			}
+		}
+	}
+	> .foot {
+		color: #ffffff;
+		align-self: center;
+		margin: 20px 0;
+		> .button {
+			padding: 16px 20px;
+			min-width: 140px;
+			& + .button {
+				margin-left: 20px;
+			}
+		}
+	}
+}
+// 音频矩阵
+#sound_matrix {
+	display: grid;
+	grid-template-rows: 30px auto;
+	> .head {
+		display: grid;
+		grid-template-columns: repeat(13, 1fr);
+		align-items: center;
+		justify-items: center;
+	}
+	> .body {
+		display: grid;
+		grid-template-columns: 1fr 12fr;
+		> .col {
+			display: grid;
+			grid-template-rows: repeat(9, 1fr);
+			align-items: center;
+			justify-items: center;
+		}
+		> .body {
+			display: grid;
+			grid-template-rows: repeat(9, 1fr);
+			> .row {
+				display: grid;
+				grid-template-columns: repeat(12, 1fr);
+				> .button {
+					min-height: 30px;
+				}
+			}
+		}
+	}
+	.title {
+		color: rgba(0, 0, 0, 0.8);
+	}
+}
+// 视频矩阵
+#video_matrix {
+	align-self: center;
+	display: grid;
+	grid-template-rows: repeat(4, 70px);
+	grid-template-columns: repeat(4, 140px);
+	> .button {
+		margin: 10px;
+		color: #fff;
+		font-weight: bold;
+		font-size: 14px;
+	}
+}
+.linshi {
+	font-size: 26px;
+	align-self: center;
+	& + .linshi {
+		margin-top: 20px;
+	}
 }

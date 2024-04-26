@@ -15,21 +15,41 @@
   <div id="index" v-cloak v-loading="html.page_loading" @click="close_popup">
     <div class="panel css_img" v-show="page_id==page.id" v-for="page in component_list" :style="panel_size(page)">
       <template v-for="item,index in page.data">
-        <custom-container v-if="item.type=='container'" :obj="item" :radio="page.radio"></custom-container>
-        <custom-text v-if="item.type=='text-block'" :obj="item" :radio="page.radio"></custom-text>
+        <custom-container v-if="item.type=='container'" :obj="item" :radio="page.radio"
+          :token="token"></custom-container>
+        <custom-text v-if="item.type=='text-block'" :obj="item" :radio="page.radio" :token="token"
+          :inject_data="inject_data"></custom-text>
         <custom-switch v-if="item.type=='switch1'||item.type=='switch1V'||item.type=='switch2'" :obj="item"
-          :radio="page.radio"></custom-switch>
-        <custom-slider v-if="item.type=='sliderV'" :obj="item" :radio="page.radio"></custom-slider>
-        <custom-slider2 v-if="item.type=='slider'" :obj="item" :radio="page.radio"></custom-slider2>
-        <custom-img v-if="item.type=='image'" :obj="item" :radio="page.radio"></custom-img>
-        <custom-line v-if="item.type=='连线'" :obj="item" :radio="page.radio" :page="page"></custom-line>
-        <custom-video v-if="item.type=='videoPlayer'" :obj="item" :radio="page.radio"></custom-video>
-        <!-- <custom-device-status v-if="item.type=='model-stat-list'" :obj="item"
-          :radio="page.radio"></custom-device-status> -->
-        <custom-device-status v-if="item.shapeNickname=='设备节点'" :obj="item" :radio="page.radio"
-          :page_width="page.mb.w"></custom-device-status>
-        <custom-button v-if="item.type=='button'" :obj="item" :radio="page.radio"
-          :current_page="page_id"></custom-button>
+          :token="token" :radio="page.radio" :inject_data="inject_data"></custom-switch>
+        <custom-slider v-if="item.type=='sliderV'" :obj="item" :radio="page.radio" :token="token"
+          :inject_data="inject_data"></custom-slider>
+        <custom-slider2 v-if="item.type=='slider'" :obj="item" :radio="page.radio" :token="token"
+          :inject_data="inject_data"></custom-slider2>
+        <custom-img v-if="item.type=='image'" :obj="item" :radio="page.radio" :token="token"></custom-img>
+        <custom-line v-if="item.type=='连线'" :obj="item" :radio="page.radio" :page="page"
+          :inject_data="inject_data"></custom-line>
+        <custom-video v-if="item.type=='videoPlayer'" :obj="item" :radio="page.radio" :token="token"></custom-video>
+        <custom-device-status v-if="item.shapeNickname=='设备节点'" :obj="item" :radio="page.radio" :page_width="page.mb.w"
+          :token="token" :inject_data="inject_data"></custom-device-status>
+        <custom-button v-if="item.type=='button'" :obj="item" :radio="page.radio" :token="token"></custom-button>
+        <current_meeting v-if="item.type=='current_meeting'" :obj="item" :radio="page.radio" :token="token">
+        </current_meeting>
+        <custom-online-check v-if="item.type=='巡检按钮'" :obj="item" :radio="page.radio" :token="token"
+          :is_checking="online_check.is_checking" @checking_event="checking_event" :random_num="html.random_num"
+          :inject_data="inject_data"></custom-online-check>
+        <custom-visual-editor1 v-if="item.type=='组件预设'" :obj="item" :radio="page.radio"
+          :token="token"></custom-visual-editor1>
+        <current_date v-if="item.type=='current_date'" :obj="item" :radio="page.radio"></current_date>
+        <custom-sound-matrix v-if="item.type=='audio_matrix'" :obj="item" :radio="page.radio"
+          :inject_data="inject_data"></custom-sound-matrix>
+        <custom-video-matrix v-if="item.type=='video_matrix'" :obj="item" :radio="page.radio"
+          :inject_data="inject_data"></custom-video-matrix>
+        <custom-button-switch v-if="item.type=='switchButton'" :obj="item" :radio="page.radio"
+          :inject_data="inject_data"></custom-button-switch>
+        <custom-progress v-if="item.type=='progressV'" :obj="item" :radio="page.radio"
+          :inject_data="inject_data"></custom-progress>
+        <custom-input v-if="item.type=='input'" :obj="item" :radio="page.radio"
+          :inject_data="inject_data"></custom-input>
       </template>
     </div>
     <!-- 设备状态栏 -->
@@ -51,6 +71,46 @@
         </div>
       </div>
     </div>
+    <!-- 一件巡检弹窗 -->
+    <div class="popup_box" v-if="online_check.show">
+      <div class="online_check">
+        <div class="head row_layout">
+          <div class="title">一键巡检</div>
+          <el-button @click.stop="online_check.show=false" type="danger" icon="el-icon-close" circle
+            size="mini"></el-button>
+        </div>
+        <!-- 巡检表格 -->
+        <el-table :data="online_check.list" max-height="600">
+          <el-table-column prop="device_id" label="设备ID"></el-table-column>
+          <el-table-column prop="device_name" label="设备名称"></el-table-column>
+          <el-table-column prop="service_name" label="巡检服务"></el-table-column>
+          <el-table-column prop="result" label="巡检结果"></el-table-column>
+        </el-table>
+      </div>
+    </div>
+    <!-- 音视频矩阵 -->
+    <div class="popup_box" v-show="matrix.show">
+      <div class="matrix_box col_layout">
+        <div class="head row_layout">
+          <div class="title">{{matrix.title}}</div>
+          <el-button @click.stop="matrix.show=false" type="danger" icon="el-icon-close" circle size="mini"></el-button>
+        </div>
+
+        <sound-matrix v-if="matrix.title==='音频矩阵'" :list="matrix.list" :device_id="matrix.device_id" :token="token">
+        </sound-matrix>
+
+        <video-matrix1 v-if="matrix.title==='视频矩阵一代'" :list="matrix.list" :device_id="matrix.device_id" :token="token">
+        </video-matrix1>
+
+        <video-matrix2 v-if="matrix.title==='视频矩阵二代'" :list="matrix.list" :device_id="matrix.device_id" :token="token">
+        </video-matrix2>
+      </div>
+    </div>
+    <!-- 下拉框 -->
+    <div class="drop_down_box" v-show="drop.show" :style="{left:`${drop.style.left}px`, top:`${drop.style.top}px`}">
+      <div class="item text_ellipsis" v-for="item in drop.options" :title="item.label" @click="drop_select(item)">
+        {{item.label}}</div>
+    </div>
   </div>
 
   <script src="../../运维人员部署请修改我.js"></script>
@@ -61,6 +121,7 @@
   <script src="../module/flv.js"></script>
   <script src="../module/common_function.js"></script>
   <script src="./components.js"></script>
+  <script src="./components2.js"></script>
   <script src="./index.js"></script>
 </body>
 

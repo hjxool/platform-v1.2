@@ -14,6 +14,9 @@ let get_template_list_url = `${url}api-portal/displayBoard/template/list`; //获
 let get_goods_list_url = `${url}api-portal/things/search`; // 查询物品列表
 let place_detail_url = `${url}api-portal/room/search`; // 查询会议室详情
 let user_name_url = `${url}api-user/users/nickName`; // 查询所有用户名
+let paperless_url = `${无纸化第三方地址}/#/ExternalEditMeeting`; // 无纸化配置页面
+let paperless_data_url = `${url}api-portal/paperless/cache`; // 无纸化会议缓存数据
+let paperless_meetingId_url = `${url}api-portal/meeting/createMeetingIds`; // 生成会议id
 
 Vue.config.productionTip = false;
 new Vue({
@@ -45,6 +48,7 @@ new Vue({
 			add_person_loading: false, //添加人员表单加载
 			time_num: 68, //一行时间间隔方块
 			add_person_url: '', //添加人员页面
+			paperless_url: '', // 无纸化页面
 			door_password_options: ['人脸', '随机码', '人脸+随机码'],
 		},
 		place_list: [], // 会议室及会议列表
@@ -72,9 +76,10 @@ new Vue({
 			emcee: [], // 主持人
 			step: 0, // 步骤条 0未开始 1~3对应步骤完成
 			step_list: [
-				{ title: '基本配置', value: 0 },
-				{ title: '通知配置', value: 1 },
-				{ title: '模板配置', value: 2 },
+				{ title: '基本配置', value: 0, show: true },
+				{ title: '无纸化配置', value: 1, show: true },
+				{ title: '通知配置', value: 2, show: true },
+				{ title: '模板配置', value: 3, show: true },
 			],
 			type: '1', // 会议类型
 			type_list: [], // 类型列表
@@ -87,6 +92,7 @@ new Vue({
 			door_password: 2, //开门码 0人脸 1随机码 2默认人脸+随机码
 			platform: [], //第三方平台
 			goods: [], // 物品清单
+			operator: [], // 操作员
 		},
 		// 当前用户信息
 		user: {
@@ -273,13 +279,28 @@ new Vue({
 						};
 						this.new_meeting_form.search_person.push(t);
 					}
+				} else if (this.add_person_form.add_type === 'operator') {
+					let list = await this.de_weight(data.data);
+					this.new_meeting_form.operator = [];
+					for (let val of list) {
+						let t = {
+							name: val.username,
+							id: val.id,
+							type: 'person',
+						};
+						this.new_meeting_form.operator.push(t);
+					}
 				}
 			} else {
 				if (data.data.type === 'Close popup') {
 					this.html.add_person_display = false;
+				} else if (data.data.msg === 'Meeting Data Saved') {
+					this.paperless_data = true;
 				}
 			}
 		};
+		// 步骤条备份
+		this.step_list_backup = JSON.parse(JSON.stringify(this.new_meeting_form.step_list));
 	},
 	methods: {
 		// 获取模板列表
@@ -320,10 +341,11 @@ new Vue({
 						this.default_meeting_type = val.id;
 						find = true;
 					}
+					val.disabled = false;
 					this.new_meeting_form.type_list.push(val);
 				}
 				if (!find) {
-					this.default_meeting_type = this.new_meeting_form.type_list[0].id;
+					this.default_meeting_type = this.new_meeting_form.type_list[1].id;
 				}
 			});
 		},
@@ -338,63 +360,150 @@ new Vue({
 					return '已完成';
 			}
 		},
+		// 返回上一步
+		pre_step(form) {
+			if (form.type != '5' && form.step === 2) {
+				// 只有无纸化配置隐藏 且 当前步骤处于2时 才自减2
+				form.step -= 2;
+			} else {
+				// 如果当前正在配置无纸化 返回上一步后要重新配置 即要清空 不能直接点下一步
+				if (form.type == '5' && form.step === 1) {
+					this.paperless_data = null;
+				}
+				form.step--;
+			}
+		},
 		// 区分点击下一步还是完成 完成时提交
 		step_pass(form) {
-			if (form.step === 2) {
+			if (form.step === 3) {
+				// 最后一步提交
 				this.new_submit(form);
 			} else {
-				// 没进行一步验证 通过才能进入下一步
-				this.$refs.new_meeting.validate(async (result) => {
-					let result2 = true;
-					if (!form.step) {
-						if (!form.emcee.length) {
-							this.$message.error('主持人不能为空！');
-							result2 = false;
-						}
-						if (form.emcee.length > 1) {
-							this.$message.error('主持人只能有一个');
-							result2 = false;
-						}
-						if (!form.search_person.length) {
-							this.$message.error('参会人人不能为空！');
-							result2 = false;
-						}
-					} else if (form.step === 1) {
-						if (form.sendMessage == 1) {
-							if (form.meetingReminds.length == 0) {
-								result2 = false;
-								this.$message.error('请添加提醒时间');
-							} else {
-								for (let i = 0; i < form.meetingReminds.length; i++) {
-									if (!form.meetingReminds[i].alert_time) {
-										this.$message.error('提醒时间不能为空');
-										result2 = false;
-										break;
-									} else {
-										for (let k = i + 1; k < form.meetingReminds.length; k++) {
-											if (form.meetingReminds[i].alert_time == form.meetingReminds[k].alert_time) {
-												this.$message.error('提醒时间不能重复');
-												result2 = false;
-												break;
-											}
-										}
-										if (!result2) {
-											break;
-										}
-									}
-								}
-							}
-						}
-					}
-					if (!result || !result2) {
-						return;
-					}
-					if (form.step === 2) {
-						this.new_submit(form);
+				if (form.step === 1) {
+					// 如果无纸化数据为空则不能进行下一步
+					if (!this.paperless_data) {
+						this.$message.error('无纸化配置未完成');
 						return;
 					}
 					form.step++;
-				});
+				} else {
+					// 没进行一步验证 通过才能进入下一步
+					this.$refs.new_meeting.validate(async (result) => {
+						let result2 = true;
+						// 此处根据实际
+						switch (form.step) {
+							case 0:
+								if (!form.emcee.length) {
+									this.$message.error('主持人不能为空！');
+									return;
+								}
+								if (form.emcee.length > 1) {
+									this.$message.error('主持人只能有一个');
+									return;
+								}
+								if (!form.search_person.length) {
+									this.$message.error('参会人人不能为空！');
+									return;
+								}
+								// 无纸化才有的配置验证
+								if (form.type == '5') {
+									if (form.operator.length !== 1) {
+										this.$message.error('操作员有且只能有一个');
+										return;
+									}
+									let holder = form.emcee[0].id;
+									for (let val of form.search_person) {
+										if (val.id === holder) {
+											this.$message.error('参会人里不能有主持人');
+											return;
+										}
+									}
+									for (let val of form.operator) {
+										if (val.id === holder) {
+											this.$message.error('操作员不能是主持人');
+											return;
+										}
+									}
+								}
+								// 进入无纸化步骤前要先存 会议名 预约时间 主持人 参会人员 操作员 会议室id
+								if (form.type == '5') {
+									// 开始结束时间
+									let m = form.date.getMonth() + 1 < 10 ? '0' + (form.date.getMonth() + 1) : form.date.getMonth() + 1;
+									let d = form.date.getDate() < 10 ? '0' + form.date.getDate() : form.date.getDate();
+									et = `${form.date.getFullYear()}-${m}-${d} ${form.time_end}:00`;
+									st = `${form.date.getFullYear()}-${m}-${d} ${form.time_start}:00`;
+									// 获取会议id
+									let {
+										data: { data: meeting_ids },
+									} = await this.request('post', paperless_meetingId_url, this.token, {
+										roomId: this.roomId || this.place_list[this.row_index].id,
+										theme: form.name,
+										userIds: form.search_person.map((e) => e.id),
+										moderatorId: form.emcee[0].id,
+										meetingType: form.type,
+										startTime: st,
+										endTime: et,
+										appointmentMode: 0,
+									});
+									if (!meeting_ids) {
+										return;
+									}
+									this.paperless_meetingId = meeting_ids;
+									let {
+										data: { data: code },
+									} = await this.request('post', paperless_data_url, this.token, {
+										theme: form.name,
+										holder: form.emcee.map(({ name, id }) => ({ name, id })),
+										operator: form.operator.map(({ name, id }) => ({ name, id })),
+										join: form.search_person.map(({ name, id }) => ({ name, id })),
+										start_time: st,
+										end_time: et,
+										room_id: this.place_list[this.row_index].id,
+										meetingId: meeting_ids[0],
+									});
+									// 无纸化配置页面 传入token
+									this.html.paperless_url = `${paperless_url}?token=${this.token}&code=${code}`;
+								}
+								break;
+							case 2:
+								if (form.sendMessage == 1) {
+									if (form.meetingReminds.length == 0) {
+										result2 = false;
+										this.$message.error('请添加提醒时间');
+									} else {
+										for (let i = 0; i < form.meetingReminds.length; i++) {
+											if (!form.meetingReminds[i].alert_time) {
+												this.$message.error('提醒时间不能为空');
+												result2 = false;
+												break;
+											} else {
+												for (let k = i + 1; k < form.meetingReminds.length; k++) {
+													if (form.meetingReminds[i].alert_time == form.meetingReminds[k].alert_time) {
+														this.$message.error('提醒时间不能重复');
+														result2 = false;
+														break;
+													}
+												}
+												if (!result2) {
+													break;
+												}
+											}
+										}
+									}
+								}
+								break;
+						}
+						if (!result || !result2) {
+							return;
+						}
+						if (form.type != '5' && form.step === 0) {
+							// 只有无纸化配置隐藏 且 当前步骤处于0时 才自增2
+							form.step += 2;
+						} else {
+							form.step++;
+						}
+					});
+				}
 			}
 		},
 		// 解析权限树
@@ -782,7 +891,7 @@ new Vue({
 				this.new_meeting_form.meetingReminds = [{ alert_time: d, index: 0, type: 0 }];
 				this.new_meeting_form.signIn = 1;
 				this.new_meeting_form.summary = 1;
-				this.new_meeting_form.search_person = [this.user];
+				this.new_meeting_form.search_person = [];
 				this.new_meeting_form.emcee = [this.user]; // 默认创建人是主持人
 				this.new_meeting_form.cycle_deadline = '';
 				this.new_meeting_form.files = [];
@@ -797,6 +906,31 @@ new Vue({
 				this.new_meeting_form.door_password = 2;
 				this.new_meeting_form.platform = [];
 				this.new_meeting_form.goods = [];
+				// 无纸化会议参数初始化
+				// 取得对应行会议室类型
+				for (let val of this.new_meeting_form.type_list) {
+					if (val.id == '5') {
+						val.disabled = this.place_list[this.row_index].type === 2 ? false : true;
+						break;
+					}
+				}
+				this.new_meeting_form.operator = [];
+				// 无纸化 显示全部步骤条
+				if (this.default_meeting_type == '5') {
+					this.new_meeting_form.step_list = this.step_list_backup;
+					// 如果不是无纸化会议室 则判断是不是默认会议室是不是无纸化 是则临时将当前会议类型显示为其他
+					for (let val of this.new_meeting_form.type_list) {
+						if (!val.disabled) {
+							this.new_meeting_form.type = val.id;
+							break;
+						}
+					}
+				} else {
+					// 非无纸化 扣掉无纸化步骤
+					this.new_meeting_form.step_list = this.step_list_backup.filter((e) => e.value !== 1);
+				}
+				// 无纸化页面保存数据 如果为空则不能进行下一步
+				this.paperless_data = null;
 			}
 			this.start_move = false;
 		},
@@ -904,11 +1038,10 @@ new Vue({
 				summary: form.summary,
 				theme: form.name,
 				userIds: [],
-				meetingFiles: form.files,
 				meetingReminds: [],
-				guestList: this.new_meeting_form.guestList,
+				guestList: form.guestList,
 				description: form.description,
-				moderatorId: this.new_meeting_form.emcee[0].id,
+				moderatorId: form.emcee[0].id,
 				meetingType: form.type,
 				doorMethod: form.door_password,
 			};
@@ -956,6 +1089,16 @@ new Vue({
 					};
 					data.meetingThings.push(t);
 				}
+			}
+			// 无纸化会议不传附件
+			if (form.type != '5') {
+				data.meetingFiles = form.files;
+			}
+			// 无纸化会议会预先生成id 所以如果是无纸化需要传会议id
+			if (form.type == '5') {
+				data.meetingIds = this.paperless_meetingId;
+				// 无纸化将操作员加到参会人员列表
+				data.userIds.push(form.operator[0].id);
 			}
 			this.html.form_loading = true;
 			this.request('post', meeting_reserve, this.token, data, (res) => {
@@ -1197,7 +1340,19 @@ new Vue({
 		},
 		// 删除参会人员
 		del_person(index, type) {
-			this.new_meeting_form[type === 'join' ? 'search_person' : 'emcee'].splice(index, 1);
+			let arr;
+			switch (type) {
+				case 'join':
+					arr = this.new_meeting_form.search_person;
+					break;
+				case 'holder':
+					arr = this.new_meeting_form.emcee;
+					break;
+				case 'operator':
+					arr = this.new_meeting_form.operator;
+					break;
+			}
+			arr.splice(index, 1);
 		},
 		// 下载excel模板
 		download() {
@@ -1322,8 +1477,23 @@ new Vue({
 			this.html.add_person_display = true;
 			this.add_person_form.add_type = type; // 标识 用于区别条件
 			// 不同类别 从不同数组灌入数据
+			let arr;
+			switch (type) {
+				case 'join':
+					arr = this.new_meeting_form.search_person;
+					this.add_person_form.title = '添加参会人';
+					break;
+				case 'holder':
+					arr = this.new_meeting_form.emcee;
+					this.add_person_form.title = '指定主持人';
+					break;
+				case 'operator':
+					arr = this.new_meeting_form.operator;
+					this.add_person_form.title = '指定操作员';
+					break;
+			}
 			let list = [];
-			for (let val of this.new_meeting_form[type === 'join' ? 'search_person' : 'emcee']) {
+			for (let val of arr) {
 				let t = {
 					id: val.id,
 					name: val.name,
@@ -1332,11 +1502,6 @@ new Vue({
 				list.push(t);
 			}
 			document.querySelector('#add_person').contentWindow.postMessage(list); //给子页面发送消息回显
-			if (type === 'join') {
-				this.add_person_form.title = '添加参会人';
-			} else {
-				this.add_person_form.title = '指定主持人';
-			}
 		},
 		// 重新预约会议
 		rebook_meeting(data) {
@@ -1603,6 +1768,28 @@ new Vue({
 			this.place.list[7].content = res.data.approve ? '是' : '否';
 			if (res.data.approve) {
 				this.place.list[8].content = res.data.auditBranchName;
+			}
+		},
+		// 会议类型改变 切换显示无纸化配置
+		meeting_type_change(value) {
+			// 无纸化会议室才显示无纸化配置
+			if (value == '5') {
+				this.new_meeting_form.step_list = this.step_list_backup;
+				// 无纸化只能选择单次预约
+				this.new_meeting_form.method = 0;
+			} else {
+				this.new_meeting_form.step_list = this.step_list_backup.filter((e) => e.value !== 1);
+			}
+		},
+		// 全屏
+		full_screen() {
+			let dom = document.getElementById('reserve');
+			if (!document.fullscreenElement) {
+				dom.requestFullscreen();
+			} else {
+				if (document.exitFullscreen) {
+					document.exitFullscreen();
+				}
 			}
 		},
 	},

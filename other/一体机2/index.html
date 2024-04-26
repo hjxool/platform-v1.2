@@ -37,9 +37,7 @@
       </div>
       <!-- 切换的tab -->
       <el-button v-for="item,index in html.page" @click="change_page(index)"
-        :type="html.page_select==index?'primary':''" style="margin-left:20px;" size="small">
-        {{item}}
-      </el-button>
+        :type="html.page_select==index?'primary':''" style="margin-left:20px;" size="small">{{item}}</el-button>
     </div>
     <!-- 定制页 -->
     <div class="body" v-show="html.page_select==0">

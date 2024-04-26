@@ -1,107 +1,34 @@
 // 通用方法及变量
 const fn = {
-	props: ['obj', 'radio'],
-	beforeMount() {
-		// 此处监听数据变化 根据路径判断是否赋值
-		this.$bus.$on('get_value', (res) => {
-			// 不同组件判断条件不同
-			if (this.obj.type === '连线') {
-				// 只有 连线两端都是设备节点才显示状态
-				if (!this.obj.bindDeviceId?.targetDevice || !this.obj.bindDeviceId?.sourceDevice) {
-					return;
-				}
-				// 判断当前设备上报消息 与当前连线组件是否相关
-				// 断连条件 有一个设备离线就断开 在线条件 两个设备都在线
-				switch (res.device_id) {
-					case this.obj.bindDeviceId.targetDevice:
-						// 相关则判断设备在线状态 4离线 5在线
-						if (res.device_status === 4 && this.target_status) {
-							this.target_status = false;
-						} else if (res.device_status === 5 && !this.target_status) {
-							this.target_status = true;
-						}
-						break;
-					case this.obj.bindDeviceId.sourceDevice:
-						if (res.device_status === 4 && this.source_status) {
-							this.source_status = false;
-						} else if (res.device_status === 5 && !this.source_status) {
-							this.source_status = true;
-						}
-						break;
-				}
-			} else if (this.obj.shapeNickname == '设备节点') {
-				// 本质是多属性回显 以往组件是单属性回显
-				if (this.obj.dataConfig.deviceId === res.device_id) {
-					// 设备状态
-					this.is_normal = res.device_status === 5;
-					// 只要设备id匹配 把原先的单属性解析改为遍历取出每个属性解析并并存到数组下而不是this.value
-					for (let val of this.status) {
-						// analysis_path原先没设计有多属性回显 因此用的全局变量 这里设置全局变量 用完后置空
-						// this.data_type = val.type;
-						val.value = this.analysis_path(val.path, 0, res.data);
-						// this.data_type = null;
-					}
-				}
-			} else {
-				// 有回显数据时 传入的是一个原始结构对象 根据path属性解析路径取任意层级的值
-				// 此时是在组件挂载完毕时接收到的数据 path已经有了
-				if (this.path_list?.length !== 1 || this.obj.deviceId !== res.device_id) {
-					// path_list未就绪或者未绑定属性
-					// path_list绑定多个属性也不回显
-					// 组件关联设备id不匹配
-					return;
-				}
-				// 到这一步说明当前数据与当前组件相关 进行进一步路径解析
-				// 每一条数据 只跟一个设备相关
-				// 虽然可以绑定多个属性 但是回显会冲突 因此只取一个属性值作为代表
-				let index = 0;
-				this.analysis_path(this.path_list[0].path, index, res.data);
-			}
-		});
-		this.$bus.$on('common_params', (...val) => {
-			this.token = val[0];
-		});
-	},
-	mounted() {
-		this.path_list = []; //记录路径列表
-		if (this.obj.attr?.length) {
-			// 有多个路径就有多个类型
-			for (let val of this.obj.attr) {
-				let t = {
-					path_str: val.path,
-					path: this.init_path(val.path), //解析后的数组路径用于匹配回显
-					type: val.type,
-				};
-				this.path_list.push(t);
-			}
-			this.data_type = this.path_list[0].type; // 记录回显属性类型
-		}
-	},
+	props: ['obj', 'radio', 'token', 'inject_data'],
 	methods: {
 		send_order(value) {
 			if (typeof value !== 'undefined' && !this.path_list.length) {
 				// 值不为空 且 未绑定属性
 				return;
 			}
-			let body = {
-				contentType: 0,
-				deviceId: this.obj.deviceId,
-			};
-			// 有服务则下发
-			if (this.obj.service?.length) {
-				body.contentType = 2;
-				body.service = this.obj.service[0].identifier;
-			}
-			// 有设置属性值则下发
-			if (typeof value != 'undefined') {
-				body.attributeMap = {};
-				for (let val of this.path_list) {
-					body.attributeMap[val.path_str] = value;
+			// 因为可以有多个绑定的属性和服务 所以异步下发指令
+			for (let val of this.obj.behaviorList) {
+				let body = {
+					contentType: 0,
+					deviceId: val.deviceId,
+				};
+				// 有服务则下发
+				if (val.serviceIdentifier) {
+					body.contentType = 2;
+					body.service = val.serviceIdentifier;
 				}
-			}
-			// 有topic才能下发指令
-			if (this.obj.topicId) {
-				return this.request('put', `${sendCmdtoDevice}/${this.obj.topicId}`, this.token, body);
+				// 有设置属性值则下发
+				if (typeof value != 'undefined') {
+					body.attributeMap = {};
+					for (let val of this.path_list) {
+						body.attributeMap[val.path_str] = value;
+					}
+				}
+				// 有topic才能下发指令
+				if (val.topicId) {
+					return this.request('put', `${sendCmdtoDevice}/${val.topicId}`, this.token, body);
+				}
 			}
 		},
 		// 设置组件样式
@@ -139,6 +66,7 @@ const fn = {
 							switch (this.obj.type) {
 								case 'slider':
 								case 'sliderV':
+								case 'progressV':
 									if (this.data_type !== 'int' && this.data_type !== 'float' && this.data_type !== 'double' && this.data_type !== 'any') {
 										return;
 									}
@@ -148,6 +76,9 @@ const fn = {
 									}
 									// 滑块上报数据根据组件设置的步长限制精度
 									let v = Number(value);
+									if (this.obj.type === 'progressV') {
+										this.accuracy = 2;
+									}
 									let m = Math.pow(10, this.accuracy);
 									this.value = Math.round(v * m) / m;
 									break;
@@ -155,8 +86,16 @@ const fn = {
 								case 'switch1V':
 								case 'switch2':
 								case 'text-block':
+								case 'switchButton':
 									// 所有值转化成字符串匹配
 									this.value = value + '';
+									break;
+								case 'input':
+									// 除了对象都能接收
+									if (typeof value === 'object') {
+										return;
+									}
+									this.value = value;
 									break;
 								default:
 									return value;
@@ -189,6 +128,141 @@ const fn = {
 			return list;
 		},
 	},
+	computed: {
+		path_list() {
+			let list = [];
+			if (this.obj.behaviorList) {
+				if (this.obj.behaviorList?.length) {
+					for (let val of this.obj.behaviorList) {
+						let t = {
+							path_str: val.attrPath,
+							path: this.init_path(val.attrPath), //解析后的数组路径用于匹配回显
+							type: val.attrType,
+						};
+						list.push(t);
+					}
+				}
+			} else {
+				// 兼容老数据
+				if (this.obj.attr?.length) {
+					// 有多个路径就有多个类型
+					for (let val of this.obj.attr) {
+						let t = {
+							path_str: val.path,
+							path: this.init_path(val.path), //解析后的数组路径用于匹配回显
+							type: val.type,
+						};
+						list.push(t);
+					}
+				}
+			}
+			return list;
+		},
+		data_type() {
+			return this.path_list[0].type;
+		},
+		temp() {
+			// 不同组件判断条件不同
+			if (this.obj.type === '连线') {
+				// 只有 连线两端都是设备节点才显示状态
+				if (this.obj.bindDeviceId?.targetDevice && this.obj.bindDeviceId?.sourceDevice) {
+					// 判断当前设备上报消息 与当前连线组件是否相关
+					// 断连条件 有一个设备离线就断开 在线条件 两个设备都在线
+					switch (res.device_id) {
+						case this.obj.bindDeviceId.targetDevice:
+							// 相关则判断设备在线状态 4离线 5在线
+							if (res.device_status === 4 && this.target_status) {
+								this.target_status = false;
+							} else if (res.device_status === 5 && !this.target_status) {
+								this.target_status = true;
+							}
+							break;
+						case this.obj.bindDeviceId.sourceDevice:
+							if (res.device_status === 4 && this.source_status) {
+								this.source_status = false;
+							} else if (res.device_status === 5 && !this.source_status) {
+								this.source_status = true;
+							}
+							break;
+					}
+				}
+			} else if (this.obj.shapeNickname == '设备节点') {
+				// 本质是多属性回显 以往组件是单属性回显
+				if (this.obj.dataConfig.deviceId === res.device_id) {
+					// 设备状态
+					this.is_normal = res.device_status === 5;
+					// 只要设备id匹配 把原先的单属性解析改为遍历取出每个属性解析并并存到数组下而不是this.value
+					for (let val of this.status) {
+						// analysis_path原先没设计有多属性回显 因此用的全局变量 这里设置全局变量 用完后置空
+						// this.data_type = val.type;
+						val.value = this.analysis_path(val.path, 0, res.data);
+						// this.data_type = null;
+					}
+				}
+			} else if (this.obj.type == '巡检按钮') {
+				// 是推流消息 且 点过巡检
+				if (res.message && this.check_list) {
+					this.$bus.$emit('online_check', { type: 'update', data: res.message });
+				}
+			} else if (this.obj.type === 'audio_matrix') {
+				if (this.obj.dataConfig.deviceId == res.device_id && res.data.MIXS) {
+					let title = '音频矩阵';
+					this.value = [];
+					let temp = res.data.MIXS.propertyValue || res.data.MIXS;
+					for (let i = 0; i < 9; i++) {
+						let t = (temp[i * 2] >>> 0).toString(2).split('').reverse();
+						let t2 = 12 - t.length;
+						for (let k = 0; k < t2; k++) {
+							t.push('0');
+						}
+						this.value.push(t);
+					}
+					this.$bus.$emit('matrix_popup', { type: 'update', title, data: this.value, device_id: this.obj.dataConfig.deviceId });
+				}
+			} else if (this.obj.type === 'video_matrix') {
+				// 视频矩阵只绑定设备id 根据固定字段取值
+				if (this.obj.dataConfig.deviceId == res.device_id && res.data.VSWT) {
+					let title;
+					switch (this.obj.dataConfig.productId) {
+						case '1564171104871739392':
+							// 一代
+							if (res.data.VSWT.length == 2) {
+								this.value = res.data.VSWT;
+							} else if (res.data.VSWT.propertyValue.length == 2) {
+								this.value = res.data.VSWT.propertyValue;
+							}
+							title = '视频矩阵一代';
+							break;
+						case '1722147067370217472':
+							// 二代
+							if (res.data.VSWT.length == 4) {
+								this.value = res.data.VSWT;
+							} else if (res.data.VSWT.propertyValue.length == 4) {
+								this.value = res.data.VSWT.propertyValue;
+							}
+							title = '视频矩阵二代';
+							break;
+					}
+					// 更新完值以后发送给父页面
+					this.$bus.$emit('matrix_popup', { type: 'update', title, data: this.value, device_id: this.obj.dataConfig.deviceId });
+				}
+			} else {
+				// 有回显数据时 传入的是一个原始结构对象 根据path属性解析路径取任意层级的值
+				// 此时是在组件挂载完毕时接收到的数据 path已经有了
+				if (this.path_list?.length === 1 && this.obj.attr[0].deviceId === res.device_id) {
+					// path_list未就绪或者未绑定属性
+					// path_list绑定多个属性也不回显
+					// 组件关联设备id不匹配
+					// 到这一步说明当前数据与当前组件相关 进行进一步路径解析
+					// 每一条数据 只跟一个设备相关
+					// 虽然可以绑定多个属性 但是回显会冲突 因此只取一个属性值作为代表
+					let index = 0;
+					this.analysis_path(this.path_list[0].path, index, res.data);
+				}
+			}
+			return '';
+		},
+	},
 };
 // 容器组件
 let customContainer = {
@@ -214,7 +288,7 @@ let customContainer = {
 let customText = {
 	template: `
     <div class="custom_text" :style="cus_style(obj)" @click="turn_to_page" :title="value">
-      <span class="content">{{value}}</span>
+      <span class="content">{{value + temp}}</span>
     </div>
   `,
 	data() {
@@ -263,7 +337,7 @@ let customSwitch = {
 	template: `
     <div :style="style(obj)" class="switch_box" @click="switch_fn">
       <img v-show="value===on_value" :src="src(true)" class="bg_img" draggable="false">
-      <img v-show="value===off_value" :src="src(false)" class="bg_img" draggable="false">
+      <img v-show="value===off_value" :src="src(temp)" class="bg_img" draggable="false">
     </div>
   `,
 	mixins: [common_functions, fn],
@@ -343,7 +417,7 @@ let customSlider = {
     <div class="slider_box" :style="style(obj)">
       <img src="./img/icon6.png" class="bg_img">
       <div class="text text_ellipsis flex_shrink center" :title="value_text">
-        {{value_text}}
+        {{value_text + temp}}
         <img src="img/icon14.png" class="bg_img">
       </div>
       <div class="box1">
@@ -402,7 +476,7 @@ let customSlider2 = {
     <div class="slider_box2" :style="style(obj)">
       <img src="./img/icon13.png" class="bg_img">
       <div class="text text_ellipsis flex_shrink center" :title="value_text">
-        {{value_text}}
+        {{value_text + temp}}
         <img src="img/icon14.png" class="bg_img">
       </div>
       <div class="box1">
@@ -511,7 +585,7 @@ let customVideo = {
 // 连线
 let customLine = {
 	template: `
-    <svg :style="cus_style(obj,page)">
+    <svg :style="cus_style(obj,page,temp)">
       <!-- 预设的箭头图标 -->
       <defs>
         <marker :id="cus_id('arrow')" refX="-3" orient="auto" markerUnits="userSpaceOnUse" overflow="visible">
@@ -660,9 +734,9 @@ let customLine = {
 let customDeviceStatus = {
 	template: `
   <div :style="style(obj)" @mouseenter="hover(true)" @mouseleave="hover(false)" @click="go_to">
-    <img class="bg_img" :src="obj.imageUrl">
+    <img class="bg_img" :src="obj.imageUrl" style="object-fit:contain;">
     <!-- 设备名称 -->
-    <div class="device_name">{{obj.nickName}}</div>
+    <div class="device_name">{{obj.nickName + temp}}</div>
   </div>
 `,
 	props: ['page_width'],
@@ -692,7 +766,25 @@ let customDeviceStatus = {
 		// 跳转到设备页
 		// 设备页需要区分可视化等参数 只需要返回给外层页面设备id 由外层页面查
 		go_to() {
-			window.parent.postMessage({ device_id: this.obj.dataConfig.deviceId });
+			// window.parent.postMessage({ device_id: this.obj.dataConfig.deviceId });
+			if (!this.obj.dataConfig.deviceId) {
+				return;
+			}
+			this.request('get', `${device_detail_url}/${this.obj.dataConfig.deviceId}`, this.token, ({ data: res }) => {
+				if (res.head.code !== 200) {
+					this.$message('无设备信息');
+					return;
+				}
+				if (res.data.visualizedFlag) {
+					let name = encodeURIComponent(res.data.deviceName);
+					window.open(`../index.html?type=Visual_Preview&token=${this.token}&deviceId=${res.data.id}&device_name=${name}`);
+				} else if (res.data.productUrl) {
+					let name = encodeURIComponent(res.data.deviceName);
+					window.open(`../index.html?type=${res.data.productUrl}&token=${this.token}&id=${res.data.id}&device_name=${name}`);
+				} else {
+					this.$message('请配置产品调控页面前端标识后再试');
+				}
+			});
 		},
 		// 悬浮在设备节点时创造并显示 属性面板
 		hover(show) {
@@ -730,12 +822,11 @@ let customDeviceStatus = {
 let customButton = {
 	template: `
     <div :style="style(obj)" class="center button_box" @click="distinguish_operation">
-      <img v-show="current_page==obj.url" src="./img/icon1.png" class="bg_img">
+      <img src="./img/icon1.png" class="bg_img">
       <span :style="size(obj)">{{text}}</span>
     </div>
   `,
 	mixins: [common_functions, fn],
-	props: ['current_page'],
 	data() {
 		return {
 			text: this.obj.dataConfig?.buttonLabel || '',
@@ -753,143 +844,506 @@ let customButton = {
 		},
 		// 按钮分下发指令和切换页面两种
 		distinguish_operation() {
-			// 有跳转id 的不触发下发指令
-			// this.obj.url ? this.$bus.$emit('turn_to_page', this.obj.url) : this.send_order(undefined);
-			// 有没有跳转都检测有命令就下发
 			this.send_order(undefined);
-			if (this.obj.url) {
-				this.$bus.$emit('turn_to_page', this.obj.url);
+		},
+	},
+};
+// 一键巡检
+let customOnlineCheck = {
+	template: `
+    <div :style="style(obj)" class="center" @click="check_devices">
+      <img src="./img/icon1.png" class="bg_img">
+      <span :style="size(obj)">{{text + temp}}</span>
+    </div>
+  `,
+	mixins: [common_functions, fn],
+	props: ['is_checking', 'random_num'],
+	data() {
+		return {
+			text: this.obj.dataConfig?.buttonLabel || '',
+		};
+	},
+	methods: {
+		size(obj_data) {
+			let t = (203 / 22) * 16; //计算多少容器大小下 字体是16px
+			let fz = (obj_data.w * this.radio) / t;
+			return {
+				color: '#fff',
+				fontSize: fz + 'rem',
+				zIndex: 1,
+			};
+		},
+		async check_devices() {
+			// 全局限制巡检按钮触发频率
+			if (this.is_checking) {
+				this.$message('巡检触发频率不能低于一分钟');
+				return;
+			}
+			this.$emit('checking_event', true);
+			setTimeout(() => {
+				this.$emit('checking_event', false);
+			}, 60000);
+			let list = [];
+			// 从按钮绑定的behaviorList列表中取出绑定了服务的设备
+			for (let val of this.obj.behaviorList) {
+				let t = {
+					deviceId: val.deviceId,
+					// placeId: this.obj.dataConfig.placeId,
+					serviceIdentifier: val.serviceIdentifier,
+				};
+				list.push(t);
+			}
+			// 取得每个请求关联的消息id
+			let { data: res } = await this.request('post', `${online_check_url}/${this.random_num}`, this.token, list).catch((err) => false);
+			if (res?.head.code !== 200) {
+				return;
+			}
+			// 存储消息id列表 等到推流消息时查看是否有对应id
+			this.check_list = [];
+			for (let val of res.data) {
+				let t = {
+					message_id: val.messageId,
+					device_name: val.deviceName,
+					device_id: val.deviceId,
+					service_identifier: val.serviceIdentifier,
+					result: '巡检中',
+				};
+				// 获取服务名称
+				for (let val2 of this.obj.behaviorList) {
+					if (val2.deviceId == t.device_id && val2.serviceIdentifier == t.service_identifier) {
+						t.service_name = val2.serviceName;
+						break;
+					}
+				}
+				this.check_list.push(t);
+			}
+			// 发送消息 打开弹窗
+			this.$bus.$emit('online_check', { type: 'open', data: this.check_list });
+		},
+	},
+};
+// 预设组件 zhr的原始数据 内嵌iframe
+let customVisualEditor1 = {
+	template: `
+    <iframe :id="id" :src="url" :style="style(obj)" frameborder="0" scrolling="no"></iframe>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			url: '', // 固定的跳转地址
+			id: `zhr-${this.obj.id}`, // 组件唯一id 为了挂载时往其中传数据
+		};
+	},
+	beforeMount() {
+		if (this.token && this.obj.dataConfig.deviceId) {
+			this.url = `../index.html?type=Visual_Preview&token=${this.token}&deviceId=${this.obj.dataConfig.deviceId}`;
+		} else {
+			this.url = '../index.html?type=Visual_Preview&token';
+		}
+	},
+	mounted() {
+		let dom = document.getElementById(this.id);
+		// 原始数据是单页的 但是传给子页面的得是数组
+		dom.contentWindow.postMessage([this.obj.dataConfig.originalRawDataConfig]);
+	},
+};
+// 音频矩阵按钮
+let customSoundMatrix = {
+	template: `
+    <div :style="style(obj,temp)" @click="show_matrix">
+      <img class="bg_img" src="./img/icon25.png">
+    </div>
+  `,
+	mixins: [common_functions, fn],
+	methods: {
+		// 显示矩阵弹窗
+		show_matrix() {
+			this.$bus.$emit('matrix_popup', {
+				type: 'open',
+				data: this.value,
+				device_id: this.obj.dataConfig.deviceId,
+				title: '音频矩阵',
+			});
+		},
+	},
+};
+// 音频矩阵组件
+let soundMatrix = {
+	template: `
+  <div class="sound_matrix">
+    <div class="head">
+      <div class="title" v-for="num,index in 13">
+        {{index>0?'IN'+index:''}}
+      </div>
+    </div>
+
+    <div class="body">
+      <div class="col">
+        <div class="title" v-for="num in 9">
+          {{'OUT'+num}}
+        </div>
+      </div>
+
+      <div class="body">
+        <div class="row" v-for="row,row_i in list">
+          <div class="button" v-for="col,col_i in row" @click="matrix_order(col,row_i,col_i)">
+            <img v-show="col==1" src="./img/icon23.png" class="bg_img">
+            <img v-show="col==0" src="./img/icon24.png" class="bg_img">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  `,
+	mixins: [common_functions],
+	props: ['list', 'device_id', 'token'],
+	methods: {
+		matrix_order(value, row_i, col_i) {
+			// 修改回显值
+			this.list[row_i].splice(col_i, 1, Number(value) ? '0' : '1');
+			// 下发指令
+			let data = [];
+			for (let row of this.list) {
+				let t = JSON.parse(JSON.stringify(row));
+				let t2 = parseInt(t.reverse().join(''));
+				let t3 = parseInt(t2, 2) >> 0;
+				data.push(t3, 0);
+			}
+			// 因为只绑定了设备id 且这是自己创建的组件不是编辑器里的所以没有存属性
+			let body = {
+				contentType: 0,
+				deviceId: this.device_id,
+			};
+			body.attributeMap = {
+				MIXS: data,
+			};
+			this.request('put', `${sendCmdtoDevice}/8`, this.token, body);
+		},
+	},
+};
+// 视频矩阵按钮
+let customVideoMatrix = {
+	template: `
+    <div :style="style(obj,temp)" @click="show_matrix">
+      <img class="bg_img" src="./img/icon22.png">
+    </div>
+  `,
+	mixins: [common_functions, fn],
+	methods: {
+		// 显示矩阵弹窗
+		show_matrix() {
+			let t = {
+				type: 'open',
+				data: this.value,
+				device_id: this.obj.dataConfig.deviceId,
+			};
+			// 区分一代还是二代
+			switch (this.obj.dataConfig.productId) {
+				case '1564171104871739392':
+					// 一代
+					t.title = '视频矩阵一代';
+					this.$bus.$emit('matrix_popup', t);
+					break;
+				case '1722147067370217472':
+					// 二代
+					t.title = '视频矩阵二代';
+					this.$bus.$emit('matrix_popup', t);
+					break;
+			}
+		},
+	},
+};
+// 视频矩阵一代
+let videoMatrix1 = {
+	template: `
+    <div class="video_matrix" style="grid-template-rows: repeat(2, 70px)">
+      <div class="button center" v-for="item,index in label_list" @click="matrix_order(index)">
+        <img v-show="!matrix_status(index)" src="./img/icon26.png" class="bg_img">
+        <img v-show="matrix_status(index)" src="./img/icon27.png" class="bg_img">
+        <span>{{item}}</span>
+      </div>
+    </div>
+  `,
+	mixins: [common_functions],
+	props: ['list', 'device_id', 'token'],
+	data() {
+		return {
+			label_list: ['IN1->OUTA', 'IN2->OUTA', 'IN3->OUTA', 'IN4->OUTA', 'IN1->OUTB', 'IN2->OUTB', 'IN3->OUTB', 'IN4->OUTB'],
+		};
+	},
+	methods: {
+		// 视频矩阵回显
+		matrix_status(index) {
+			if (index < 4) {
+				if (index + 1 == this.list[0]) {
+					return true;
+				} else {
+					return false;
+				}
+			} else {
+				if (index - 3 == this.list[1]) {
+					return true;
+				} else {
+					return false;
+				}
+			}
+		},
+		matrix_order(value) {
+			// 因为只绑定了设备id 且这是自己创建的组件不是编辑器里的所以没有存属性
+			let body = {
+				contentType: 0,
+				deviceId: this.device_id,
+			};
+			if (value < 4) {
+				let t = value + 1;
+				body.attributeMap = {
+					VSWT: [t, 255],
+				};
+				this.list.splice(0, 1, t);
+			} else {
+				let t = value - 3;
+				body.attributeMap = {
+					VSWT: [255, t],
+				};
+				this.list.splice(1, 1, t);
+			}
+			this.request('put', `${sendCmdtoDevice}/8`, this.token, body);
+		},
+	},
+};
+// 视频矩阵二代
+let videoMatrix2 = {
+	template: `
+    <div class="video_matrix">
+      <div class="button center" v-for="item,index in label_list" @click="matrix_order(item.value, index)">
+        <img v-show="!matrix_status(index)" src="./img/icon26.png" class="bg_img">
+        <img v-show="matrix_status(index)" src="./img/icon27.png" class="bg_img">
+        <span>{{item.label}}</span>
+      </div>
+    </div>
+  `,
+	mixins: [common_functions],
+	props: ['list', 'device_id', 'token'],
+	data() {
+		return {
+			label_list: [],
+		};
+	},
+	beforeMount() {
+		// 生成视频控制按钮
+		for (let row = 0; row < 4; row++) {
+			for (let col = 0; col < 4; col++) {
+				let t = {
+					label: `In${col + 1}->Out${row + 1}`,
+					value: [col, row],
+				};
+				this.label_list.push(t);
+			}
+		}
+	},
+	methods: {
+		// 视频矩阵回显
+		matrix_status(index) {
+			if (this.list[Math.floor(index / 4)] === index % 4) {
+				return true;
+			} else {
+				return false;
+			}
+		},
+		matrix_order(value, index) {
+			// 因为只绑定了设备id 且这是自己创建的组件不是编辑器里的所以没有存属性
+			let body = {
+				contentType: 0,
+				deviceId: this.device_id,
+				attributeMap: {
+					VSWT: value,
+				},
+			};
+			this.list.splice(Math.floor(index / 4), 1, index % 4);
+			this.request('put', `${sendCmdtoDevice}/8`, this.token, body);
+		},
+	},
+};
+// 按钮开关
+let customButtonSwitch = {
+	template: `
+    <div :style="style(obj)" class="center switch_box button" @click="switch_fn">
+      <div :style="bg(temp)" class="bg_img"></div>
+      <span :style="size(obj)">{{value===on_value?text2:text}}</span>
+    </div>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			value: this.obj.dataConfig[1].value || '0', //当前值
+			text: this.obj.data.buttonText || '',
+			text2: this.obj.data.activeText || '',
+			on_value: this.obj.dataConfig[0].value || '1', //开的值
+			off_value: this.obj.dataConfig[1].value || '0', //关的值
+		};
+	},
+	methods: {
+		switch_fn() {
+			if (this.value === this.on_value) {
+				this.value = this.off_value;
+			} else if (this.value === this.off_value) {
+				this.value = this.on_value;
+			}
+			let data;
+			switch (this.data_type) {
+				case 'int':
+				case 'float':
+				case 'double':
+				case 'any':
+					data = parseInt(this.value);
+					break;
+				case 'array':
+				case 'struct':
+					data = JSON.parse(this.value);
+					break;
+				default:
+					data = this.value;
+					break;
+			}
+			this.send_order(data);
+		},
+		size(obj_data) {
+			let t = (203 / 22) * 16; //计算多少容器大小下 字体是16px
+			let fz = (obj_data.w * this.radio) / t;
+			return {
+				color: '#fff',
+				fontSize: fz + 'rem',
+				zIndex: 1,
+			};
+		},
+		bg() {
+			return {
+				background: this.value === this.on_value ? this.obj.data.onColor : this.obj.data.backColor,
+			};
+		},
+	},
+};
+// 进度条
+let customProgress = {
+	template: `
+    <div class="progress_box" :style="style(obj)">
+      <img src="./img/icon7.png" class="bg_img">
+      <span class="text" style="margin: 20px 0 10px 0;">{{max + temp}}</span>
+      <div class="progress">
+        <div class="lump flex_shrink" v-for="i in total_num" :style="color(i)"></div>
+      </div>
+      <span class="text" style="margin: 10px 0 20px 0;">{{min}}</span>
+    </div>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			block_h: 12, //方块大小
+			value: 0,
+			max: this.obj.dataConfig[1].value, // 最大值
+			min: this.obj.dataConfig[0].value, // 最小值
+		};
+	},
+	methods: {
+		color(index) {
+			// 10是单位，一个小方格大小+间隔=10
+			let color;
+			let max = Math.floor((this.total_height * 0.1) / this.block_h + 0.5);
+			let mid = Math.floor((this.total_height * 0.2) / this.block_h + 0.5);
+			let min = Math.floor((this.total_height * 0.3) / this.block_h + 0.5);
+			if (index < max) {
+				color = '#AB152E';
+			} else if (index >= max && index < mid) {
+				color = '#CB7E05';
+			} else if (index >= mid && index < min) {
+				color = '#1594FF';
+			} else {
+				color = '#1560FF';
+			}
+			// 显示效果时从下往上，但是节点渲染是从上往下，所以要用总数-基数
+			let opacity = '0.5'; //单独维护的色块透明度
+			if (index > this.render_num) {
+				opacity = '1';
+			}
+			return { background: color, opacity: opacity };
+		},
+	},
+	computed: {
+		total_num() {
+			return Math.floor(this.total_height / this.block_h);
+		},
+		render_num() {
+			// 计算回显值占方块数
+			let per = (this.value - this.min) / (this.max - this.min);
+			let n = Math.floor((this.total_height * per) / this.block_h + 0.5);
+			return this.total_num - n;
+		},
+		total_height() {
+			return this.obj.h * this.radio - 40;
+		},
+	},
+	watch: {
+		value() {
+			if (this.value < this.min) {
+				this.value = this.min;
+			} else if (this.value > this.max) {
+				this.value = this.max;
+			}
+		},
+	},
+};
+// 输入框
+let customInput = {
+	template: `
+    <el-input class="input_style" v-model="value" @change="comfirm_input" :style="style(obj,temp)" :placeholder="obj.dataConfig[0].value" type="text"
+      :maxlength="obj.dataConfig[1].value" show-word-limit>
+    </el-input>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			value: '',
+		};
+	},
+	methods: {
+		// 失去焦点或按下回车时提示确认下发指令信息
+		async comfirm_input() {
+			// 根据绑定属性转换输入值 如果没绑定属性则不进行
+			if (!this.path_list.length) {
+				return;
+			}
+			let value = Number(this.value);
+			if (this.data_type === 'int' || this.data_type === 'float' || this.data_type === 'double') {
+				// 如果绑定属性是数字但是输入内容无法转换成数字 则提示
+				if (isNaN(value)) {
+					this.$alert('输入内容与属性类型不符', '提示', {
+						confirmButtonText: '确定',
+					});
+					return;
+				}
+			} else if (this.data_type === 'any') {
+				if (isNaN(value)) {
+					// 如果是any类型 又转不成数字则变回字符串
+					value = this.value;
+				}
+			}
+			let result = await this.$confirm(`确认下发指令${value}?`, '提示', {
+				confirmButtonText: '确定',
+				cancelButtonText: '取消',
+			})
+				.then(() => {
+					return true;
+				})
+				.catch(() => {
+					return false;
+				});
+			if (result) {
+				this.send_order(value);
 			}
 		},
 	},
 };
 
-// // 按钮开关
-// let customButtonSwitch = {
-// 	template: `
-//     <div :style="style(obj)" class="center switch_box button" @click="switch_fn">
-//       <div :style="bg()" class="bg_img"></div>
-//       <span :style="size(obj)">{{value===on_value?text2:text}}</span>
-//     </div>
-//   `,
-// 	mixins: [common_functions, fn],
-// 	data() {
-// 		return {
-// 			value: this.obj.SwitchDisplaysOffStatus || '0', //当前值
-// 			text: this.obj.value || '',
-// 			text2: this.obj.value2 || '',
-// 			on_value: this.obj.SwitchDisplaysOnStatus || '1', //开的值
-// 			off_value: this.obj.SwitchDisplaysOffStatus || '0', //关的值
-// 		};
-// 	},
-// 	methods: {
-// 		switch_fn() {
-// 			if (this.value === this.on_value) {
-// 				this.value = this.off_value;
-// 			} else if (this.value === this.off_value) {
-// 				this.value = this.on_value;
-// 			}
-// 			let data;
-// 			switch (this.data_type) {
-// 				case 'int':
-// 				case 'float':
-// 				case 'double':
-// 				case 'any':
-// 					data = parseInt(this.value);
-// 					break;
-// 				case 'array':
-// 				case 'struct':
-// 					data = JSON.parse(this.value);
-// 					break;
-// 				default:
-// 					data = this.value;
-// 					break;
-// 			}
-// 			this.send_order(data);
-// 		},
-// 		size(obj_data) {
-// 			let t = (203 / 22) * 16; //计算多少容器大小下 字体是16px
-// 			let fz = (obj_data.w * this.radio) / t;
-// 			return {
-// 				color: '#fff',
-// 				fontSize: fz + 'rem',
-// 				zIndex: 1,
-// 			};
-// 		},
-// 		bg() {
-// 			return {
-// 				background: this.value === this.on_value ? this.obj.background2 : this.obj.background,
-// 			};
-// 		},
-// 	},
-// };
-// // 进度条
-// let customProgress = {
-// 	template: `
-//     <div class="progress_box" :style="style(obj)">
-//       <img src="./img/icon7.png" class="bg_img">
-//       <span class="text" style="margin: 20px 0 10px 0;">{{obj.max}}</span>
-//       <div class="progress">
-//         <div class="lump flex_shrink" v-for="i in total_num" :style="color(i)"></div>
-//       </div>
-//       <span class="text" style="margin: 10px 0 20px 0;">{{obj.min}}</span>
-//     </div>
-//   `,
-// 	mixins: [common_functions, fn],
-// 	data() {
-// 		return {
-// 			block_h: 12, //方块大小
-// 			value: 0,
-// 		};
-// 	},
-// 	methods: {
-// 		color(index) {
-// 			// 10是单位，一个小方格大小+间隔=10
-// 			let color;
-// 			let max = Math.floor((this.total_height * 0.1) / this.block_h + 0.5);
-// 			let mid = Math.floor((this.total_height * 0.2) / this.block_h + 0.5);
-// 			let min = Math.floor((this.total_height * 0.3) / this.block_h + 0.5);
-// 			if (index < max) {
-// 				color = '#AB152E';
-// 			} else if (index >= max && index < mid) {
-// 				color = '#CB7E05';
-// 			} else if (index >= mid && index < min) {
-// 				color = '#1594FF';
-// 			} else {
-// 				color = '#1560FF';
-// 			}
-// 			// 显示效果时从下往上，但是节点渲染是从上往下，所以要用总数-基数
-// 			let opacity = '0.5'; //单独维护的色块透明度
-// 			if (index > this.render_num) {
-// 				opacity = '1';
-// 			}
-// 			return { background: color, opacity: opacity };
-// 		},
-// 	},
-// 	computed: {
-// 		total_num() {
-// 			return Math.floor(this.total_height / this.block_h);
-// 		},
-// 		render_num() {
-// 			// 计算回显值占方块数
-// 			let per = (this.value - this.obj.min) / (this.obj.max - this.obj.min);
-// 			let n = Math.floor((this.total_height * per) / this.block_h + 0.5);
-// 			return this.total_num - n;
-// 		},
-// 		total_height() {
-// 			return this.obj.h * this.radio - 40;
-// 		},
-// 	},
-// 	watch: {
-// 		value() {
-// 			if (this.value < this.obj.min) {
-// 				this.value = this.obj.min;
-// 			} else if (this.value > this.obj.max) {
-// 				this.value = this.obj.max;
-// 			}
-// 		},
-// 	},
-// };
 // // 下拉框
 // let customSelector = {
 // 	template: `
@@ -1224,56 +1678,6 @@ let customButton = {
 // 	computed: {
 // 		maxheight() {
 // 			return this.obj.h * this.radio;
-// 		},
-// 	},
-// };
-// // 输入框
-// let customInput = {
-// 	template: `
-//     <el-input class="input_style" v-model="value" @change="comfirm_input" :style="style(obj)"
-//     :placeholder="obj.placeholder" type="text" :maxlength="obj.maxlength" show-word-limit></el-input>
-//   `,
-// 	mixins: [common_functions, fn],
-// 	data() {
-// 		return {
-// 			value: '',
-// 		};
-// 	},
-// 	methods: {
-// 		// 失去焦点或按下回车时提示确认下发指令信息
-// 		async comfirm_input() {
-// 			// 根据绑定属性转换输入值 如果没绑定属性则不进行
-// 			if (!this.path_list.length) {
-// 				return;
-// 			}
-// 			let value = Number(this.value);
-// 			if (this.data_type === 'int' || this.data_type === 'float' || this.data_type === 'double') {
-// 				// 如果绑定属性是数字但是输入内容无法转换成数字 则提示
-// 				if (isNaN(value)) {
-// 					this.$alert('输入内容与属性类型不符', '提示', {
-// 						confirmButtonText: '确定',
-// 					});
-// 					return;
-// 				}
-// 			} else if (this.data_type === 'any') {
-// 				if (isNaN(value)) {
-// 					// 如果是any类型 又转不成数字则变回字符串
-// 					value = this.value;
-// 				}
-// 			}
-// 			let result = await this.$confirm(`确认下发指令${value}?`, '提示', {
-// 				confirmButtonText: '确定',
-// 				cancelButtonText: '取消',
-// 			})
-// 				.then(() => {
-// 					return true;
-// 				})
-// 				.catch(() => {
-// 					return false;
-// 				});
-// 			if (result) {
-// 				this.send_order(value);
-// 			}
 // 		},
 // 	},
 // };

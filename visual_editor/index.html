@@ -15,28 +15,100 @@
   <div id="index" v-cloak v-loading="html.page_loading" @click="close_popup">
     <div class="body" :style="resize(page)" v-for="page in component_list" v-show="page_id==page.id">
       <template v-for="item,index in page.data">
-        <custom-slider v-if="item.type=='slider'" :obj="item" :radio="page.radio"></custom-slider>
-        <custom-text v-if="item.type=='text'" :obj="item" :radio="page.radio"></custom-text>
-        <custom-img v-if="item.type=='img'" :obj="item" :radio="page.radio"></custom-img>
-        <custom-button v-if="item.type=='button'" :obj="item" :radio="page.radio"
-          :current_page="page_id"></custom-button>
-        <custom-switch v-if="item.type=='switch'||item.type=='switch2'" :obj="item" :radio="page.radio"></custom-switch>
-        <custom-progress v-if="item.type=='progress'" :obj="item" :radio="page.radio"></custom-progress>
-        <custom-selector v-if="item.type=='select'" :obj="item" :radio="page.radio" :group="index"></custom-selector>
-        <custom-popup v-if="item.type=='select'" :obj="item" :radio="page.radio" :group="index"></custom-popup>
-        <custom-button-switch v-if="item.type=='switch_button'" :obj="item" :radio="page.radio"></custom-button-switch>
-        <custom-matrix v-if="item.type=='matrix'" :obj="item" :radio="page.radio"></custom-matrix>
-        <custom-radio-group v-if="item.type=='radio'" :obj="item" :radio="page.radio"></custom-radio-group>
-        <custom-check-box v-if="item.type=='checkbox'" :obj="item" :radio="page.radio"></custom-check-box>
-        <custom-table v-if="item.type=='table'" :obj="item" :radio="page.radio"></custom-table>
-        <custom-input v-if="item.type=='input'" :obj="item" :radio="page.radio"></custom-input>
+        <custom-slider v-if="item.type=='slider'" :obj="item" :radio="page.radio" :token="token" :device_id="device_id"
+          :inject_data="inject_data"></custom-slider>
+        <custom-text v-if="item.type=='text'" :obj="item" :radio="page.radio" :token="token" :device_id="device_id"
+          :inject_data="inject_data"></custom-text>
+        <custom-img v-if="item.type=='img'" :obj="item" :radio="page.radio" :token="token"
+          :device_id="device_id"></custom-img>
+        <custom-button v-if="item.type=='button'" :obj="item" :radio="page.radio" :current_page="page_id" :token="token"
+          :device_id="device_id"></custom-button>
+        <custom-switch v-if="item.type=='switch'||item.type=='switch2'" :obj="item" :radio="page.radio" :token="token"
+          :device_id="device_id" :inject_data="inject_data"></custom-switch>
+        <custom-progress v-if="item.type=='progress'" :obj="item" :radio="page.radio" :token="token"
+          :device_id="device_id" :inject_data="inject_data"></custom-progress>
+        <custom-selector v-if="item.type=='select'" :obj="item" :radio="page.radio" :token="token"
+          :device_id="device_id" :inject_data="inject_data" :select="drop.select"></custom-selector>
+        <custom-button-switch v-if="item.type=='switch_button'" :obj="item" :radio="page.radio" :token="token"
+          :device_id="device_id" :inject_data="inject_data"></custom-button-switch>
+        <custom-matrix v-if="item.type=='matrix'" :obj="item" :radio="page.radio" :token="token" :device_id="device_id"
+          :inject_data="inject_data"></custom-matrix>
+        <custom-radio-group v-if="item.type=='radio'" :obj="item" :radio="page.radio" :token="token"
+          :device_id="device_id" :inject_data="inject_data"></custom-radio-group>
+        <custom-check-box v-if="item.type=='checkbox'" :obj="item" :radio="page.radio" :token="token"
+          :device_id="device_id" :inject_data="inject_data"></custom-check-box>
+        <custom-table v-if="item.type=='table'" :obj="item" :radio="page.radio" :token="token" :device_id="device_id"
+          :inject_data="inject_data"></custom-table>
+        <custom-input v-if="item.type=='input'" :obj="item" :radio="page.radio" :token="token" :device_id="device_id"
+          :inject_data="inject_data"></custom-input>
+        <custom-status v-if="item.type=='状态组件'" :obj="item" :radio="page.radio" :token="token" :device_id="device_id"
+          :inject_data="inject_data"></custom-status>
+        <custom-echart v-if="item.type=='折线图'" :obj="item" :radio="page.radio" :token="token" :device_id="device_id"
+          :inject_data="inject_data"></custom-echart>
+        <custom-popup v-if="item.type=='打开弹窗按钮'" :obj="item" :radio="page.radio" :token="token"
+          :device_id="device_id"></custom-popup>
       </template>
+    </div>
+    <!-- 弹窗 -->
+    <div class="popup_box" v-if="popup.show">
+      <div class="content_box" :style="{background:popup.style.ys}">
+        <div class="head">
+          <div class="title">{{this.popup.title}}</div>
+          <el-button @click.stop="popup.show=false" type="danger" icon="el-icon-close" circle size="mini"></el-button>
+        </div>
+        <!-- 滚动显示容器 -->
+        <div class="content">
+          <!-- 缩放的面板 -->
+          <div :style="popup_size()">
+            <template v-for="item,index in popup.components">
+              <custom-slider v-if="item.type=='slider'" :obj="item" :radio="popup.radio" :token="token"
+                :device_id="device_id" :inject_data="inject_data"></custom-slider>
+              <custom-text v-if="item.type=='text'" :obj="item" :radio="popup.radio" :token="token"
+                :device_id="device_id" :inject_data="inject_data"></custom-text>
+              <custom-img v-if="item.type=='img'" :obj="item" :radio="popup.radio" :token="token"
+                :device_id="device_id"></custom-img>
+              <custom-button v-if="item.type=='button'" :obj="item" :radio="popup.radio" :current_page="page_id"
+                :token="token" :device_id="device_id"></custom-button>
+              <custom-switch v-if="item.type=='switch'||item.type=='switch2'" :obj="item" :radio="popup.radio"
+                :token="token" :device_id="device_id" :inject_data="inject_data"></custom-switch>
+              <custom-progress v-if="item.type=='progress'" :obj="item" :radio="popup.radio" :token="token"
+                :device_id="device_id" :inject_data="inject_data"></custom-progress>
+              <custom-selector v-if="item.type=='select'" :obj="item" :radio="popup.radio" :token="token"
+                :device_id="device_id" :inject_data="inject_data" :select="drop.select"></custom-selector>
+              <custom-button-switch v-if="item.type=='switch_button'" :obj="item" :radio="popup.radio" :token="token"
+                :device_id="device_id" :inject_data="inject_data"></custom-button-switch>
+              <custom-matrix v-if="item.type=='matrix'" :obj="item" :radio="popup.radio" :token="token"
+                :device_id="device_id" :inject_data="inject_data"></custom-matrix>
+              <custom-radio-group v-if="item.type=='radio'" :obj="item" :radio="popup.radio" :token="token"
+                :device_id="device_id" :inject_data="inject_data"></custom-radio-group>
+              <custom-check-box v-if="item.type=='checkbox'" :obj="item" :radio="popup.radio" :token="token"
+                :device_id="device_id" :inject_data="inject_data"></custom-check-box>
+              <custom-table v-if="item.type=='table'" :obj="item" :radio="popup.radio" :token="token"
+                :device_id="device_id" :inject_data="inject_data"></custom-table>
+              <custom-input v-if="item.type=='input'" :obj="item" :radio="popup.radio" :token="token"
+                :device_id="device_id" :inject_data="inject_data"></custom-input>
+              <custom-status v-if="item.type=='状态组件'" :obj="item" :radio="popup.radio" :token="token"
+                :device_id="device_id" :inject_data="inject_data"></custom-status>
+              <custom-echart v-if="item.type=='折线图'" :obj="item" :radio="popup.radio" :token="token"
+                :device_id="device_id" :inject_data="inject_data"></custom-echart>
+              <custom-submit-button v-if="item.type=='提交按钮'" :obj="item" :radio="popup.radio" :token="token"
+                :device_id="device_id"></custom-submit-button>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 下拉框 -->
+    <div class="drop_down_box" v-show="drop.show" :style="{left:`${drop.style.left}px`, top:`${drop.style.top}px`}">
+      <div class="item text_ellipsis" v-for="item in drop.options" :title="item.label" @click="drop_select(item)">
+        {{item.label}}</div>
     </div>
   </div>
 
   <script src="../../运维人员部署请修改我.js"></script>
   <script src="../../js/stomp.min.js"></script>
   <script src="../module/vue.js"></script>
+  <script src="../module/echarts.min.js"></script>
   <script src="../module/element-ui.js"></script>
   <script src="../module/axios.min.js"></script>
   <script src="../module/common_function.js"></script>

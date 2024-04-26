@@ -58,6 +58,9 @@ new Vue({
 				case 'yitiji2':
 					path = 'other/一体机2';
 					break;
+				case 'DS-CS310M':
+					path = 'other/DS-CS310M';
+					break;
 				case 'power_supply':
 					location.href = `../智慧设备/电源设备/index.html${location.search}`;
 					return;
@@ -126,9 +129,6 @@ new Vue({
 					return;
 				case 'wirelessmircophone':
 					path = 'wirelessmircophone';
-					break;
-				case 'DS-CS310M':
-					path = 'other/DS-CS310M';
 					break;
 				default:
 					location.href = `${this.path}${location.search}`;

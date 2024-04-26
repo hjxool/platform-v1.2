@@ -120,12 +120,16 @@
           <el-button @click="throttle('restart',1)" class="right" size="medium">重启应用</el-button>
         </div>
 
-        <div class="grid_box">
-          <el-button @click="throttle('volumeUp',1)" class="left" size="medium">音量
+        <div class="row_layout" style="margin: 0 1rem 1rem 1rem;">
+          <!-- <el-button @click="throttle('volumeUp',1)" class="left" size="medium">音量
             +</el-button>
-          <div class="line"></div>
+          
           <el-button @click="throttle('volumeDown',1)" class="right" size="medium">音量
-            -</el-button>
+            -</el-button> -->
+          <div style="margin-right: 20px;">音量：</div>
+
+          <el-slider class="flex_grow" v-model="play_ctrl.volume"
+            @change="throttle('volume',play_ctrl.volume)"></el-slider>
         </div>
 
         <div class="row_layout margin">
