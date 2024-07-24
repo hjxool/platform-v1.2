@@ -31,6 +31,7 @@ new Vue({
 		customButtonSwitch,
 		customProgress,
 		customInput,
+		customIframeComponent,
 	},
 	data: {
 		html: {
@@ -73,6 +74,13 @@ new Vue({
 			options: [], // 下拉框可选数据
 			select: null, // 传入下拉框组件的值
 		},
+		mouse_p: null, // 鼠标定位 x y 坐标组成的对象
+		line: {
+			show: false, // 连线信息弹窗
+			list: [], // 信息分类显示
+			style: {},
+			isBidirect: false, // 如果是双向 则用↔ 否则用→
+		},
 	},
 	beforeCreate() {
 		Vue.prototype.$bus = this;
@@ -99,7 +107,8 @@ new Vue({
 			console.log('err', error);
 		}
 		window.addEventListener('resize', this.resize());
-		// // 监听下拉框事件
+		//#region
+		// 监听下拉框事件
 		// this.$bus.$on('drop_down_show', ({ list, left, top, id }) => {
 		// 	this.drop.show = true;
 		// 	this.drop.style.left = left;
@@ -108,9 +117,19 @@ new Vue({
 		// 	// 记录当前显示的对应组件id
 		// 	this.drop.id = id;
 		// });
+		//#endregion
 		// 监听跳转页面事件
 		this.$bus.$on('turn_to_page', (page_id) => {
 			this.page_id = page_id;
+			// 根据当前页id 得到是第几个页面
+			let i = 0;
+			for (let val of this.component_list) {
+				if (val.id === page_id) {
+					this.page_index = i;
+					break;
+				}
+				i++;
+			}
 		});
 		// 监听设备状态弹窗
 		this.$bus.$on('device_status', ({ list, show, style, name, is_normal }) => {
@@ -160,6 +179,57 @@ new Vue({
 				// 只更新当前打开的矩阵
 				if (this.matrix.title === title && this.matrix.device_id === device_id) {
 					this.matrix.list = data;
+				}
+			}
+		});
+		// 监听鼠标悬浮在线段附近 显示弹窗
+		this.$bus.$on('line_info', ({ list: lines, isBidirect, is_in_range }) => {
+			if (is_in_range) {
+				this.line.list = [];
+				for (let val of lines) {
+					// 根据线材类型进行分类 list中没有的类型就创建 有就填入
+					let find = false;
+					for (let val2 of this.line.list) {
+						if (val2.type === val.type) {
+							find = true;
+							val2.list.push(val);
+							break;
+						}
+					}
+					if (!find) {
+						let t = {
+							type: val.type,
+							list: [val],
+						};
+						this.line.list.push(t);
+					}
+				}
+				this.line.isBidirect = isBidirect;
+				// 弹窗显示在鼠标右下角 10px的位置
+				this.line.show = true;
+				this.$nextTick(() => {
+					// 如果弹窗在右下角显示不下 则换到左下角
+					let { x, y } = this.mouse_p;
+					let width = document.getElementById('line_info').offsetWidth;
+					let w_width = document.getElementById('index').clientWidth;
+					if (x + 10 + width >= w_width) {
+						this.line.style = {
+							left: `${x - 10 - width}px`,
+							top: `${y + 10}px`,
+						};
+					} else {
+						this.line.style = {
+							left: `${x + 10}px`,
+							top: `${y + 10}px`,
+						};
+					}
+				});
+			} else {
+				// 每收到一条连线发来的消息 就自增
+				this.line_count++;
+				// 所有 有信息 的连线都是false则隐藏弹窗
+				if (this.line_count === this.component_list[this.page_index].line_info_total) {
+					this.line.show = false;
 				}
 			}
 		});
@@ -213,9 +283,19 @@ new Vue({
 				// 每个面板比例不同
 				// 连线组件组要将画布拉伸到跟页面大小一样 所以radio要代理
 				val.radio = Math.round((c_w / val.mb.w) * 100) / 100;
+				// 每个页面都有自己的连线需要统计
+				val.line_info_total = 0;
+				for (let val2 of val.data) {
+					// 判断组件列表中 连线组件是否有接口信息 有则计数
+					if (val2.type === '连线' && val2.rawData?.data?.edgeConfig?.length) {
+						val.line_info_total++;
+					}
+				}
 			}
 			this.component_list = res.data.data.panelParam;
 			this.page_id = this.component_list[0].id;
+			// 刚进页面在第一页
+			this.page_index = 0;
 			this.$nextTick(async () => {
 				await this.count_device_list();
 				// 开启设备实时数据上报
@@ -244,8 +324,12 @@ new Vue({
 			}
 			// 将整个数据对象发给每个组件 让其自己解析路径 获取对应的值
 			// status 1在线 2离线 除了在线 其他都算离线
-			let device_status = res.data.data.status === 1 ? 5 : 4;
-			this.$bus.$emit('get_value', { data: res.data.data.properties, device_id: res.data.data.deviceId, device_status });
+			let device_status = res.data.data.status === 1 ? 5 : 6;
+			this.inject_data = {
+				data: res.data.data.properties,
+				device_id: res.data.data.deviceId,
+				device_status,
+			};
 		},
 		// 获取用户信息包括 id 连接stomp用户名和密码
 		async get_user_info() {
@@ -270,7 +354,12 @@ new Vue({
 					`/exchange/device-report/device-report.${val}`,
 					(res) => {
 						let data = JSON.parse(res.body);
-						this.$bus.$emit('get_value', { data: data.contents[0].attributes, device_id: val, device_status: data.messageBizType, message: data });
+						this.inject_data = {
+							data: data.contents[0].attributes,
+							device_id: val,
+							device_status: data.messageBizType,
+							message: data,
+						};
 					},
 					{ 'auto-delete': true }
 				);
@@ -411,10 +500,6 @@ new Vue({
 		start_report(device_id) {
 			this.request('put', `${decive_report_url}/${device_id}`, this.token);
 		},
-		// 设备属性面板 自定义样式
-		device_status_style(style) {
-			return style;
-		},
 		// 巡检节流事件
 		checking_event(flag) {
 			this.online_check.is_checking = flag;
@@ -434,6 +519,26 @@ new Vue({
 				label: obj.label,
 				value: obj.value,
 			};
+		},
+		// 鼠标移动监测
+		mouse_event(e) {
+			clearTimeout(this.mouse_timer);
+			this.mouse_timer = setTimeout(() => {
+				// 存储当前页面的滚动距离 否则向下滚动时鼠标坐标位置会和连线位置错开
+				let scroll_top = document.getElementById('index').scrollTop;
+				// 检测鼠标位置是否在线上
+				this.mouse_p = {
+					x: e.clientX,
+					y: e.clientY,
+					scroll_top,
+				};
+				// 鼠标移动结束时 清空连线统计计数
+				this.line_count = 0;
+			}, 500);
+		},
+		// 鼠标移出 清除事件
+		mouse_leave() {
+			clearTimeout(this.mouse_timer);
 		},
 	},
 });

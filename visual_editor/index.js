@@ -26,6 +26,7 @@ new Vue({
 		customEchart,
 		customPopup,
 		customSubmitButton,
+		customSlider2,
 	},
 	data: {
 		html: {

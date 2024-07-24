@@ -43,7 +43,7 @@ new Vue({
 					label: `In${col + 1}->Out${row + 1}`,
 					value: [col, row],
 				};
-				this.video_buttons.push(t);
+				this.html.video_buttons.push(t);
 			}
 		}
 		document.title = '智慧运算中心';

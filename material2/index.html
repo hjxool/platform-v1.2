@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <link rel="stylesheet" href="../module/element-ui.css">
+  <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+  <div id="index" v-cloak v-loading="html.page_loading" :element-loading-text="html.load_text" :style="theme_bg()">
+    <div class="header row_layout flex_shrink" :style="theme_bg()">
+      <span :style="theme_font()" class="margin" style="font-size: 0.9rem;">模糊搜索</span>
+      <el-input v-model="html.search" @change="get_data(1)" style="margin-right:2rem;width:10rem;" placeholder="请输入内容"
+        size="mini" clearable></el-input>
+      <span :style="theme_font()" class="margin" style="font-size: 0.9rem;">操作</span>
+      <el-button class="margin" @click="get_data(1)" type="primary" size="mini">条件查询</el-button>
+      <el-button v-show="config.add_show" @click="select_file" class="margin" type="success"
+        size="mini">新增素材</el-button>
+      <input id="select_file" @change="classify_upload" type="file" style="display: none;">
+    </div>
+
+    <div class="body">
+      <el-table :data="table.data" :max-height="table.h" @selection-change="select_material">
+        <el-table-column type="selection" width="50"></el-table-column>
+
+        <el-table-column label="预览">
+          <template slot-scope="scope">
+            <div v-if="scope.row.thumbnailUrl" class="img">
+              <img :src="scope.row.thumbnailUrl" style="width:100%;height:100%;">
+            </div>
+            <div v-if="!scope.row.thumbnailUrl" class="img box1">
+              <i class="el-icon-picture-outline icon"></i>
+              <span>暂无缩略图</span>
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="fileName" label="素材名称"></el-table-column>
+        <el-table-column prop="fileTypeString" label="素材类型"></el-table-column>
+        <el-table-column label="操作" width="250">
+          <template slot-scope="scope">
+            <div class="row_layout">
+              <el-button v-show="config.download_show" @click="download_material(scope.row)"
+                :style="{marginRight:config.show_button?'':'0.5rem'}" :disabled="scope.row.ban_download" size="mini"
+                type="primary">下载</el-button>
+              <div v-show="config.show_button" class="col_layout" style="margin: 0 0.5rem;">
+                <el-button v-show="config.instant_show" @click="publish_show(scope.row,'instant')"
+                  :disabled="can_publish(scope.row.fileTypeString)" size="mini" type="success"
+                  style="margin-bottom:0.5rem;">即时发布</el-button>
+                <el-button v-show="config.timing_show" @click="publish_show(scope.row,'timing')"
+                  :disabled="can_publish(scope.row.fileTypeString)" size="mini" type="success"
+                  style="margin-left:0;">定时发布</el-button>
+              </div>
+              <el-button v-show="config.del_show" @click="del_material(scope.row)" size="mini"
+                type="danger">删除</el-button>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+
+    <div class="footer flex_shrink">
+      <el-pagination background layout="total, prev, pager, next" :total="table.total" :page-size="table.page_size"
+        @current-change="get_data" :current-page="table.cur_page"></el-pagination>
+    </div>
+
+    <!-- 弹窗 -->
+    <div class="popover" v-if="form.show">
+      <div class="form_layout" v-loading="form.loading" :style="theme_bg()">
+        <div class="head row_layout flex_shrink">
+          <span class="title" :style="theme_font()">发布计划</span>
+          <el-button @click="form.show=false" size="mini" type="danger" circle icon="el-icon-close"></el-button>
+        </div>
+
+        <iframe :src="form.url" frameborder="0" scrolling="no" style="width: 100%;height: 100%;"></iframe>
+      </div>
+    </div>
+    <!-- 下载弹窗 -->
+    <div class="download_tips" v-show="html.download_list.length"
+      :style="{width:html.download_fold?'20px':'calc(13rem + 20px)'}">
+      <div class="fold center" @click="html.download_fold=!html.download_fold">
+        <div class="icon1" v-show="!html.download_fold"></div>
+        <div class="icon2" v-show="html.download_fold"></div>
+      </div>
+      <transition-group name="download" v-show="!html.download_fold" style="overflow: hidden;">
+        <div class="box" v-for="item in html.download_list" :key="item.id">
+          <div class="row_layout">
+            <span class="text_ellipsis" :title="item.name">{{item.name}}</span>
+            <!-- <i class="el-icon-close icon" @click="close_download(index)"></i> -->
+          </div>
+          <el-progress :text-inside="true" :stroke-width="20" :percentage="item.per"></el-progress>
+        </div>
+      </transition-group>
+    </div>
+    <!-- 资源下发弹窗 -->
+    <div class="popover" v-show="issue.show">
+      <div class="issue_box col_layout">
+        <div class="head row_layout">
+          <div class="title">资源下发</div>
+
+          <el-button @click="issue.show=false" type="danger" icon="el-icon-close" circle size="mini"></el-button>
+        </div>
+
+        <div class="body row_layout">
+          <div class="title">下发至</div>
+
+          <el-select class="select_box" v-model="issue.select" clearable multiple>
+            <el-option v-for="item in issue.list" :key="item.id" :label="item.deviceName" :value="item.id">
+            </el-option>
+          </el-select>
+        </div>
+
+        <div class="foot">
+          <el-button type="primary">确认</el-button>
+          <el-button @click="issue.show=false">取消</el-button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../运维人员部署请修改我.js"></script>
+  <script src="../module/vue.js"></script>
+  <script src="../module/element-ui.js"></script>
+  <script src="../module/axios.min.js"></script>
+  <script src="../module/spark-md5.min.js"></script>
+  <script src="../module/upload_file.js"></script>
+  <script src="../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

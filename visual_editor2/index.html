@@ -7,13 +7,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title></title>
   <link rel="stylesheet" href="../module/element-ui.css">
+  <link rel="stylesheet" href="//at.alicdn.com/t/c/font_4540968_ygs0apge99.css">
   <link rel="stylesheet" href="../module/common_style.css">
   <link rel="stylesheet" href="./index.css">
 </head>
 
 <body>
   <div id="index" v-cloak v-loading="html.page_loading" @click="close_popup">
-    <div class="panel css_img" v-show="page_id==page.id" v-for="page in component_list" :style="panel_size(page)">
+    <div class="panel css_img" v-show="page_id==page.id" v-for="page in component_list" :style="panel_size(page)"
+      @mousemove="mouse_event" @mouseleave="mouse_leave">
       <template v-for="item,index in page.data">
         <custom-container v-if="item.type=='container'" :obj="item" :radio="page.radio"
           :token="token"></custom-container>
@@ -26,8 +28,8 @@
         <custom-slider2 v-if="item.type=='slider'" :obj="item" :radio="page.radio" :token="token"
           :inject_data="inject_data"></custom-slider2>
         <custom-img v-if="item.type=='image'" :obj="item" :radio="page.radio" :token="token"></custom-img>
-        <custom-line v-if="item.type=='连线'" :obj="item" :radio="page.radio" :page="page"
-          :inject_data="inject_data"></custom-line>
+        <custom-line v-if="item.type=='连线'" :obj="item" :radio="page.radio" :page="page" :inject_data="inject_data"
+          :mouse_p="mouse_p"></custom-line>
         <custom-video v-if="item.type=='videoPlayer'" :obj="item" :radio="page.radio" :token="token"></custom-video>
         <custom-device-status v-if="item.shapeNickname=='设备节点'" :obj="item" :radio="page.radio" :page_width="page.mb.w"
           :token="token" :inject_data="inject_data"></custom-device-status>
@@ -39,21 +41,23 @@
           :inject_data="inject_data"></custom-online-check>
         <custom-visual-editor1 v-if="item.type=='组件预设'" :obj="item" :radio="page.radio"
           :token="token"></custom-visual-editor1>
-        <current_date v-if="item.type=='current_date'" :obj="item" :radio="page.radio"></current_date>
+        <current_date v-if="item.type=='current_date'" :obj="item" :radio="page.radio" :token="token"></current_date>
         <custom-sound-matrix v-if="item.type=='audio_matrix'" :obj="item" :radio="page.radio"
           :inject_data="inject_data"></custom-sound-matrix>
         <custom-video-matrix v-if="item.type=='video_matrix'" :obj="item" :radio="page.radio"
           :inject_data="inject_data"></custom-video-matrix>
-        <custom-button-switch v-if="item.type=='switchButton'" :obj="item" :radio="page.radio"
+        <custom-button-switch v-if="item.type=='switchButton'" :obj="item" :radio="page.radio" :token="token"
           :inject_data="inject_data"></custom-button-switch>
         <custom-progress v-if="item.type=='progressV'" :obj="item" :radio="page.radio"
           :inject_data="inject_data"></custom-progress>
-        <custom-input v-if="item.type=='input'" :obj="item" :radio="page.radio"
+        <custom-input v-if="item.type=='input'" :obj="item" :radio="page.radio" :token="token"
           :inject_data="inject_data"></custom-input>
+        <custom-iframe-component v-if="item.type=='iframe'" :obj="item" :radio="page.radio"
+          :token="token"></custom-iframe-component>
       </template>
     </div>
     <!-- 设备状态栏 -->
-    <div class="device_status" v-show="device_status.show" :style="device_status_style(device_status.style)"
+    <div class="device_status" v-show="device_status.show" :style="device_status.style"
       @mouseenter="device_status.show=true" @mouseleave="device_status.show=false">
       <!-- 节点信息 头部 -->
       <div class="head row_layout">
@@ -107,9 +111,29 @@
       </div>
     </div>
     <!-- 下拉框 -->
-    <div class="drop_down_box" v-show="drop.show" :style="{left:`${drop.style.left}px`, top:`${drop.style.top}px`}">
+    <!-- <div class="drop_down_box" v-show="drop.show" :style="{left:`${drop.style.left}px`, top:`${drop.style.top}px`}">
       <div class="item text_ellipsis" v-for="item in drop.options" :title="item.label" @click="drop_select(item)">
         {{item.label}}</div>
+    </div> -->
+    <!-- 随鼠标移动的线段信息弹窗 -->
+    <div id="line_info" v-if="line.show" :style="line.style">
+      <i class="close el-icon-error button" @click="line.show=false"></i>
+
+      <div class="scroll">
+        <div class="box" v-for="item1 in line.list">
+          <div class="title">{{item1.type}}</div>
+
+          <div class="row_layout" v-for="item2 in item1.list">
+            <div class="margin nowrap">{{item2.start.name}}</div>
+            <div v-show="line.isBidirect" class="margin iconfont icon-zuoyoujiantou-2"></div>
+            <div v-show="!line.isBidirect" class="margin iconfont icon-jiantou_xiangyou_o"></div>
+            <div class="margin nowrap">{{item2.end.name}}</div>
+            <i v-show="item2.status" class="el-icon-success green margin"></i>
+            <i v-show="!item2.status" class="el-icon-error red margin"></i>
+            <div class="nowrap" style="padding-right: 20px;">{{item2.msg}}</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

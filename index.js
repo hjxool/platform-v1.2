@@ -97,6 +97,9 @@ new Vue({
 				case 'public_material':
 					path = 'material';
 					break;
+				case 'material2':
+					path = 'material2';
+					break;
 				case 'role_add_user':
 				case 'department_add_user':
 				case 'search_user':
@@ -129,6 +132,12 @@ new Vue({
 					return;
 				case 'wirelessmircophone':
 					path = 'wirelessmircophone';
+					break;
+				case 'screen_scheduling':
+					path = 'screen_scheduling';
+					break;
+				case 'screen_control':
+					path = 'screen_control';
 					break;
 				default:
 					location.href = `${this.path}${location.search}`;

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <title>智慧会议管理系统</title>
+  <link rel="stylesheet" href="../../module/vant.css">
+  <link rel="stylesheet" href="../../module/icon.css">
+  <link rel="stylesheet" href="../../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index" class="col_layout" v-cloak v-my_loading="loading">
+    <!-- 返回 -->
+    <div class="back_title row_layout" @click="turn_back">
+      <div class="iconfont icon-xiangzuojiantou"></div>
+      <div class="title">会议详情</div>
+    </div>
+    <!-- 会议信息 -->
+    <div class="info_box col_layout">
+      <!-- 背景图 为了不设置父容器隐藏 -->
+      <div class="bg_img bg">
+        <img src="./img/icon1.png" class="bg_img bg">
+      </div>
+
+      <div class="title margin">{{meeting.theme}}</div>
+
+      <div class="time row_layout margin">
+        <img src="./img/icon2.png" class="bg_img">
+        <div>{{meeting.date}}</div>
+        <img src="./img/icon3.png" class="icon">
+        <div>{{meeting.start}} ~ {{meeting.end}}</div>
+      </div>
+
+      <div class="row row_layout margin">
+        <img src="./img/icon4.png" class="icon">
+
+        <div>申请人：{{meeting.emcee}}</div>
+      </div>
+      <div :class="['row','row_layout',meeting.door_code?'margin':'']">
+        <img src="./img/icon5.png" class="icon">
+
+        <div class="text_ellipsis">{{meeting.room}}</div>
+      </div>
+      <div class="row row_layout" v-show="meeting.door_code">
+        <img src="./img/icon6.png" class="icon">
+
+        <div>开门码：{{meeting.door_code}}</div>
+      </div>
+    </div>
+    <!-- 功能 -->
+    <div v-if="modules.length" class="module">
+      <div class="col_layout" v-for="m in modules" @click="meeting_fn(m.name)">
+        <img class="icon" :src="m.img">
+        <div class="text">{{m.name}}</div>
+      </div>
+    </div>
+    <!-- 会议按钮 -->
+    <div class="buttons">
+      <div class="box center" v-show="b.show" v-for="b in buttons" :style="b.style" @click="meeting_fn(b.name)">
+        {{b.name}}
+      </div>
+    </div>
+    <!-- 参会人员 -->
+    <div class="person_title row_layout">
+      <img src="./img/icon8.png" style="width: 1.6rem;height: 1.6rem;margin-right: 1rem;">
+      <div class="text1">参会人员</div>
+    </div>
+    <div class="scroll_box flex_grow">
+      <div class="box col_layout" v-for="p in meeting.users">
+        <div class="title text1 text_ellipsis">{{p.name}}</div>
+
+        <div class="status row_layout flex_grow">
+          <div :class="['text',p.reply?'blue':'orange']">{{reply_text(p.reply)}}</div>
+          <div class="line"></div>
+          <div :class="['text',p.sign_in?'blue':'orange']">{{sign_text(p.sign_in)}}</div>
+        </div>
+      </div>
+    </div>
+    <!-- 签到按钮 会议未开始/开始 未签到 未转交 时显示 -->
+    <div class="sign_in row_layout" v-show="sign_in_show">
+      <div class="box blue" @click="meeting_fn('参加')">参加</div>
+      <div class="box red" @click="meeting_fn('请假')">请假</div>
+    </div>
+
+    <!-- 弹窗 -->
+    <van-dialog class="dialog" v-model="confirm.show" @confirm="dialog_confirm" :title="confirm.title"
+      show-cancel-button>
+      <!-- 转交 -->
+      <div v-if="confirm.type=='transfer'" class="margin row_layout transfer">
+        <div class="title flex_shrink">委托给</div>
+
+        <div class="box row_layout">
+          <!-- 添加 -->
+          <div class="person flex_shrink" @click="meeting_fn('添加人员')">
+            <div class="iconfont icon-jiahao" style="margin-right:6px;"></div>
+            <div class="name">添加</div>
+          </div>
+          <!-- 人员列表 -->
+          <div class="person flex_shrink" v-for="p,index in meeting.transfer" @click="del_person(index)">
+            <div class="name text_ellipsis">{{p.name}}</div>
+            <div class="iconfont icon-closel"></div>
+          </div>
+        </div>
+      </div>
+      <!-- 延迟 -->
+      <div v-if="confirm.type=='delay'" class="margin row_layout delay">
+        <div class="title flex_shrink">延后</div>
+        <div class="box center" @click="meeting_fn('延时')">{{meeting.delay}}</div>
+        <div class="text">分钟</div>
+      </div>
+    </van-dialog>
+
+    <van-popup v-model="pop.show" round position="bottom" :style="pop_style()">
+      <!-- 添加人 -->
+      <iframe v-show="pop.type=='person'" id="pop_window" :src="pop.url" frameborder="0" scrolling="no"></iframe>
+      <!-- 选择器 -->
+      <van-picker v-if="pop.type=='delay'" :title="pop.title" show-toolbar :columns="pop.list" @confirm="picker_select"
+        @cancel="pop.show=false">
+      </van-picker>
+      <!-- 会议资料 -->
+      <div v-if="pop.type=='files'" class="file_list col_layout">
+        <div class="title">会议资料</div>
+
+        <div class="list">
+          <div class="row_layout " v-for="file in meeting.files" @click="open_file(file)">
+            {{file.fileName}}
+          </div>
+        </div>
+      </div>
+      <!-- 审核流程 -->
+      <div v-if="pop.type=='审核流程'" class="file_list col_layout">
+        <div class="title">审批流程</div>
+
+        <div class="audit_process flex_grow">
+          <van-steps direction="vertical" :active="audit.进行中" active-icon="more" inactive-icon="more"
+            finish-icon="checked" :failed="audit.被驳回" failed-color="#F53131" failed-icon="clear" active-color="#FFB51A"
+            finish-color="#07c160" success-color="#07c160" :success="audit.通过" success-icon="checked">
+            <van-step v-for="i in audit.data">
+              <p class="timeline">
+                {{i.status == 1 || i.status == 4 ? '' : i.modified}}{{i.waitForMyDeal ? i.status ==
+                1 ? '等待我处理' : '待处理' : ''}}
+              </p>
+              <h3 v-if="i.status == 2" class="content status" style="color: #07c160;">{{i.statusName}}</h3>
+              <h3 v-else-if="i.status == 0 || i.status == -1" class="content status" style="color: #F53131;">
+                {{i.statusName}}
+              </h3>
+              <h3 v-if="i.status == 1" class="content status" style="color: #FFB51A;">{{i.statusName}}</h3>
+              <h3 class="content">审批环节：{{i.auditConfigName}}</h3>
+              <h3 class="content">审批人：<van-tag style="font-size: 1.25rem;" type="primary"
+                  v-for="(user, index) in i.actualAuditUserVOList">{{user.nickname}}</van-tag></h3>
+              <h3 class="content">审批意见：{{i.remark ? i.remark : i.statusName}}</h3>
+              <!-- <p class="timeline" style="top: 17%;" v-if="i.waitForMyDeal">等待我处理</p> -->
+            </van-step>
+          </van-steps>
+        </div>
+      </div>
+      <!-- 请假事由 -->
+      <div v-if="pop.type==='请假'" class="file_list col_layout">
+        <div class="title">不参加会议</div>
+
+        <div class="reject_box flex_grow">
+          <van-field v-model="pop.content" placeholder="请输入请假理由" label-width="30vw" style="height: 100%;" />
+        </div>
+
+        <div class="row_layout flex_shrink" style="justify-content: space-around;">
+          <van-button class="reject_button" type="warning" @click="meeting_fn('确认请假')"
+            style="background: #F55661;">确认请假</van-button>
+          <van-button class="reject_button" type="primary" @click="pop.show = false">取消</van-button>
+        </div>
+      </div>
+    </van-popup>
+    <!-- 预览文件 -->
+    <van-popup v-model="file.show" round>
+      <div class="file_box col_layout" @touchstart="zoom_start" @touchmove="zoom">
+        <div class="body empty" v-show="file.loading">加载中...</div>
+
+        <template v-if="!file.loading">
+          <template v-if="file.imgs.length">
+            <div id="file_box" class="body">
+              <img v-lazy="file.imgs[file.page].src"
+                :style="{objectFit:'contain', width: `${100*file.imgs[file.page].scale}%`, height: `${100*file.imgs[file.page].scale}%`}">
+            </div>
+
+            <div class="foot row_layout">
+              <div class="button" @click="pdf_page(-1)">前一页</div>
+              <div class="num">{{ file.page + 1 }}/{{file.imgs.length}}</div>
+              <div class="button" @click="pdf_page(1)">后一页</div>
+            </div>
+          </template>
+
+          <div class="body empty" v-if="!file.imgs.length">无预览</div>
+        </template>
+      </div>
+    </van-popup>
+  </div>
+
+  <script src="../../../运维人员部署请修改我.js"></script>
+  <script src="../../module/vue.js"></script>
+  <!-- <script src="https://cdn.bootcdn.net/ajax/libs/pdf.js/3.10.111/pdf.min.js"></script> -->
+  <script src="../../../dlc2/js/vant.min.js"></script>
+  <script src="../../module/axios.min.js"></script>
+  <script src="../../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

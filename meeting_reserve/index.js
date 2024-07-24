@@ -1334,10 +1334,6 @@ new Vue({
 		del_guest(index) {
 			this.new_meeting_form.guestList.splice(index, 1);
 		},
-		// 物品清单删除
-		del_guest(index) {
-			this.new_meeting_form.goods.splice(index, 1);
-		},
 		// 删除参会人员
 		del_person(index, type) {
 			let arr;

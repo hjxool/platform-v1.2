@@ -308,11 +308,11 @@ new Vue({
 		},
 		// 下载素材
 		download_material(row_obj) {
-			// this.html.download_list.push({ name: row_obj.fileName, per: 0, id: row_obj.id });
+			this.html.download_list.push({ name: row_obj.fileName, per: 0, id: row_obj.id });
 			// 做个闭包将对象的引用地址传入异步方法
-			// let obj = this.html.download_list[this.html.download_list.length - 1];
+			let obj = this.html.download_list[this.html.download_list.length - 1];
 			// 下载中的文件不能再点下载
-			// row_obj.ban_download = true;
+			row_obj.ban_download = true;
 			this.request('get', `${get_file_url}/${row_obj.id}`, this.token, (res) => {
 				if (res.data.head.code !== 200) {
 					return;
@@ -323,24 +323,24 @@ new Vue({
 					responseType: 'blob',
 					header: {
 						Authorization: `Bearer ${this.token}`,
-						'Content-Type': 'application/x-download',
+						// 'Content-Type': 'application/x-download',
 					},
 					// 下载进度事件
-					// onDownloadProgress: (progress) => {
-					// 	let per = Math.floor((progress.loaded / progress.total) * 1000 + 0.5) / 10;
-					// 	obj.per = per; // 修改引用地址下的属性值
-					// 	if (per == 100) {
-					// 		// 进度满了后恢复下载和移除下载列表中的元素
-					// 		row_obj.ban_download = false;
-					// 		for (let index = 0; index < this.html.download_list.length; index++) {
-					// 			let t = this.html.download_list[index];
-					// 			if (t.id === obj.id) {
-					// 				this.html.download_list.splice(index, 1);
-					// 				break;
-					// 			}
-					// 		}
-					// 	}
-					// },
+					onDownloadProgress: (progress) => {
+						let per = Math.floor((progress.loaded / progress.total) * 1000 + 0.5) / 10;
+						obj.per = per; // 修改引用地址下的属性值
+						if (per == 100) {
+							// 进度满了后恢复下载和移除下载列表中的元素
+							row_obj.ban_download = false;
+							for (let index = 0; index < this.html.download_list.length; index++) {
+								let t = this.html.download_list[index];
+								if (t.id === obj.id) {
+									this.html.download_list.splice(index, 1);
+									break;
+								}
+							}
+						}
+					},
 				}).then((res) => {
 					// let b = new Blob([res.data]);
 					let a = document.createElement('a');

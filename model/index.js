@@ -100,6 +100,7 @@ new Vue({
 				outputData: [], //事件/服务 属性数组
 				inputData: [], //服务 属性数组
 				// struct_array: [], //属性 子属性数组
+				all_send: true, // 结构体是否全部下发
 			},
 			// 表单数组
 			form_list: [],
@@ -128,6 +129,9 @@ new Vue({
 				create_show: false,
 				publish_show: false,
 				edit_show: false,
+			},
+			tips: {
+				all_send: '如果关闭后，将只发送结构体中的字段的值，比如结构构体属性为：T：{"a":1,"b":2},那么如果选择下发控制b的指令时，只会下发b参数的值',
 			},
 		};
 	},
@@ -263,11 +267,13 @@ new Vue({
 					} else if (e.dataType.type == 'struct') {
 						// 这地方存的是源数据 在点编辑查看时要特殊处理 取值赋给展示数据
 						table.struct_array = e.dataType.properties;
+						table.all_send = e.dataType.specs.structAllSend;
 					} else if (e.dataType.type == 'array') {
 						table.itemType = e.dataType.specs.item.type;
 						table.size = e.dataType.specs.size;
 						if (table.itemType == 'struct') {
 							table.struct_array = e.dataType.specs.item.properties;
+							table.all_send = e.dataType.specs.structAllSend;
 						}
 					} else if (e.dataType.type == 'enum') {
 						table.enum_list = [];
@@ -281,7 +287,7 @@ new Vue({
 						table.max = e.dataType.specs.max;
 						table.step = e.dataType.specs.step;
 						table.unit = e.dataType.specs.unitName == null ? '' : `${e.dataType.specs.unitName} / ${e.dataType.specs.unit}`;
-						table.scale = e.dataType.specs.scale || e.dataType.specs.scale === 0 ? 0 : 2;
+						table.scale = e.dataType.specs.scale;
 					}
 					this.protocol_list.push(table);
 				});
@@ -488,12 +494,14 @@ new Vue({
 					temp.struct_array = row_data.dataType.properties;
 					// temp.struct_array_replace = [];
 					// this.copy_struct_array(temp.struct_array_replace, row_data.dataType.properties);
+					temp.all_send = row_data.dataType.specs.structAllSend;
 					break;
 				case 'array':
 					temp.itemType = row_data.dataType.specs.item.type;
 					temp.size = row_data.dataType.specs.size;
 					if (temp.itemType == 'struct') {
 						temp.struct_array = row_data.dataType.specs.item.properties;
+						temp.all_send = row_data.dataType.specs.structAllSend;
 						// temp.struct_array_replace = [];
 						// this.copy_struct_array(temp.struct_array_replace, row_data.dataType.specs.item.properties);
 					}
@@ -511,7 +519,7 @@ new Vue({
 					temp.max = row_data.dataType.specs.max;
 					temp.step = row_data.dataType.specs.step;
 					temp.unit = row_data.dataType.specs.unitName == null ? '' : `${row_data.dataType.specs.unitName} / ${row_data.dataType.specs.unit}`;
-					temp.scale = row_data.dataType.specs.scale || row_data.dataType.specs.scale === 0 ? 0 : 2;
+					temp.scale = row_data.dataType.specs.scale;
 					break;
 			}
 			this.form_list.push(temp);
@@ -550,12 +558,14 @@ new Vue({
 					break;
 				case 'struct':
 					temp.struct_array = row_data.dataType.properties;
+					temp.all_send = row_data.dataType.specs.structAllSend;
 					break;
 				case 'array':
 					temp.itemType = row_data.dataType.specs.item.type;
 					temp.size = row_data.dataType.specs.size;
 					if (temp.itemType == 'struct') {
 						temp.struct_array = row_data.dataType.specs.item.properties;
+						temp.all_send = row_data.dataType.specs.structAllSend;
 					}
 					break;
 				case 'enum':
@@ -570,7 +580,7 @@ new Vue({
 					temp.max = row_data.dataType.specs.max;
 					temp.step = row_data.dataType.specs.step;
 					temp.unit = row_data.dataType.specs.unitName == null ? '' : `${row_data.dataType.specs.unitName} / ${row_data.dataType.specs.unit}`;
-					temp.scale = row_data.dataType.specs.scale || row_data.dataType.specs.scale === 0 ? 0 : 2;
+					temp.scale = row_data.dataType.specs.scale;
 					break;
 			}
 			this.form_list.push(temp);
@@ -754,57 +764,6 @@ new Vue({
 					// 其实也可以修改成将当前表单编辑的数据格式化 再替换上一层struct_array里对应的元素对象
 					let array = this.form_list[index - 1].struct_array;
 					array.splice(obj.index, 1, this.format_params(obj));
-					// array[obj.index].name = obj.name;
-					// array[obj.index].identifier = obj.identifier;
-					// array[obj.index].dataType.type = obj.dataType;
-					// if (array[obj.index].dataType.specs != null) {
-					// 	if (array[obj.index].dataType.specs.item != null) {
-					// 		array[obj.index].dataType.specs.item.properties = [];
-					// 	}
-					// }
-					// array[obj.index].dataType.properties = [];
-					// switch (obj.dataType) {
-					// 	case 'text':
-					// 		// 如果原先数据是date等 specs就是null不能直接添加属性 而要用新对象直接覆盖
-					// 		// 而且本来specs里就没有什么固定内容
-					// 		array[obj.index].dataType.specs = { length: obj.textLength };
-					// 		break;
-					// 	case 'date':
-					// 		break;
-					// 	case 'struct':
-					// 		for (let i of obj.struct_array) {
-					// 			array[obj.index].dataType.properties.push(i);
-					// 		}
-					// 		break;
-					// 	case 'array':
-					// 		array[obj.index].dataType.specs = {
-					// 			size: obj.size,
-					// 			item: { type: obj.itemType },
-					// 		};
-					// 		array[obj.index].dataType.specs.item.properties = [];
-					// 		if (obj.itemType == 'struct') {
-					// 			for (let i of obj.struct_array) {
-					// 				array[obj.index].dataType.specs.item.properties.push(i);
-					// 			}
-					// 		}
-					// 		break;
-					// 	case 'enum':
-					// 		array[obj.index].dataType.specs = { enumValue: {}, enumType: obj.enum_value_type };
-					// 		for (let val of obj.enum_list) {
-					// 			array[obj.index].dataType.specs.enumValue[val.value] = val.label;
-					// 		}
-					// 		break;
-					// 	default:
-					// 		array[obj.index].dataType.specs = {
-					// 			min: obj.min == '' ? 0 : obj.min,
-					// 			max: obj.max == '' ? 0 : obj.max,
-					// 			step: obj.step == '' ? 0 : obj.step,
-					// 			unitName: obj.unit.split(' / ')[0] == '' ? null : obj.unit.split(' / ')[0],
-					// 			unit: obj.unit.split(' / ')[0] == '' ? null : obj.unit.split(' / ')[1],
-					// 			scale: obj.scale,
-					// 		};
-					// 		break;
-					// }
 					// 修改完后关闭一层表单
 					this.form_list.pop();
 					this.child_count_list.pop();
@@ -887,6 +846,7 @@ new Vue({
 												for (let i of obj.struct_array) {
 													e.dataType.properties.push(i);
 												}
+												e.dataType.specs.structAllSend = obj.all_send;
 												break;
 											case 'array':
 												e.dataType.specs = {
@@ -898,6 +858,7 @@ new Vue({
 													for (let i of obj.struct_array) {
 														e.dataType.specs.item.properties.push(i);
 													}
+													e.dataType.specs.structAllSend = obj.all_send;
 												}
 												break;
 											case 'enum':
@@ -913,7 +874,7 @@ new Vue({
 													step: obj.step == '' ? 0 : obj.step,
 													unitName: obj.unit.split(' / ')[0] == '' ? null : obj.unit.split(' / ')[0],
 													unit: obj.unit.split(' / ')[0] == '' ? null : obj.unit.split(' / ')[1],
-													scale: obj.scale || obj.scale === 0 ? 0 : 2,
+													scale: obj.scale,
 												};
 												break;
 										}
@@ -981,9 +942,10 @@ new Vue({
 						for (let i of obj.struct_array) {
 							dataType.properties.push(i);
 						}
-					} else {
-						return;
 					}
+					dataType.specs = {
+						structAllSend: obj.all_send,
+					};
 					break;
 				case 'array':
 					dataType.specs = {
@@ -996,9 +958,8 @@ new Vue({
 							for (let i of obj.struct_array) {
 								dataType.specs.item.properties.push(i);
 							}
-						} else {
-							return;
 						}
+						dataType.specs.structAllSend = obj.all_send;
 					}
 					break;
 				case 'enum':
@@ -1014,7 +975,7 @@ new Vue({
 						step: obj.step == '' ? 0 : obj.step,
 						unitName: obj.unit.split(' / ')[0] == '' ? null : obj.unit.split(' / ')[0],
 						unit: obj.unit.split(' / ')[0] == '' ? null : obj.unit.split(' / ')[1],
-						scale: obj.scale || obj.scale === 0 ? 0 : 2,
+						scale: obj.scale,
 					};
 					break;
 			}
@@ -1344,6 +1305,7 @@ new Vue({
 					break;
 				case 'struct':
 					form_obj.struct_array = JSON.parse(JSON.stringify(select_obj.dataType.properties));
+					form_obj.all_send = select_obj.dataType.specs.structAllSend;
 					break;
 				case 'array':
 					form_obj.size = select_obj.dataType.specs.size;
@@ -1357,7 +1319,7 @@ new Vue({
 					form_obj.max = select_obj.dataType.specs.max || 0;
 					form_obj.step = select_obj.dataType.specs.step || 0;
 					form_obj.unit = `${select_obj.dataType.specs.unitName} / ${select_obj.dataType.specs.unit}`;
-					form_obj.scale = select_obj.dataType.specs.scale || select_obj.dataType.specs.scale === 0 ? 0 : 2;
+					form_obj.scale = select_obj.dataType.specs.scale;
 					break;
 			}
 			this.form_verify(form_obj.name, 'name');

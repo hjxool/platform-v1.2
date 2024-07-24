@@ -1,0 +1,306 @@
+#index {
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	background: #fff;
+	display: flex;
+	flex-direction: column;
+	> .body {
+		flex-grow: 1;
+	}
+}
+.row_layout {
+	display: flex;
+	align-items: center;
+}
+.col_layout {
+	display: flex;
+	flex-direction: column;
+}
+.flex_grow {
+	flex-grow: 1;
+}
+.scroll {
+	flex-grow: 1;
+	overflow-x: hidden;
+	padding-right: 4px;
+}
+// 场景表单
+#scene_form {
+	width: 80vw;
+	height: 80vh;
+	max-width: 80vw;
+	max-height: 80vh;
+	position: fixed;
+	> .col_layout {
+		height: 100%;
+		overflow: hidden;
+		> .body {
+			overflow: auto;
+		}
+	}
+}
+// 阈值框
+.threshold_box {
+	min-height: 200px;
+	max-height: 310px;
+	overflow: hidden;
+	border: 1px solid;
+	border-radius: 6px;
+	display: flex;
+	width: 100%;
+	> .buttons {
+		padding: 22px 24px 0 24px;
+		> .icon {
+			width: 80px;
+			height: 36px;
+			margin-bottom: 22px;
+		}
+	}
+	> .list_box {
+		overflow: hidden;
+		border-right: 1px solid;
+		display: flex;
+		flex-direction: column;
+		> .title {
+			padding: 20px 4px 20px 0;
+			border-bottom: 1px solid;
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			justify-items: center;
+			align-items: center;
+			line-height: normal;
+		}
+		.box {
+			z-index: 10;
+			position: relative;
+			cursor: pointer;
+			> .header {
+				height: 50px;
+				display: grid;
+				grid-template-columns: repeat(3, 1fr);
+				justify-items: center;
+				align-items: center;
+				overflow: hidden;
+				position: relative;
+				padding-left: 20px;
+				> .icon {
+					position: absolute;
+					left: 0;
+					top: 50%;
+					transform: translateY(-50%);
+				}
+			}
+			.row_box {
+				padding: 10px 0 10px 60px;
+				display: grid;
+				grid-template-columns: repeat(3, 1fr);
+				align-items: center;
+				overflow: hidden;
+				&:first-of-type {
+					padding-top: 0;
+				}
+			}
+			> .bg2 {
+				background: rgba(86, 158, 248, 0.1);
+			}
+		}
+	}
+}
+// 服务框
+.server_box {
+	max-height: 310px;
+	overflow: hidden;
+	border: 1px solid;
+	border-radius: 6px;
+	display: flex;
+	> .list_box {
+		flex-grow: 1;
+		border-right: 1px solid;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+		> .title {
+			padding: 20px 4px 20px 0;
+			border-bottom: 1px solid;
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			justify-items: center;
+		}
+		.server {
+			z-index: 10;
+			height: 50px;
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			justify-items: center;
+			align-items: center;
+			overflow: hidden;
+			position: relative;
+			cursor: pointer;
+			> .text_ellipsis {
+				max-width: 100%;
+			}
+			> .bg1 {
+				background: rgba(255, 255, 255, 0.1);
+			}
+			> .bg2 {
+				background: rgba(86, 158, 248, 0.1);
+			}
+		}
+	}
+	> .buttons {
+		padding: 22px 24px 0 24px;
+		> .icon {
+			width: 80px;
+			height: 36px;
+			margin-bottom: 22px;
+		}
+	}
+}
+.popover {
+	position: fixed;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.2);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 20000;
+	> .place_box {
+		width: 50%;
+		height: 80%;
+		border-radius: 10px;
+		border: 1px solid #454c59;
+		background: #fff;
+		display: flex;
+		flex-direction: column;
+		> .head {
+			padding: 20px 30px;
+			border-radius: 10px 10px 0 0;
+			background: #53b0ff;
+			color: #05050b;
+		}
+		> .search {
+			padding: 0 20px;
+			> .search_input {
+				flex-grow: 1;
+				margin-left: 90px;
+			}
+		}
+		> .center {
+			flex-grow: 1;
+		}
+		> .foot {
+			padding: 16px 0;
+			align-self: center;
+		}
+		.place_box2 {
+			height: 50px;
+			cursor: pointer;
+			color: #05050b;
+			.icon {
+				font-size: 14px;
+				margin-right: 10px;
+			}
+			.text {
+				font-size: 14px;
+			}
+		}
+		.device_box {
+			height: 40px;
+			> .flex_shrink {
+				margin-right: 10px;
+			}
+			.text {
+				font-size: 14px;
+				margin-right: auto;
+				cursor: pointer;
+			}
+		}
+	}
+	> .server_box2 {
+		width: 40%;
+		height: 70%;
+		border-radius: 10px;
+		border: 1px solid;
+		display: flex;
+		flex-direction: column;
+		background: #fff;
+		border-color: #454c59;
+		> .head {
+			padding: 20px 30px;
+			border-radius: 10px 10px 0 0;
+			background: #53b0ff;
+			color: #05050b;
+		}
+		> .search {
+			padding: 0 20px;
+		}
+		> .scroll > .row_layout {
+			padding: 10px 20px;
+			.flex_shrink {
+				margin-right: 10px;
+			}
+		}
+		.text {
+			font-size: 14px;
+			flex-grow: 1;
+			color: #05050b;
+		}
+		> .foot {
+			padding: 16px 0;
+			align-self: center;
+		}
+	}
+	> .server_box3 {
+		width: 50%;
+		height: 80%;
+		border-radius: 10px;
+		border: 1px solid;
+		display: flex;
+		flex-direction: column;
+		background: #fff;
+		border-color: #454c59;
+		> .head {
+			padding: 20px 30px;
+			border-radius: 10px 10px 0 0;
+			background: #53b0ff;
+			color: #05050b;
+		}
+		> .scroll > .row_layout {
+			padding: 10px 20px;
+			border-bottom: 1px solid #bcccda;
+			> .text {
+				font-size: 14px;
+				width: 200px;
+				color: #05050b;
+			}
+		}
+		> .foot {
+			padding: 16px 0;
+			align-self: center;
+		}
+	}
+}
+// 设置条件弹窗标题
+.set_condition {
+	padding: 10px 20px;
+	display: grid;
+	grid-template-columns: repeat(3, 1fr) 60px;
+	align-items: center;
+	justify-items: center;
+	color: #05050b;
+}
+// 头部搜索
+.header {
+	padding: 16px 20px;
+	> .label {
+		font-size: 14px;
+		color: rgb(96, 98, 102);
+		margin-right: 10px;
+	}
+	> .input {
+		width: 200px;
+		margin-right: 20px;
+	}
+}

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智慧会议管理系统</title>
+  <link rel="stylesheet" href="../../module/vant.css">
+  <link rel="stylesheet" href="../../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index" class="col_layout" v-cloak v-my_loading="loading">
+    <div class="search_box row_layout">
+      <!-- 搜索 -->
+      <div class="search flex_grow">
+        <van-search class="box" v-model="search" @search="get_data()" placeholder="搜索"
+          background="transparent"></van-search>
+      </div>
+      <div class="button1" @click="get_data()">搜索</div>
+    </div>
+    <!-- 列表 -->
+    <div class="scroll_box flex_grow">
+      <!-- 组织列表 -->
+      <div class="row row_layout" v-for="item,index in list">
+        <!-- 勾选 -->
+        <img v-show="!item.check" @click="select(item)" src="./img/icon2.png" class="icon">
+        <img v-show="item.check" @click="select(item)" src="./img/icon3.png" class="icon">
+        <!-- 名 -->
+        <span class="name flex_grow" @click="select(item)">{{item.name}}</span>
+        <!-- 数量 -->
+        <van-stepper class="num flex_shrink" v-model="item.num" integer></van-stepper>
+        <!-- 单位 -->
+        <div class="unit flex_shrink">{{item.unit}}</div>
+      </div>
+    </div>
+    <!-- 分页 -->
+    <van-pagination class="page_box flex_shrink" @change="get_data" v-model="page_num" :total-items="total"
+      :show-page-size="3" force-ellipses :items-per-page="page_size">
+      <template #prev-text>
+        <van-icon name="arrow-left"></van-icon>
+      </template>
+      <template #next-text>
+        <van-icon name="arrow"></van-icon>
+      </template>
+    </van-pagination>
+    <!-- 已选 -->
+    <div class="foot row_layout flex_shrink" @click="select_show=true">
+      <span class="text">已选择({{select_list.length}})</span>
+      <div class="button1" @click.stop="submit">确定</div>
+    </div>
+
+    <!-- 弹窗 -->
+    <van-popup class="select_box col_layout" v-model="select_show" position="bottom">
+      <div class="text">已选择({{select_list.length}})</div>
+      <div class="scroll">
+        <div class="tag row_layout" v-for="t,index in select_list" @click="del_select(index)">
+          <span class="text_ellipsis">{{t.name}}({{t.num||0}}{{t.unit}})</span>
+          <span>x</span>
+        </div>
+      </div>
+      <div class="submit">
+        <div class="button1" @click="select_show=false">关闭</div>
+      </div>
+    </van-popup>
+  </div>
+
+  <script src="../../../运维人员部署请修改我.js"></script>
+  <script src="../../module/vue.js"></script>
+  <script src="../../module/vant.min.js"></script>
+  <script src="../../module/axios.min.js"></script>
+  <script src="../../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

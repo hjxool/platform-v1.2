@@ -202,17 +202,34 @@
 	stroke-dasharray: 15;
 	// 多个svg画布 有重复id 不能在css中写死
 	// marker-end: url(#arrow);
-	animation: 30s linear 0s infinite normal none running path_line;
+}
+.path_line {
+	animation-name: path_line;
+	animation-duration: 30s;
+	animation-timing-function: linear;
+	animation-iteration-count: infinite;
 }
 @keyframes path_line {
 	100% {
 		stroke-dashoffset: -1000;
 	}
 }
-.path2 {
-	// marker-end: url(#dot);
+// 双向流动样式
+.path_bothway {
+	animation-name: path_bothway;
+	animation-duration: 2s; // 切换频率要快才能明显表示来回
+	animation-timing-function: linear;
+	animation-iteration-count: infinite;
+	animation-direction: alternate;
+}
+@keyframes path_bothway {
+	100% {
+		stroke-dashoffset: -200;
+	}
+}
+.arrow {
+	fill: rgb(24, 144, 255);
 	stroke: rgb(24, 144, 255);
-	fill: none;
 }
 // 文本框
 .custom_text {
@@ -266,10 +283,6 @@ video::-webkit-media-controls-play-button {
 	transform: translateX(-50%);
 	top: 100%;
 	white-space: nowrap;
-}
-// 图片伸缩
-.bg_img {
-	// object-fit: contain;
 }
 // 当前会议及下场会议
 .cur_meeting {
@@ -443,5 +456,59 @@ video::-webkit-media-controls-play-button {
 	overflow-x: hidden;
 	> .item {
 		margin: 20px 0;
+	}
+}
+// 连线信息弹窗
+#line_info {
+	position: fixed;
+	z-index: 990;
+	padding: 20px 0 0 20px;
+	border-radius: 10px;
+	background: #fff;
+	max-width: 30vw;
+	max-height: 30vh;
+	overflow: hidden;
+	display: flex;
+	> .close {
+		position: absolute;
+		right: 10px;
+		top: 10px;
+		color: red;
+		font-size: 26px;
+	}
+	> .scroll {
+		overflow: auto;
+		flex-grow: 1;
+		> .box {
+			margin-bottom: 20px;
+			> .title {
+				font-size: 16px;
+				margin-bottom: 10px;
+				font-weight: bold;
+			}
+			> .row_layout {
+				margin-left: 20px;
+				font-size: 16px;
+				// padding-right: 20px;
+				&:not(:last-of-type) {
+					margin-bottom: 10px;
+				}
+				> .margin {
+					margin-right: 10px;
+				}
+				> .nowrap {
+					white-space: nowrap;
+				}
+				> .green {
+					color: #32cd32;
+				}
+				> .red {
+					color: #ff4500;
+				}
+				> .iconfont {
+					font-weight: bold;
+				}
+			}
+		}
 	}
 }

@@ -17,9 +17,11 @@
       <template v-for="item,index in page.data">
         <custom-slider v-if="item.type=='slider'" :obj="item" :radio="page.radio" :token="token" :device_id="device_id"
           :inject_data="inject_data"></custom-slider>
+        <custom-slider2 v-if="item.type=='slider2'" :obj="item" :radio="page.radio" :token="token"
+          :device_id="device_id" :inject_data="inject_data"></custom-slider2>
         <custom-text v-if="item.type=='text'" :obj="item" :radio="page.radio" :token="token" :device_id="device_id"
           :inject_data="inject_data"></custom-text>
-        <custom-img v-if="item.type=='img'" :obj="item" :radio="page.radio" :token="token"
+        <custom-img v-if="item.type=='img'" :obj="item" :radio="page.radio" :current_page="page_id" :token="token"
           :device_id="device_id"></custom-img>
         <custom-button v-if="item.type=='button'" :obj="item" :radio="page.radio" :current_page="page_id" :token="token"
           :device_id="device_id"></custom-button>
@@ -63,6 +65,8 @@
             <template v-for="item,index in popup.components">
               <custom-slider v-if="item.type=='slider'" :obj="item" :radio="popup.radio" :token="token"
                 :device_id="device_id" :inject_data="inject_data"></custom-slider>
+              <custom-slider2 v-if="item.type=='slider2'" :obj="item" :radio="popup.radio" :token="token"
+                :device_id="device_id" :inject_data="inject_data"></custom-slider2>
               <custom-text v-if="item.type=='text'" :obj="item" :radio="popup.radio" :token="token"
                 :device_id="device_id" :inject_data="inject_data"></custom-text>
               <custom-img v-if="item.type=='img'" :obj="item" :radio="popup.radio" :token="token"

@@ -156,6 +156,7 @@ const fn = {
 									this.value = arr;
 									break;
 								case 'slider':
+								case 'slider2':
 								case 'progress':
 									if (this.data_type !== 'int' && this.data_type !== 'float' && this.data_type !== 'float' && this.data_type !== 'any') {
 										return;
@@ -320,15 +321,14 @@ const fn = {
 			}
 			return t;
 		},
-		// 因为改为父级注入响应式数据 且组件挂载时就要解析数据因此不能用watch
-		// 但是将value设为计算属性 组件就不能直接修改自身value属性会很麻烦
-		// 因此设置一个临时计算属性 用来监听注入数据变化 解析value值
-		temp() {
+	},
+	watch: {
+		// 组件挂载后才查询的数据
+		inject_data(newvalue) {
 			if (this.path) {
 				let index = 0;
-				this.analysis_path(this.path_list, index, this.inject_data);
+				this.analysis_path(this.path_list, index, newvalue);
 			}
-			return '';
 		},
 	},
 };
@@ -337,7 +337,7 @@ let customSlider = {
 	template: `
     <div class="slider_box" :style="style(obj)">
       <img src="./img/icon6.png" class="bg_img">
-      <span class="text text_ellipsis flex_shrink" :title="value_text">{{value_text + temp}}</span>
+      <span class="text text_ellipsis flex_shrink" :title="value_text">{{value_text}}</span>
       <div class="box1">
         <img src="./img/icon5.png" class="bg_img">
         <el-slider v-model="value" @change="send_order($event)" vertical :show-tooltip="false" :min="obj.min" :max="obj.max" :step="step"></el-slider>
@@ -347,7 +347,7 @@ let customSlider = {
 	mixins: [common_functions, fn],
 	data() {
 		return {
-			step: this.obj.step, //步长
+			step: Number(this.obj.step) || 1, //步长
 			value: 0,
 		};
 	},
@@ -362,7 +362,7 @@ let customSlider = {
 			}
 		},
 		value_text() {
-			return `${this.value} ${this.obj.units || ''}`;
+			return `${this.value}${this.obj.units ? ' ' + this.obj.units : ''}`;
 		},
 	},
 };
@@ -370,7 +370,7 @@ let customSlider = {
 let customText = {
 	template: `
     <div :style="text_style(obj)" @click="turn_to_page" :title="value">
-      {{value + temp}}
+      {{value}}
     </div>
   `,
 	data() {
@@ -427,11 +427,19 @@ let customText = {
 // 图片
 let customImg = {
 	template: `
-    <div :style="style(obj)">
-      <img class="bg_img" :src="obj.src" :style="{objectFit:obj.fls?'contain':''}">
+    <div @click="distinguish_operation" :style="style(obj)">
+      <img class="bg_img" :src="obj.src" :style="{objectFit:obj.fls?'contain':'',cursor: 'pointer'}">
     </div>
   `,
 	mixins: [common_functions, fn],
+	props: ['current_page'],
+	methods: {
+		distinguish_operation() {
+			if (this.obj.url) {
+				this.$bus.$emit('turn_to_page', this.obj.url);
+			}
+		},
+	},
 };
 // 按钮
 let customButton = {
@@ -475,7 +483,7 @@ let customSwitch = {
 	template: `
     <div :style="style(obj)" class="switch_box" @click="switch_fn">
       <img v-show="value==on_value" :src="src(true)" class="bg_img" draggable="false">
-      <img v-show="value==off_value" :src="src(temp)" class="bg_img" draggable="false">
+      <img v-show="value==off_value" :src="src(false)" class="bg_img" draggable="false">
     </div>
   `,
 	mixins: [common_functions, fn],
@@ -537,7 +545,7 @@ let customSwitch = {
 let customButtonSwitch = {
 	template: `
     <div :style="style(obj)" class="center switch_box button" @click="switch_fn">
-      <div :style="bg(temp)" class="bg_img"></div>
+      <div :style="bg()" class="bg_img"></div>
       <span :style="size(obj)">{{value===on_value?text2:text}}</span>
     </div>
   `,
@@ -600,7 +608,7 @@ let customProgress = {
 	template: `
     <div class="progress_box" :style="style(obj)">
       <img src="./img/icon7.png" class="bg_img">
-      <span class="text" style="margin: 20px 0 10px 0;">{{obj.max+temp}}</span>
+      <span class="text" style="margin: 20px 0 10px 0;">{{obj.max}}</span>
       <div class="progress">
         <div class="lump flex_shrink" v-for="i in total_num" :style="color(i)"></div>
       </div>
@@ -667,7 +675,7 @@ let customSelector = {
 	template: `
     <div class="select_box" :style="style(obj)" @click.stop="popup">
       <img src="./img/icon8.png" class="bg_img">
-      <span class="text_ellipsis" :style="font_size(obj)" :title="label">{{label+temp}}</span>
+      <span class="text_ellipsis" :style="font_size(obj)" :title="label">{{label}}</span>
     </div>
   `,
 	mixins: [common_functions, fn],
@@ -682,17 +690,17 @@ let customSelector = {
 	methods: {
 		// 字体样式
 		font_size(obj_data) {
-			let t = (203 / 16) * 16; //计算多少容器大小下 字体是16px
-			let fz = (obj_data.w * this.radio) / t;
+			// let t = (203 / 16) * 16; //计算多少容器大小下 字体是16px
+			// let fz = (obj_data.w * this.radio) / t;
 			// 计算字体大小(px) 如果超过组件高度 则字体大小设为组件高度 小于组件高度则正常显示
-			let fpx = ((obj_data.w * this.radio) / 203) * 16;
-			if (fpx >= obj_data.h - 8) {
-				// 上下各留4px间距 默认根节点字体大小16px
-				fz = (obj_data.h - 8) / 16;
-			}
+			// let fpx = ((obj_data.w * this.radio) / 203) * 16;
+			// if (fpx >= obj_data.h - 8) {
+			// 	// 上下各留4px间距 默认根节点字体大小16px
+			// 	fz = (obj_data.h - 8) / 16;
+			// }
 			return {
 				color: '#fff',
-				fontSize: fz + 'rem',
+				// fontSize: fz + 'rem',
 				paddingRight: obj_data.w * this.radio * 0.152 + 'px',
 				paddingLeft: obj_data.w * this.radio * 0.076 + 'px',
 			};
@@ -752,6 +760,8 @@ let customSelector = {
 			if (this.id === newvalue.id) {
 				this.label = newvalue.label;
 				this.value = newvalue.value;
+				// 匹配到后 下发指令
+				this.send_order(this.value);
 			}
 		},
 	},
@@ -759,7 +769,7 @@ let customSelector = {
 // 矩阵
 let customMatrix = {
 	template: `
-  <div class="matrix" :style="matrix_style(obj,temp)">
+  <div class="matrix" :style="matrix_style(obj)">
     <div class="matrix" v-for="row in obj.nh" :style="row_style(obj)">
       <div class="center button" v-for="col in obj.mw" @click="control(row-1,col-1)">
         <img v-show="value[row-1][col-1]" src="./img/icon9.png" class="bg_img">
@@ -816,7 +826,7 @@ let customMatrix = {
 let customRadioGroup = {
 	template: `
     <el-radio-group class="radio_group" :style="style(obj)" v-model="value" @change="send_order(value)">
-      <el-radio v-for="item,index in options" :key="index" :label="item.value">{{item.label+temp}}</el-radio>
+      <el-radio v-for="item,index in options" :key="index" :label="item.value">{{item.label}}</el-radio>
     </el-radio-group>
   `,
 	mixins: [common_functions, fn],
@@ -855,7 +865,7 @@ let customRadioGroup = {
 let customCheckBox = {
 	template: `
     <el-checkbox-group class="check_box" :style="style(obj)" v-model="value" @change="send_order(value)">
-      <el-checkbox v-for="item,index in options" :key="index" :label="item.value">{{item.label+temp}}</el-checkbox>
+      <el-checkbox v-for="item,index in options" :key="index" :label="item.value">{{item.label}}</el-checkbox>
     </el-checkbox-group>
   `,
 	mixins: [common_functions, fn],
@@ -897,7 +907,7 @@ let customTable = {
       <el-table-column v-for="item in obj.option" :prop="item.value" :label="item.label"></el-table-column>
       <el-table-column label="操作">
         <template slot-scope="scope">
-          <el-button v-for="button in obj.button" @click="table_button_order(button)" size="mini">{{button.label+temp}}</el-button>
+          <el-button v-for="button in obj.button" @click="table_button_order(button)" size="mini">{{button.label}}</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -954,7 +964,7 @@ let customTable = {
 let customInput = {
 	template: `
     <el-input class="input_style" v-model="value" @keyup.enter.native="comfirm_input" :style="style(obj)" 
-    :placeholder="obj.placeholder+temp" type="text" :maxlength="obj.maxlength" show-word-limit></el-input>
+    :placeholder="obj.placeholder" type="text" :maxlength="obj.maxlength" :show-word-limit="obj.显示输入限制"></el-input>
   `,
 	mixins: [common_functions, fn],
 	data() {
@@ -1006,7 +1016,7 @@ let customInput = {
 let customStatus = {
 	template: `
   <div class="custom_status" :style="cus_style(obj)">
-    <div :style="{color:color}">{{label+temp}}</div>
+    <div :style="{color:color}">{{label}}</div>
   </div>
   `,
 	mixins: [common_functions, fn],
@@ -1051,7 +1061,7 @@ let customStatus = {
 // 图表
 let customEchart = {
 	template: `
-    <div :id="id" :style="style(obj,temp)"></div>
+    <div :id="id" :style="style(obj)"></div>
   `,
 	mixins: [common_functions, fn],
 	data() {
@@ -1159,6 +1169,44 @@ let customSubmitButton = {
 		},
 		submit() {
 			this.$bus.$emit('popup_data_collect', this.obj.隶属面板ID, this.obj.total, {});
+		},
+	},
+};
+// 滑块组件 横
+let customSlider2 = {
+	template: `
+    <div class="slider_box2" :style="style(obj)">
+      <img src="./img/icon13.png" class="bg_img">
+      <div class="text text_ellipsis flex_shrink center" :title="value_text">
+        {{value_text}}
+        <img src="img/icon14.png" class="bg_img">
+      </div>
+      <div class="box1">
+        <img src="./img/icon15.png" class="bg_img">
+        <el-slider v-model="value" @change="send_order($event)" :show-tooltip="false" :min="obj.min" :max="obj.max"
+          :step="step" style="width:90%"></el-slider>
+      </div>
+    </div>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			value: 0,
+			step: Number(this.obj.step) || 1, //步长
+		};
+	},
+	computed: {
+		accuracy() {
+			let t = this.step + '';
+			let t2 = t.split('.')[1];
+			if (t2) {
+				return t2.length;
+			} else {
+				return 0;
+			}
+		},
+		value_text() {
+			return `${this.value}${this.obj.units ? ' ' + this.obj.units : ''}`;
 		},
 	},
 };

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智慧会议管理系统</title>
+  <link rel="stylesheet" href="../../module/icon.css">
+  <link rel="stylesheet" href="../../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index" class="col_layout">
+    <!-- 返回 -->
+    <div class="back_title row_layout" @click="turn_back">
+      <div class="iconfont icon-xiangzuojiantou"></div>
+      <div class="title">会议流转</div>
+    </div>
+
+    <iframe class="flex_grow" style="overflow: hidden;" :src="url" frameborder="0" scrolling="no"></iframe>
+  </div>
+
+  <!-- <script src="../../../运维人员部署请修改我.js"></script> -->
+  <script src="../../module/vue.js"></script>
+  <script src="../../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

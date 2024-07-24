@@ -42,6 +42,7 @@ Vue.component('current_meeting', {
 		});
 		setInterval(() => {
 			this.getMeetingRoomInfo();
+			this.getMeetingInfo();
 		}, 60000);
 	},
 	methods: {

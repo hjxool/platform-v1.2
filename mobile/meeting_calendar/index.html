@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智慧会议管理系统</title>
+  <link rel="stylesheet" href="../../module/vant.css">
+  <link rel="stylesheet" href="../../module/icon.css">
+  <link rel="stylesheet" href="../../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index" class="col_layout" v-cloak v-my_loading="loading">
+    <!-- 返回 -->
+    <div class="back_title row_layout" @click="turn_back">
+      <div class="iconfont icon-xiangzuojiantou"></div>
+      <div class="title">会议日历</div>
+    </div>
+    <!-- 月份 -->
+    <div id="month" class="row_layout flex_shrink" @click="show_pop">
+      <div class="text1" style="margin-right: 1rem;">{{month.text}}</div>
+      <div class="iconfont icon-xiangxiajiantou text1"></div>
+    </div>
+    <!-- 星期 -->
+    <div id="week_box" class="flex_shrink">
+      <div class="week col_layout" v-for="w in week.list" @click="select_day(w)">
+        <div :class="['box','col_layout',week.select.day===w.day?'text2':'text1']">
+          <div class="margin">{{init_week(w)}}</div>
+          <div>{{w.day}}</div>
+        </div>
+
+        <div v-show="week.select.day===w.day" class="line"></div>
+      </div>
+    </div>
+
+    <!-- 背景时间轴 -->
+    <div class="scroll_box flex_grow">
+      <!-- 单条时间线 -->
+      <div class="time" v-for="t in 16">
+        <!-- 小时 -->
+        <div class="center text1 hour">{{t+6}}:30</div>
+        <!-- 时间格 -->
+        <div class="box flex_grow">
+          <!-- 虚线 -->
+          <div class="line"></div>
+        </div>
+      </div>
+      <!-- 限制会议框显示范围 -->
+      <div class="range" :style="{height:`${16*block_height}rem`}">
+        <div class="meeting col_layout" v-for="m in meetings" :style="meeting_top(m)"
+          @click="turn_to_page('会议详情',m.id)">
+          <div class="time">{{m.start}} ~ {{m.end}}</div>
+
+          <div class="flex_grow text1 meeting_theme">{{m.name}}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 弹窗 -->
+    <van-popup v-model="pop.show" position="bottom" round>
+      <van-datetime-picker v-model="month.time" type="year-month" :title="pop.title" :min-date="month.min_date"
+        @confirm="picker_select" :max-date="month.max_date" :formatter="month_format">
+      </van-datetime-picker>
+    </van-popup>
+  </div>
+
+  <script src="../../../运维人员部署请修改我.js"></script>
+  <script src="../../module/vue.js"></script>
+  <script src="../../module/vant.min.js"></script>
+  <script src="../../module/axios.min.js"></script>
+  <script src="../../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

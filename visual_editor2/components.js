@@ -161,54 +161,143 @@ const fn = {
 		data_type() {
 			return this.path_list[0].type;
 		},
-		temp() {
+	},
+	watch: {
+		inject_data(newvalue) {
 			// 不同组件判断条件不同
 			if (this.obj.type === '连线') {
-				// 只有 连线两端都是设备节点才显示状态
-				if (this.obj.bindDeviceId?.targetDevice && this.obj.bindDeviceId?.sourceDevice) {
+				// 连线两端任意端是设备节点就 显示状态 或 更新连线信息
+				if (this.obj.bindDeviceId?.targetDevice || this.obj.bindDeviceId?.sourceDevice) {
 					// 判断当前设备上报消息 与当前连线组件是否相关
 					// 断连条件 有一个设备离线就断开 在线条件 两个设备都在线
-					switch (res.device_id) {
+					switch (newvalue.device_id) {
 						case this.obj.bindDeviceId.targetDevice:
 							// 相关则判断设备在线状态 4离线 5在线
-							if (res.device_status === 4 && this.target_status) {
+							if (newvalue.device_status === 6 && this.target_status) {
 								this.target_status = false;
-							} else if (res.device_status === 5 && !this.target_status) {
+							} else if (newvalue.device_status === 5 && !this.target_status) {
 								this.target_status = true;
 							}
 							break;
 						case this.obj.bindDeviceId.sourceDevice:
-							if (res.device_status === 4 && this.source_status) {
+							if (newvalue.device_status === 6 && this.source_status) {
 								this.source_status = false;
-							} else if (res.device_status === 5 && !this.source_status) {
+							} else if (newvalue.device_status === 5 && !this.source_status) {
 								this.source_status = true;
 							}
 							break;
+						default:
+							// 当接收的数据与当前线两端的设备id都不符 则不继续向下执行
+							return;
+					}
+					// 更新完设备在线状态后 更新连线当前信息
+					if (this.line_info) {
+						// 不论另一端设备是否在线 只要当前设备上报了接口状态 就要存下来
+						// 设备上报的属性不一定有接口字段
+						if (newvalue?.data?.iot_link_channels) {
+							// 存储更新单个接口状态
+							for (let val of this.line_info) {
+								let res;
+								switch (newvalue.device_id) {
+									case val.start.device_id:
+										if (val.start.identifier) {
+											res = this.analysis_path(['iot_link_channels', val.start.identifier], 0, newvalue.data);
+											// 只更新上报的字段 比如有A B两个接口 但是A接口状态变化 就会只收到A接口字段
+											if (res !== undefined) {
+												val.start.status = res ? true : false;
+											}
+										}
+										break;
+									case val.end.device_id:
+										if (val.end.identifier) {
+											res = this.analysis_path(['iot_link_channels', val.end.identifier], 0, newvalue.data);
+											if (res !== undefined) {
+												val.end.status = res ? true : false;
+											}
+										}
+										break;
+								}
+							}
+							// 有上报接口
+							// 两端设备都在线时 才需要具体分析接口状态 根据存储的两端接口状态 更新接口连线状态
+							if (this.source_status && this.target_status) {
+								for (let val of this.line_info) {
+									val.status = val.start.status && val.end.status;
+									switch (true) {
+										case !val.start.status && val.end.status:
+											val.msg = `${val.start.name}接口异常`;
+											break;
+										case val.start.status && !val.end.status:
+											val.msg = `${val.end.name}接口异常`;
+											break;
+										case !val.start.status && !val.end.status:
+											val.msg = `${val.start.name}接口 和 ${val.end.name}接口异常`;
+											break;
+										case val.start.status && val.end.status:
+											val.msg = '连接正常';
+											break;
+									}
+								}
+							}
+						}
+						if (!this.source_status || !this.target_status) {
+							// 设备离线 则将所有接口信息更改为xx设备离线
+							switch (true) {
+								case this.source_status && !this.target_status:
+									for (let val of this.line_info) {
+										val.msg = `${this.obj.bindDeviceId.targetDeviceName || ''}设备离线`;
+										val.status = false;
+									}
+									break;
+								case !this.source_status && this.target_status:
+									for (let val of this.line_info) {
+										val.msg = `${this.obj.bindDeviceId.sourceDeviceName || ''}设备离线`;
+										val.status = false;
+									}
+									break;
+								case !this.source_status && !this.target_status:
+									for (let val of this.line_info) {
+										val.msg = `${this.obj.bindDeviceId.sourceDeviceName || '起始'}设备 和 ${this.obj.bindDeviceId.targetDeviceName || '末端'}设备离线`;
+										val.status = false;
+									}
+									break;
+							}
+						}
 					}
 				}
 			} else if (this.obj.shapeNickname == '设备节点') {
 				// 本质是多属性回显 以往组件是单属性回显
-				if (this.obj.dataConfig.deviceId === res.device_id) {
+				if (this.obj.dataConfig.deviceId === newvalue.device_id) {
 					// 设备状态
-					this.is_normal = res.device_status === 5;
+					switch (newvalue.device_status) {
+						case 5:
+							this.is_normal = true;
+							break;
+						case 6:
+							this.is_normal = false;
+							break;
+					}
 					// 只要设备id匹配 把原先的单属性解析改为遍历取出每个属性解析并并存到数组下而不是this.value
 					for (let val of this.status) {
 						// analysis_path原先没设计有多属性回显 因此用的全局变量 这里设置全局变量 用完后置空
 						// this.data_type = val.type;
-						val.value = this.analysis_path(val.path, 0, res.data);
+						let r = this.analysis_path(val.path, 0, newvalue.data);
+						if (r !== undefined) {
+							val.value = r;
+						}
 						// this.data_type = null;
 					}
 				}
 			} else if (this.obj.type == '巡检按钮') {
 				// 是推流消息 且 点过巡检
-				if (res.message && this.check_list) {
-					this.$bus.$emit('online_check', { type: 'update', data: res.message });
+				if (newvalue.message && this.check_list) {
+					this.$bus.$emit('online_check', { type: 'update', data: newvalue.message });
 				}
 			} else if (this.obj.type === 'audio_matrix') {
-				if (this.obj.dataConfig.deviceId == res.device_id && res.data.MIXS) {
+				if (this.obj.dataConfig.deviceId == newvalue.device_id && newvalue.data.MIXS) {
 					let title = '音频矩阵';
 					this.value = [];
-					let temp = res.data.MIXS.propertyValue || res.data.MIXS;
+					let temp = newvalue.data.MIXS.propertyValue || newvalue.data.MIXS;
 					for (let i = 0; i < 9; i++) {
 						let t = (temp[i * 2] >>> 0).toString(2).split('').reverse();
 						let t2 = 12 - t.length;
@@ -221,24 +310,24 @@ const fn = {
 				}
 			} else if (this.obj.type === 'video_matrix') {
 				// 视频矩阵只绑定设备id 根据固定字段取值
-				if (this.obj.dataConfig.deviceId == res.device_id && res.data.VSWT) {
+				if (this.obj.dataConfig.deviceId == newvalue.device_id && newvalue.data.VSWT) {
 					let title;
 					switch (this.obj.dataConfig.productId) {
 						case '1564171104871739392':
 							// 一代
-							if (res.data.VSWT.length == 2) {
-								this.value = res.data.VSWT;
-							} else if (res.data.VSWT.propertyValue.length == 2) {
-								this.value = res.data.VSWT.propertyValue;
+							if (newvalue.data.VSWT.length == 2) {
+								this.value = newvalue.data.VSWT;
+							} else if (newvalue.data.VSWT.propertyValue.length == 2) {
+								this.value = newvalue.data.VSWT.propertyValue;
 							}
 							title = '视频矩阵一代';
 							break;
 						case '1722147067370217472':
 							// 二代
-							if (res.data.VSWT.length == 4) {
-								this.value = res.data.VSWT;
-							} else if (res.data.VSWT.propertyValue.length == 4) {
-								this.value = res.data.VSWT.propertyValue;
+							if (newvalue.data.VSWT.length == 4) {
+								this.value = newvalue.data.VSWT;
+							} else if (newvalue.data.VSWT.propertyValue.length == 4) {
+								this.value = newvalue.data.VSWT.propertyValue;
 							}
 							title = '视频矩阵二代';
 							break;
@@ -249,7 +338,7 @@ const fn = {
 			} else {
 				// 有回显数据时 传入的是一个原始结构对象 根据path属性解析路径取任意层级的值
 				// 此时是在组件挂载完毕时接收到的数据 path已经有了
-				if (this.path_list?.length === 1 && this.obj.attr[0].deviceId === res.device_id) {
+				if (this.path_list?.length === 1 && this.obj.attr[0].deviceId === newvalue.device_id) {
 					// path_list未就绪或者未绑定属性
 					// path_list绑定多个属性也不回显
 					// 组件关联设备id不匹配
@@ -257,10 +346,9 @@ const fn = {
 					// 每一条数据 只跟一个设备相关
 					// 虽然可以绑定多个属性 但是回显会冲突 因此只取一个属性值作为代表
 					let index = 0;
-					this.analysis_path(this.path_list[0].path, index, res.data);
+					this.analysis_path(this.path_list[0].path, index, newvalue.data);
 				}
 			}
-			return '';
 		},
 	},
 };
@@ -288,7 +376,7 @@ let customContainer = {
 let customText = {
 	template: `
     <div class="custom_text" :style="cus_style(obj)" @click="turn_to_page" :title="value">
-      <span class="content">{{value + temp}}</span>
+      <span class="content">{{value}}</span>
     </div>
   `,
 	data() {
@@ -337,7 +425,7 @@ let customSwitch = {
 	template: `
     <div :style="style(obj)" class="switch_box" @click="switch_fn">
       <img v-show="value===on_value" :src="src(true)" class="bg_img" draggable="false">
-      <img v-show="value===off_value" :src="src(temp)" class="bg_img" draggable="false">
+      <img v-show="value===off_value" :src="src(false)" class="bg_img" draggable="false">
     </div>
   `,
 	mixins: [common_functions, fn],
@@ -417,7 +505,7 @@ let customSlider = {
     <div class="slider_box" :style="style(obj)">
       <img src="./img/icon6.png" class="bg_img">
       <div class="text text_ellipsis flex_shrink center" :title="value_text">
-        {{value_text + temp}}
+        {{value_text}}
         <img src="img/icon14.png" class="bg_img">
       </div>
       <div class="box1">
@@ -440,7 +528,7 @@ let customSlider = {
 		for (let val of this.obj.dataConfig) {
 			switch (val.nickName) {
 				case '步长值':
-					this.step = val.value;
+					this.step = Number(val.value);
 					break;
 				case '最小值':
 					this.min = val.value;
@@ -476,7 +564,7 @@ let customSlider2 = {
     <div class="slider_box2" :style="style(obj)">
       <img src="./img/icon13.png" class="bg_img">
       <div class="text text_ellipsis flex_shrink center" :title="value_text">
-        {{value_text + temp}}
+        {{value_text}}
         <img src="img/icon14.png" class="bg_img">
       </div>
       <div class="box1">
@@ -500,7 +588,7 @@ let customSlider2 = {
 		for (let val of this.obj.dataConfig) {
 			switch (val.nickName) {
 				case '步长值':
-					this.step = val.value;
+					this.step = Number(val.value);
 					break;
 				case '最小值':
 					this.min = val.value;
@@ -585,33 +673,94 @@ let customVideo = {
 // 连线
 let customLine = {
 	template: `
-    <svg :style="cus_style(obj,page,temp)">
+    <svg :style="cus_style(obj,page)">
       <!-- 预设的箭头图标 -->
       <defs>
-        <marker :id="cus_id('arrow')" refX="-3" orient="auto" markerUnits="userSpaceOnUse" overflow="visible">
-          <path :style="mark_style(obj.lineStyle)" transform="rotate(180)" d="M 0 0 L 8 -4 L 6 0 L 8 4 Z"></path>
+        <marker :id="cus_id('arrow-end')" refX="-3" orient="auto" markerUnits="userSpaceOnUse" overflow="visible">
+          <path class="arrow" :style="mark_style()" transform="rotate(180)" d="M 0 0 L 20 -10 L 16 0 L 20 10 Z"></path>
         </marker>
 
-        <marker :id="cus_id('err')" markerUnits="userSpaceOnUse" overflow="visible" orient="auto" refY="20" refX="40">
+        <marker :id="cus_id('arrow-start')" refX="3" orient="auto" markerUnits="userSpaceOnUse" overflow="visible">
+          <path class="arrow" :style="mark_style()" d="M 0 0 L 20 -10 L 16 0 L 20 10 Z"></path>
+        </marker>
+
+        <marker :id="cus_id('err-end')" markerUnits="userSpaceOnUse" overflow="visible" orient="auto" refY="20" refX="40">
+          <path d="M10 10 L30 30 M30 10 L10 30" stroke="red" stroke-width="3"></path>
+        </marker>
+
+        <marker :id="cus_id('err-start')" markerUnits="userSpaceOnUse" overflow="visible" orient="auto" refY="20" refX="0">
           <path d="M10 10 L30 30 M30 10 L10 30" stroke="red" stroke-width="3"></path>
         </marker>
 
         <marker :id="cus_id('dot')" markerUnits="userSpaceOnUse" overflow="visible" refX="10" refY="5">
-          <circle cx="10" cy="10" r="10" :style="mark_style(obj.lineStyle)"></circle>
+          <circle class="arrow" cx="10" cy="10" r="10" :style="mark_style()"></circle>
         </marker>
       </defs>
 
-      <path :class="[is_full_line?'path2':'path']" :d="line_path" :style="line_style(obj.lineStyle)"></path>
+      <path :class="['path',isBidirect?'path_bothway':'path_line']" :d="line_path" :style="line_style()"></path>
     </svg>
   `,
-	props: ['page'],
+	props: ['page', 'mouse_p'],
 	mixins: [common_functions, fn],
 	data() {
 		return {
 			// 不能用一个标识表示 因为是由两个设备状态组合判断 而每次收到的消息只有一台设备
 			target_status: true, // 终端设备状态
 			source_status: true, // 起始设备状态
+			isBidirect: this.obj.rawData.data.isBidirect || false, // 是否应用双向样式
+			line_info: null, // 给个初始值null 当有值时会更新 connect
 		};
+	},
+	beforeMount() {
+		let arr = this.obj.rawData.data.edgeConfig;
+		if (arr?.length) {
+			// 保存线上需要显示的信息
+			this.line_info = [];
+			for (let val of arr) {
+				let t = {
+					start: {
+						device_id: val.startDevice, // 判断设备上报信息的条件
+						name: val.startNickname, // 显示在页面上的内容
+						status: true, // 存储设备上报的自身接口状态
+					},
+					end: {
+						device_id: val.endDevice,
+						name: val.endNickname,
+						status: true,
+					},
+					status: true, // 接口线路的状态图标标识 由设备在线状态、接口状态共同决定
+					msg: '连接正常', // 显示线路状态信息
+				};
+				// 显示在页面的线路材质信息
+				switch (val.connectionType) {
+					case '0':
+						t.type = '音频线';
+						break;
+					case '1':
+						t.type = '视频线';
+						break;
+					case '2':
+						t.type = '网线';
+						break;
+				}
+				// 匹配设备上报接口状态字段
+				if (val.startPort?.length) {
+					// 因为结构是固定的只有一层 所以可以简单的这样截取
+					t.start.identifier = val.startPort.pop().split('.').pop();
+				}
+				if (val.endPort?.length) {
+					t.end.identifier = val.endPort.pop().split('.').pop();
+				}
+				this.line_info.push(t);
+			}
+			// 保存鼠标移动判断所需的线的相关数据
+			// 将连线拆分成线段并拉伸成宽度10的矩形
+			// 将连线以拐点切分
+			let l1 = this.line_path.split(/\s?[A-Z]\s/);
+			// 分割的数组首位是空元素要去掉
+			l1.shift();
+			this.lines = this.line_scope(l1);
+		}
 	},
 	methods: {
 		cus_style(obj, page) {
@@ -625,43 +774,86 @@ let customLine = {
 				height: `${page.mb.h * page.radio}px`,
 			};
 		},
-		// 线的样式
-		line_style(style) {
+		// 线的样式 因为线末尾的箭头是必须动态添加的 所以要保留
+		line_style() {
 			let t = {
-				strokeWidth: `${style.strokeWidth}`,
+				markerEnd: this.connect ? `url(#${this.obj.id}-arrow-end)` : `url(#${this.obj.id}-err-end)`,
 			};
-			// 先判断是实线还是流动虚线
-			if (!this.is_full_line) {
-				t.stroke = this.connect ? `${style.stroke}` : 'red';
-				// 流动线才有虚线样式
-				t.strokeDasharray = `${style.strokeDasharray}`;
-				t.markerEnd = `url(#${this.obj.id}-arrow)`;
-				// 流动线才需要判断连接标识
-				// 如果断连 则添加标识
-				if (!this.connect) {
-					t.markerEnd = `url(#${this.obj.id}-err)`;
-				}
-			} else {
-				t.stroke = `${style.stroke}`;
-				t.markerEnd = `url(#${this.obj.id}-dot)`;
+			if (this.obj.lineStyle.strokeWidth) {
+				t.strokeWidth = this.obj.lineStyle.strokeWidth;
+			}
+			if (this.obj.lineStyle.strokeDasharray) {
+				t.strokeDasharray = this.obj.lineStyle.strokeDasharray;
+			}
+			if (this.obj.lineStyle.stroke) {
+				t.stroke = this.obj.lineStyle.stroke;
+			}
+			// 断连的红色优先级最高 放在下面
+			// 没有断连 就使用默认样式
+			if (!this.connect) {
+				t.stroke = 'red';
+			}
+			// 读取线段样式
+			// 如果是双向要设置起始箭头
+			if (this.isBidirect) {
+				t.markerStart = this.connect ? `url(#${this.obj.id}-arrow-start)` : `url(#${this.obj.id}-err-start)`;
 			}
 			return t;
 		},
 		// 箭头样式
-		mark_style(style) {
+		mark_style() {
 			let t = {};
-			if (!this.is_full_line) {
-				t.fill = this.connect ? `${style.stroke}` : 'red';
-				t.stroke = this.connect ? `${style.stroke}` : 'red';
-			} else {
-				// 实线不需要判断断连
-				t.fill = `${style.stroke}`;
+			if (this.obj.lineStyle.stroke) {
+				t.stroke = this.obj.lineStyle.stroke;
+				t.fill = this.obj.lineStyle.stroke;
+			}
+			// 不论是什么线 只要是断开的都是红色
+			if (!this.connect) {
+				t.fill = 'red';
+				t.stroke = 'red';
 			}
 			return t;
 		},
 		// 自定义id 多个svg画布 有重复id 要做区分
 		cus_id(type) {
 			return `${this.obj.id}-${type}`;
+		},
+		// 将线段处理成矩阵
+		line_scope(list) {
+			// 粗细参数
+			let size = 16; // 默认线宽5 可触发宽度是16
+			if (this.obj.lineStyle.strokeWidth) {
+				size = Number(this.obj.lineStyle.strokeWidth) * 2;
+			}
+			let arr = [];
+			// 线段数是点的个数-1
+			for (let i = 0; i < list.length - 1; i++) {
+				// 判断根据相邻点确定线段横纵
+				let xy = list[i].split(' ');
+				let x1 = Number(xy[0]);
+				let y1 = Number(xy[1]);
+				xy = list[i + 1].split(' ');
+				let x2 = Number(xy[0]);
+				let y2 = Number(xy[1]);
+				// x轴相等则是纵向 y轴相等则是横向
+				// 根据方向对线段进行扩充 横向拉伸Y轴 纵向拉伸X轴
+				if (x1 == x2) {
+					arr.push({
+						left: x1 - size / 2,
+						right: x1 + size / 2,
+						top: y1,
+						bottom: y2,
+					});
+				} else if (y1 == y2) {
+					arr.push({
+						left: x1,
+						right: x2,
+						top: y1 - size / 2,
+						bottom: y1 + size / 2,
+					});
+				}
+			}
+			return arr;
 		},
 	},
 	computed: {
@@ -721,12 +913,41 @@ let customLine = {
 		// 连接标识 由两个设备状态共同决定
 		// 用计算属性监听设备状态 如果发生改变则重新判断
 		connect() {
-			return this.target_status && this.source_status;
+			// 两端设备全部在线 且 接口连线全部正常
+			let status = true;
+			if (this.line_info) {
+				for (let val of this.line_info) {
+					if (!val.status) {
+						status = false;
+						break;
+					}
+				}
+			}
+			return this.target_status && this.source_status && status;
 		},
-		// 实线 虚线区分标识
-		is_full_line() {
-			// 有connection属性说明是流动线 有banEdit属性说明是实线 两个属性互斥
-			return this.obj.lineStyle.banEdit !== undefined;
+	},
+	watch: {
+		// 收到改变的坐标后检测是否在自身范围
+		mouse_p(newvalue) {
+			if (this.lines) {
+				let find = false;
+				// 判断鼠标位置是否在任一段矩形中
+				for (let val of this.lines) {
+					// 鼠标坐标要加上滚动偏移
+					if (newvalue.x >= val.left && newvalue.x <= val.right && newvalue.y + newvalue.scroll_top >= val.top && newvalue.y + newvalue.scroll_top <= val.bottom) {
+						// 在范围内则 往父页面发送线中存储的信息
+						if (this.line_info.length) {
+							find = true;
+							this.$bus.$emit('line_info', { list: this.line_info, isBidirect: this.isBidirect, is_in_range: true });
+						}
+						break;
+					}
+				}
+				// 如果不在当前连线范围内 则通知父页面 父页面在统计所有连线都不在范围内后 隐藏弹窗
+				if (!find) {
+					this.$bus.$emit('line_info', { is_in_range: false });
+				}
+			}
 		},
 	},
 };
@@ -736,7 +957,7 @@ let customDeviceStatus = {
   <div :style="style(obj)" @mouseenter="hover(true)" @mouseleave="hover(false)" @click="go_to">
     <img class="bg_img" :src="obj.imageUrl" style="object-fit:contain;">
     <!-- 设备名称 -->
-    <div class="device_name">{{obj.nickName + temp}}</div>
+    <div class="device_name">{{obj.nickName}}</div>
   </div>
 `,
 	props: ['page_width'],
@@ -851,9 +1072,9 @@ let customButton = {
 // 一键巡检
 let customOnlineCheck = {
 	template: `
-    <div :style="style(obj)" class="center" @click="check_devices">
+    <div :style="style(obj)" class="center button" @click="check_devices">
       <img src="./img/icon1.png" class="bg_img">
-      <span :style="size(obj)">{{text + temp}}</span>
+      <span :style="size(obj)">{{text}}</span>
     </div>
   `,
 	mixins: [common_functions, fn],
@@ -893,6 +1114,8 @@ let customOnlineCheck = {
 				};
 				list.push(t);
 			}
+			// 先打开弹窗等请求回来再加载数据
+			this.$bus.$emit('online_check', { type: 'open', data: [] });
 			// 取得每个请求关联的消息id
 			let { data: res } = await this.request('post', `${online_check_url}/${this.random_num}`, this.token, list).catch((err) => false);
 			if (res?.head.code !== 200) {
@@ -950,7 +1173,7 @@ let customVisualEditor1 = {
 // 音频矩阵按钮
 let customSoundMatrix = {
 	template: `
-    <div :style="style(obj,temp)" @click="show_matrix">
+    <div :style="style(obj)" @click="show_matrix">
       <img class="bg_img" src="./img/icon25.png">
     </div>
   `,
@@ -1024,7 +1247,7 @@ let soundMatrix = {
 // 视频矩阵按钮
 let customVideoMatrix = {
 	template: `
-    <div :style="style(obj,temp)" @click="show_matrix">
+    <div :style="style(obj)" @click="show_matrix">
       <img class="bg_img" src="./img/icon22.png">
     </div>
   `,
@@ -1168,7 +1391,7 @@ let videoMatrix2 = {
 let customButtonSwitch = {
 	template: `
     <div :style="style(obj)" class="center switch_box button" @click="switch_fn">
-      <div :style="bg(temp)" class="bg_img"></div>
+      <div :style="bg()" class="bg_img"></div>
       <span :style="size(obj)">{{value===on_value?text2:text}}</span>
     </div>
   `,
@@ -1228,7 +1451,7 @@ let customProgress = {
 	template: `
     <div class="progress_box" :style="style(obj)">
       <img src="./img/icon7.png" class="bg_img">
-      <span class="text" style="margin: 20px 0 10px 0;">{{max + temp}}</span>
+      <span class="text" style="margin: 20px 0 10px 0;">{{max}}</span>
       <div class="progress">
         <div class="lump flex_shrink" v-for="i in total_num" :style="color(i)"></div>
       </div>
@@ -1295,7 +1518,7 @@ let customProgress = {
 // 输入框
 let customInput = {
 	template: `
-    <el-input class="input_style" v-model="value" @change="comfirm_input" :style="style(obj,temp)" :placeholder="obj.dataConfig[0].value" type="text"
+    <el-input class="input_style" v-model="value" @change="comfirm_input" :style="style(obj)" :placeholder="obj.dataConfig[0].value" type="text"
       :maxlength="obj.dataConfig[1].value" show-word-limit>
     </el-input>
   `,
@@ -1341,6 +1564,24 @@ let customInput = {
 				this.send_order(value);
 			}
 		},
+	},
+};
+// // 定制iframe组件
+let customIframeComponent = {
+	template: `
+    <iframe :src="url" :style="style(obj)" frameborder="0" scrolling="no"></iframe>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			url: '', // 固定的跳转地址
+		};
+	},
+	beforeMount() {
+		let { placeId, iframeUrl } = this.obj.data;
+		if (placeId) {
+			this.url = `${iframeUrl}?placeId=${placeId}&token=${this.token}`;
+		}
 	},
 };
 

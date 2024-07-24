@@ -1,5 +1,6 @@
+let Upload;
 (function () {
-	function Upload(obj) {
+	Upload = function Upload(obj) {
 		let reader = new FileReader();
 		let slice_list = [];
 		let file = document.getElementById(obj.id).files[0]; // 根据input标签id获取文件
@@ -41,7 +42,7 @@
 			let read_file_index = 0; // 读取大文件时的索引
 			large_file_md5(read_file_index, spark, reader, slice_list, obj, file); // 需要传入读取文件索引、spark对象、FileReader对象、切片数组、配置对象、文件对象
 		}
-	}
+	};
 	function large_file_md5(index, spark, reader, slice_list, obj, file) {
 		reader.readAsArrayBuffer(slice_list[index]); // 读取单片文件
 		obj.readProgress(++index, slice_list.length); // 配置 读取进程时执行
@@ -115,3 +116,4 @@
 	}
 	window.Upload = Upload;
 })();
+export default Upload;

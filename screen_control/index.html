@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link rel="stylesheet" href="../module/element-ui.css">
+  <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+  <div id="index" v-cloak v-loading="loading">
+    <div class="grid_box">
+      <el-button @click="throttle('clearCache',1)" class="left" size="medium">清除应用缓存</el-button>
+      <div class="line"></div>
+      <el-button @click="throttle('restart',1)" class="right" size="medium">重启应用</el-button>
+    </div>
+
+    <div class="row_layout" style="margin: 0 1rem 1rem 1rem;">
+      <!-- <el-button @click="throttle('volumeUp',1)" class="left" size="medium">音量
+        +</el-button>
+      
+      <el-button @click="throttle('volumeDown',1)" class="right" size="medium">音量
+        -</el-button> -->
+      <div style="margin-right: 20px;">音量：</div>
+
+      <el-slider class="flex_grow" v-model="volume" @change="throttle('volume',volume)"></el-slider>
+    </div>
+
+    <div class="row_layout margin">
+      <span class="label flex_shrink">当前任务:</span>
+      <span class="text_ellipsis" :title="cur_task_name">{{cur_task_name}}</span>
+    </div>
+    <div class="row_layout margin">
+      <span class="label flex_shrink">当前播放:</span>
+      <span class="text_ellipsis" :title="cur_play_source">{{cur_play_source}}</span>
+    </div>
+
+    <div class="row_layout margin" v-if="play_ctrl_show">
+      <span class="label flex_shrink">播放控制:</span>
+      <!-- 播放器样式 -->
+      <div class="player row_layout">
+        <div class="ctrl_box flex_shrink" @click="ctrl_play">
+          <span v-show="status==='pause'" class="icon">&#9654</span>
+          <span v-show="status==='play'" class="icon">||</span>
+        </div>
+
+        <span class="flex_shrink">{{play_cur_text}}</span>
+
+        <div class="process" @mousedown="process_change" ref="play_process">
+          <div class="cur" :style="{width:`${play_percent}%`}"></div>
+        </div>
+
+        <span class="flex_shrink">{{play_total_text}}</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../运维人员部署请修改我.js"></script>
+  <script src="../module/vue.js"></script>
+  <script src="../module/element-ui.js"></script>
+  <script src="../module/axios.min.js"></script>
+  <script src="../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

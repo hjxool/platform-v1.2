@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>屏幕排期</title>
+  <link rel="stylesheet" href="../module/element-ui.css">
+  <link rel="stylesheet" href="../module/common_style.css">
+  <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+  <div id="index" v-cloak v-loading="loading">
+    <div class="flex_shrink">
+      <el-tabs v-model="active" @tab-click="get_day_data(active)">
+        <el-tab-pane label="今天" name="today"></el-tab-pane>
+        <el-tab-pane label="明天" name="tomorrow"></el-tab-pane>
+      </el-tabs>
+    </div>
+
+    <div class="time_axis flex_shrink">
+      <div class="icon"></div>
+      <div class="text center" v-for="time in 24">{{time-1}}:30</div>
+    </div>
+
+    <div class="box">
+      <div class="box1">
+        <div class="box1_1" v-for="item in left_list">
+          <span class="text_ellipsis flex_shrink">{{item.name}}</span>
+          <!-- <i class="el-icon-picture-outline icon"></i> -->
+        </div>
+      </div>
+
+      <div class="box2">
+        <!-- 装饰线 -->
+        <div class="box2_1" v-for="i in 48"></div>
+        <!-- 行定位 -->
+        <div class="box2_2 row_layout" v-for="row,index in right_list" :style="row_style(index)">
+          <!-- 列定位 -->
+          <div class="box2_2_1 center" v-for="col,index2 in row" :style="col_style(col)"
+            @mouseenter="schedule_detail(col,index,index2)" @mouseleave="pop_show=false">
+            <span class="text_ellipsis" :title="col.name">{{col.name}}</span>
+            <!-- 列中每一项定位 -->
+            <div class="box2_2_1_1" v-for="item in col.list" :style="col_style(item)"></div>
+          </div>
+        </div>
+        <!-- 排期详情 -->
+        <div class="detail" v-show="pop_show" :style="detail_style()">
+          <div class="row_layout text_ellipsis">发布名称：{{pop.name}}</div>
+          <div class="row_layout text_ellipsis">开始时间：{{pop.start_time}}</div>
+          <div class="row_layout text_ellipsis">结束时间：{{pop.end_time}}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../运维人员部署请修改我.js"></script>
+  <script src="../module/vue.js"></script>
+  <script src="../module/element-ui.js"></script>
+  <script src="../module/axios.min.js"></script>
+  <script src="../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

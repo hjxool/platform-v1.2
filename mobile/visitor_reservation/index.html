@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>来宾预约</title>
+  <link rel="stylesheet" href="../../module/vant.css">
+  <link rel="stylesheet" href="../../module/icon.css">
+  <link rel="stylesheet" href="../../module/common_style.css">
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div id="index" class="col_layout" v-cloak>
+    <div class="title center">来宾预约单</div>
+
+    <van-form @submit="submit">
+      <van-field v-model="username" name="用户名" label="用户名" placeholder="用户名" :rules="rules.username"></van-field>
+      <van-field v-model="phone" name="电话" label="电话" placeholder="电话" :rules="rules.phone"></van-field>
+      <van-field v-model="company" name="单位" label="单位" placeholder="单位" :rules="rules.company"></van-field>
+      <div style="margin: 2rem 2rem 0 2rem;">
+        <van-button round block type="info" native-type="submit">提交</van-button>
+      </div>
+    </van-form>
+  </div>
+
+  <script src="../../../运维人员部署请修改我.js"></script>
+  <script src="../../module/vue.js"></script>
+  <script src="../../module/vant.min.js"></script>
+  <script src="../../module/axios.min.js"></script>
+  <script src="../../module/common_function.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

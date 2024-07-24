@@ -21,6 +21,7 @@ new Vue({
 			page_size: 20,
 			total_person: 0,
 			option_select: 0, //按xxx搜索
+			cur_page: 1,
 		},
 		html: {
 			page_loading: false,
@@ -73,6 +74,7 @@ new Vue({
 					url = all_user_url;
 					c = {};
 				}
+				this.form.cur_page = page;
 				this.request('post', url, this.token, { pageNum: page, pageSize: this.form.page_size, condition: c, keyword: this.form.search }, (res) => {
 					console.log('检索结果', res);
 					this.html.page_loading = false;
@@ -133,6 +135,7 @@ new Vue({
 					url = all_layer_url;
 					c = { currentDeptId: id };
 				}
+				this.form.cur_page = page;
 				this.request('post', url, this.token, { pageNum: page, pageSize: this.form.page_size, condition: c }, (res) => {
 					console.log('检索结果', res);
 					this.html.page_loading = false;
