@@ -1179,7 +1179,7 @@ let customSlider2 = {
       <img src="./img/icon13.png" class="bg_img">
       <div class="text text_ellipsis flex_shrink center" :title="value_text">
         {{value_text}}
-        <img src="img/icon14.png" class="bg_img">
+        <img src="img/icon14.png" class="bg_img" style="z-index:-1;">
       </div>
       <div class="box1">
         <img src="./img/icon15.png" class="bg_img">

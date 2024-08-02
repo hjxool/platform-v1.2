@@ -17,10 +17,17 @@
       <span :style="theme_font()" class="margin" style="font-size: 0.9rem;">模糊搜索</span>
       <el-input v-model="html.search" @change="get_data(1)" style="margin-right:2rem;width:10rem;" placeholder="请输入内容"
         size="mini" clearable></el-input>
+
       <span :style="theme_font()" class="margin" style="font-size: 0.9rem;">操作</span>
       <el-button class="margin" @click="get_data(1)" type="primary" size="mini">条件查询</el-button>
+
       <el-button v-show="config.add_show" @click="select_file" class="margin" type="success"
         size="mini">新增素材</el-button>
+
+      <el-button class="margin" @click="显示资源下发弹窗()" size="mini">资源下发</el-button>
+
+      <el-button class="margin" @click="显示下发历史弹窗()" size="mini">下发历史</el-button>
+
       <input id="select_file" @change="classify_upload" type="file" style="display: none;">
     </div>
 
@@ -99,7 +106,7 @@
     </div>
     <!-- 资源下发弹窗 -->
     <div class="popover" v-show="issue.show">
-      <div class="issue_box col_layout">
+      <div class="issue_box">
         <div class="head row_layout">
           <div class="title">资源下发</div>
 
@@ -109,15 +116,78 @@
         <div class="body row_layout">
           <div class="title">下发至</div>
 
-          <el-select class="select_box" v-model="issue.select" clearable multiple>
-            <el-option v-for="item in issue.list" :key="item.id" :label="item.deviceName" :value="item.id">
-            </el-option>
-          </el-select>
+          <div class="scroll">
+            <el-cascader class="select_box" v-model="issue.select" :options="issue.list" :props="{multiple: true}"
+              clearable></el-cascader>
+          </div>
         </div>
 
         <div class="foot">
-          <el-button type="primary">确认</el-button>
+          <el-button @click="下发至设备()" type="primary">确认</el-button>
           <el-button @click="issue.show=false">取消</el-button>
+        </div>
+      </div>
+    </div>
+    <!-- 下发历史弹窗 -->
+    <div class="popover" v-show="下发历史.show">
+      <div class="issue_box history_box">
+        <div class="head row_layout">
+          <div class="title">下发历史</div>
+
+          <el-button @click="下发历史.show=false" type="danger" icon="el-icon-close" circle size="mini"></el-button>
+        </div>
+
+        <div class="search row_layout">
+          <el-input v-model="下发历史.search" style="margin-right:2rem;width:10rem;" placeholder="模糊搜索" size="mini"
+            clearable>
+          </el-input>
+
+          <el-select v-model="下发历史.素材类型" style="margin-right:2rem;width:6rem;" size="mini">
+            <el-option v-for="item in 下发历史.类型列表" :key="item.value" :label="item.label" :value="item.value">
+            </el-option>
+          </el-select>
+
+          <el-button @click="查询下发历史()" icon="el-icon-search" type="primary" size="mini">搜索</el-button>
+        </div>
+
+        <div id="history_table" class="flex_grow">
+          <el-table :data="下发历史.素材列表" :max-height="下发历史.表格高度">
+            <el-table-column prop="fileName" label="素材名称"></el-table-column>
+
+            <el-table-column label="素材类型" width="120">
+              <template slot-scope="scope">
+                <span>{{素材类型名称(scope.row.fileType)}}</span>
+              </template>
+            </el-table-column>
+
+            <el-table-column prop="placeName" label="所属场所"></el-table-column>
+
+            <el-table-column prop="deviceName" label="设备名称"></el-table-column>
+
+            <el-table-column label="状态" width="100">
+              <template slot-scope="scope">
+                <span>{{下载状态(scope.row.downloadStatus)}}</span>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="操作">
+              <template slot-scope="scope">
+                <div class="row_layout">
+                  <el-button @click="重试下载任务(scope.row)" type="primary" size="mini">重试</el-button>
+
+                  <el-button @click="取消下载任务(scope.row)" size="mini">取消</el-button>
+
+                  <el-button @click="删除下载记录(scope.row)" size="mini" type="danger">删除</el-button>
+                </div>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+
+        <div class="foot flex_shrink">
+          <el-pagination background layout="total, prev, pager, next" :total="下发历史.total" :page-size="下发历史.pageSize"
+            @current-change="查询下发历史($event)" :current-page="下发历史.pageNum">
+          </el-pagination>
         </div>
       </div>
     </div>

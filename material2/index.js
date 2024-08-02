@@ -6,6 +6,12 @@ let del_material_url = `${url}api-file/doc/file/delete`;
 let get_file_url = `${url}api-file/doc/catalogue/shareMaterial`; // 下载文件
 let upload_error_url = `${url}api-file/files`;
 let limits_url = `${url}api-user/menus/current`; //获取菜单权限
+let get_place_devices_url = `${url}api-portal/video/search/liveDevice`; // 按场所分组获取直播设备
+let 资源下发至设备url = `${url}api-portal/video/device/download/createTask`;
+let 查询下发历史url = `${url}api-portal/video/device/download/record`;
+let 重新下载url = `${url}api-portal/video/device/download/retry`;
+let 取消下载url = `${url}api-portal/video/device/download/cancel`;
+let 删除下载记录url = `${url}api-portal/video/device/download/delete`;
 
 new Vue({
 	el: '#index',
@@ -46,6 +52,23 @@ new Vue({
 			show: false, // 资源下发弹窗
 			list: [], // 设备列表
 			select: [], // 勾选项
+		},
+		下发历史: {
+			show: false,
+			pageNum: 1,
+			pageSize: 10,
+			total: 0,
+			search: '',
+			素材类型: 0,
+			类型列表: [
+				{ label: '全部', value: 0 },
+				{ label: '文档', value: 1 },
+				{ label: '视频', value: 2 },
+				{ label: '音频', value: 3 },
+				{ label: '图片', value: 4 },
+			],
+			素材列表: [],
+			表格高度: 0,
 		},
 	},
 	async mounted() {
@@ -174,6 +197,9 @@ new Vue({
 			dom.style.fontSize = ratio * 20 + 'px';
 			this.$nextTick(() => {
 				this.table.h = document.querySelector('.body').clientHeight;
+				if (this.下发历史.show) {
+					this.下发历史.表格高度 = document.querySelector('#history_table').clientHeight;
+				}
 			});
 		},
 		get_data(page) {
@@ -391,6 +417,179 @@ new Vue({
 			}
 		},
 		// 勾选素材
-		select_material(selects) {},
+		select_material(selects) {
+			this.selected_material = selects;
+		},
+		async 显示资源下发弹窗() {
+			// 未勾选资源 不继续执行
+			if (!this.selected_material?.length) {
+				this.$message('请勾选资源再试');
+				return;
+			}
+			// 查询发布设备列表
+			this.issue.select = []; // 重置勾选设备
+			let { data: res } = await this.request('get', get_place_devices_url, this.token);
+			if (res.head.code !== 200 || !res.data?.length) {
+				this.$message('未查询到设备');
+				return;
+			}
+			this.issue.show = true;
+			this.issue.list = res.data.map((e) => ({
+				label: e.nodeName,
+				value: e.id,
+				children: e.children.map((e2) => ({
+					label: e2.deviceName,
+					value: e2.deviceId,
+				})),
+			}));
+		},
+		async 下发至设备() {
+			// 未勾选设备不执行
+			if (!this.issue.select.length) {
+				return;
+			}
+			this.issue.show = false;
+			let { data: res } = await this.request('post', 资源下发至设备url, this.token, {
+				deviceIds: this.issue.select.map((e) => e.pop()),
+				fileIds: this.selected_material.map((e) => e.id),
+			});
+			if (res.head.code !== 200) {
+				this.$message.error('下发失败');
+			} else {
+				this.$message.success('下发成功');
+			}
+		},
+		async 显示下发历史弹窗() {
+			// 重置表单数据
+			this.下发历史.search = '';
+			this.下发历史.素材类型 = 0;
+			let res = await this.查询下发历史();
+			if (res) {
+				this.下发历史.show = true;
+				this.$nextTick(() => {
+					this.下发历史.表格高度 = document.querySelector('#history_table').clientHeight;
+				});
+			} else {
+				this.$message('无历史记录');
+			}
+		},
+		async 查询下发历史(pageNum) {
+			if (pageNum) {
+				this.下发历史.pageNum = pageNum;
+			} else {
+				this.下发历史.pageNum = 1;
+			}
+			let body = {
+				pageNum: this.下发历史.pageNum,
+				pageSize: this.下发历史.pageSize,
+				condition: {},
+			};
+			if (this.下发历史.search) {
+				body.keyword = this.下发历史.search;
+			}
+			if (this.下发历史.素材类型) {
+				body.condition.fileType = this.下发历史.素材类型;
+			}
+			let { data: res } = await this.request('post', 查询下发历史url, this.token, body);
+			if (res.head.code == 200 && res.data.total) {
+				this.下发历史.total = res.data.total;
+				this.下发历史.素材列表 = res.data.data;
+				return true;
+			} else {
+				return false;
+			}
+		},
+		素材类型名称(type) {
+			switch (type) {
+				case 1:
+					return '文档';
+				case 2:
+					return '视频';
+				case 3:
+					return '音频';
+				case 4:
+					return '图片';
+			}
+		},
+		下载状态(type) {
+			switch (type) {
+				case '0':
+					return '等待下载';
+				case '1':
+					return '下载中';
+				case '2':
+					return '下载成功';
+				case '3':
+					return '下载失败';
+				case '4':
+					return '取消下载';
+				case '5':
+					return '已删除';
+			}
+		},
+		重试下载任务(obj) {
+			// 下载中 或 等待下载 不能重新下载
+			if (obj.downloadStatus == '0' || obj.downloadStatus == '1') {
+				this.$message('任务正在下载中');
+				return;
+			}
+			this.$confirm('确定要设备重新下载?', '提示', {
+				confirmButtonText: '确定',
+				cancelButtonText: '取消',
+				type: 'warning',
+				center: true,
+			}).then(() => {
+				this.request('put', `${重新下载url}/${obj.id}`, this.token, ({ data: res }) => {
+					if (res.head.code === 200) {
+						obj.downloadStatus = '0';
+					} else {
+						this.$message('重新下载失败');
+					}
+				});
+			});
+		},
+		取消下载任务(obj) {
+			// 下载中 或 等待下载 才能取消下载
+			if (obj.downloadStatus != '0' && obj.downloadStatus != '1') {
+				this.$message('任务已经结束不能取消');
+				return;
+			}
+			this.$confirm('确定取消设备下载任务?', '提示', {
+				confirmButtonText: '确定',
+				cancelButtonText: '取消',
+				type: 'warning',
+				center: true,
+			}).then(() => {
+				this.request('put', `${取消下载url}/${obj.id}`, this.token, ({ data: res }) => {
+					if (res.head.code === 200) {
+						obj.downloadStatus = '4';
+					} else {
+						this.$message('取消下载失败');
+					}
+				});
+			});
+		},
+		删除下载记录(obj) {
+			// 下载中 或 等待下载 不能删除记录
+			if (obj.downloadStatus == '0' || obj.downloadStatus == '1') {
+				this.$message('下载中请勿删除');
+				return;
+			}
+			this.$confirm('确定删除设备下载记录?', '提示', {
+				confirmButtonText: '确定',
+				cancelButtonText: '取消',
+				type: 'warning',
+				center: true,
+			}).then(() => {
+				this.request('delete', `${删除下载记录url}/${obj.id}`, this.token, ({ data: res }) => {
+					if (res.head.code === 200) {
+						this.$message.success(`删除记录 ${obj.fileName}`);
+						this.查询下发历史(this.下发历史.pageNum);
+					} else {
+						this.$message('删除记录失败');
+					}
+				});
+			});
+		},
 	},
 });

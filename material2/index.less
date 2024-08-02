@@ -158,25 +158,42 @@
 	border-radius: 14px;
 	margin-top: 40px;
 	overflow: hidden;
-	padding: 2rem;
+	padding: 1rem;
+	display: flex;
+	flex-direction: column;
 	> .head {
 		justify-content: space-between;
-		margin-bottom: 2rem;
+		margin-bottom: 1rem;
 		> .title {
 			font-weight: bold;
 		}
 	}
 	> .body {
-		padding-left: 1rem;
-		padding-right: 2rem;
+		margin: 0 2rem 1rem 1rem;
 		> .title {
-			margin-right: 2rem;
+			margin-right: 1rem;
 		}
-		> .select_box {
-			width: 15rem;
+		> .scroll {
+			max-height: 50vh;
+			overflow-x: hidden;
+			padding: 10px;
+			> .select_box {
+				width: 15rem;
+			}
 		}
 	}
 	> .foot {
 		align-self: center;
+	}
+}
+// 下发历史
+.history_box {
+	width: 80vw;
+	height: 80vh;
+	> .search {
+		padding: 0 1rem 1rem 1rem;
+	}
+	> .flex_grow {
+		flex-grow: 1;
 	}
 }

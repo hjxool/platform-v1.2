@@ -158,6 +158,7 @@ new Vue({
 				this.device.list = res.data.data;
 				this.device.list_empty = false;
 			});
+			this.html.control_url = '';
 			if (this.config.menus[0].show) {
 				this.request('get', `${place_gplot_url}/${place_id}?panelType=1`, this.token, ({ data: res }) => {
 					if (res.head.code !== 200 || !res.data?.panelId) {
@@ -166,6 +167,7 @@ new Vue({
 					this.html.control_url = `../index.html?type=CentralizedControlPanel&id=${res.data.panelId}&token=${this.token}`;
 				});
 			}
+			this.html.gplot_url = '';
 			if (this.config.menus[1].show) {
 				// 根据场所id查询绑定的拓扑图
 				// 赋值跳转拓扑图url

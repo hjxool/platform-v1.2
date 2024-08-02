@@ -19,11 +19,13 @@ const fn = {
 					body.service = val.serviceIdentifier;
 				}
 				// 有设置属性值则下发
-				if (typeof value != 'undefined') {
-					body.attributeMap = {};
-					for (let val of this.path_list) {
-						body.attributeMap[val.path_str] = value;
-					}
+				if (typeof value != 'undefined' && val.attrPath) {
+					body.attributeMap = {
+						[val.attrPath]: value,
+					};
+					// for (let val of this.path_list) {
+					// 	body.attributeMap[val.path_str] = value;
+					// }
 				}
 				// 有topic才能下发指令
 				if (val.topicId) {
@@ -134,12 +136,14 @@ const fn = {
 			if (this.obj.behaviorList) {
 				if (this.obj.behaviorList?.length) {
 					for (let val of this.obj.behaviorList) {
-						let t = {
-							path_str: val.attrPath,
-							path: this.init_path(val.attrPath), //解析后的数组路径用于匹配回显
-							type: val.attrType,
-						};
-						list.push(t);
+						if (val.attrPath) {
+							let t = {
+								path_str: val.attrPath,
+								path: this.init_path(val.attrPath), //解析后的数组路径用于匹配回显
+								type: val.attrType,
+							};
+							list.push(t);
+						}
 					}
 				}
 			} else {
@@ -159,7 +163,7 @@ const fn = {
 			return list;
 		},
 		data_type() {
-			return this.path_list[0].type;
+			return this.path_list[0]?.type || 'all';
 		},
 	},
 	watch: {
