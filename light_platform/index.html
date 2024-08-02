@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/网页标题图标/logo.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title></title>
+  </head>
+  <style>
+    body {
+      padding: 0;
+      margin: 0;
+    }
+
+    img {
+      -webkit-user-drag: none;
+    }
+
+    .pl {
+      display: flex;
+      flex-wrap: wrap;
+      overflow-x: hidden;
+      overflow-y: auto;
+      gap: 0px; /* 使用gap(元素之间间距)和padding,而不是margin*/
+      justify-content: space-around;
+      align-items: center;
+      scroll-snap-type: both proximity; /*  scroll-snap-align:center; 给列表子元素加上后,滚动可以自动吸附 */
+    }
+
+    /* ---菜单栏选中样式--- */
+    .el-menu-item.is-active {
+      background: #115dbf;
+    }
+    .el-submenu__title,.el-menu-item{
+      border-radius:8px;
+    }
+
+    /* ---全局滚动条--- */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-thumb {
+      border-radius: 5px;
+      background: #115dbf;
+    }
+
+
+    /* ---el-table滚动条公共样式--- */
+    .el-scrollbar {
+      .el-scrollbar__bar.is-horizontal {
+        height: 5px;
+      }
+      .el-scrollbar__bar.is-vertical {
+        width: 5px;
+      }
+      .el-scrollbar__bar.is-horizontal .el-scrollbar__thumb {
+        opacity: 1;
+        border-radius: 5px;
+        background: #115dbf;
+      }
+      .el-scrollbar__bar.is-vertical .el-scrollbar__thumb {
+        opacity: 1;
+        border-radius: 5px;
+        background: #115dbf;
+      }
+    }
+
+  </style>
+  <body>
+    <div id="app"></div>
+    <script src="/运维配置文件.js"></script>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
+
+<!--<script src="https://cdn.staticfile.net/translate.js/3.2.1/translate.js"></script>-->
+<!--<script>-->
+<!--    translate.language.setLocal('chinese_simplified'); //设置本地语种（当前网页的语种）。如果不设置，默认自动识别当前网页显示文字的语种。 可填写如 'english'、'chinese_simplified' 等，具体参见文档下方关于此的说明。-->
+<!--    translate.service.use('client.edge'); //设置机器翻译服务通道，直接客户端本身，不依赖服务端 。相关说明参考 http://translate.zvo.cn/43086.html-->
+<!--    translate.execute();//进行翻译-->
+<!--</script>-->
