@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
+  <script src="../js/Zhr_Basics.js"></script>
+</head>
+
+<body>
+
+</body>
+
+<script>
+  let code;
+  let state;
+  let openid;
+  let subscribe;
+  var appid;
+  var timestamp;
+  var noncestr;
+  var signature;
+  var currentUrl;
+  console.log("开始执行")
+  function getUrlParameter (name) {
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+      results = regex.exec(window.location.href);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+  }
+
+  // 在页面加载完成后调用获取参数值的函数
+  window.onload = function () {
+    code = getUrlParameter("code");
+    state = getUrlParameter("state");
+    currentUrl = window.location.href;
+    url = window.location.origin;// https://iot.china-hushan.com
+    console.log(window.location)
+    console.log("当前" + currentUrl)
+    getTicket(url, btoa(currentUrl));
+    getInfo(url);
+    toWx();
+  };
+
+  function toWx () {
+    console.log("wx执行")
+    console.log(appid, timestamp, noncestr, signature, openid, subscribe)
+    // 使用获取到的数据调用wx.config()方法
+    wx.config({
+      debug: false,
+      appId: appid,
+      timestamp: timestamp,
+      nonceStr: noncestr,
+      signature: signature,
+      jsApiList: ["closeWindow"]
+    });
+    wx.ready(function () {
+      function back () {
+        console.log("wx执行成功：" + openid + ", " + subscribe);
+        //wx.miniProgram.postMessage({ data: `${openid},${subscribe}` });
+
+        wx.miniProgram.reLaunch({ url: `/pages/home/home?openid=${openid}&subscribe=${subscribe}` });
+
+      }
+
+      back();
+    });
+    wx.error(function (res) {
+      console.log(res);
+      confirm(res);
+      if (res.errMsg.config == "ok" && res.errMsg.invokeMiniProgramAPI == "ok") {
+        console.log(res);
+      } else {
+        confirm(res);
+      }
+    });
+  }
+
+  function getInfo (url) {
+    console.log("开始执行getInfo")
+    $.ajax({
+      url: url + "/api-auth/oauth/wechat/callback?code=" + code + "&state=" + state,
+      type: "GET",
+      dataType: "json",
+      async: false,
+      success: function (data) {
+        if (data == null || data == undefined) {
+          confirm("请求失败");
+        }
+        openid = data.openid;
+        subscribe = data.subscribe;
+        console.log(openid, subscribe)
+
+      },
+      error: function (jqXHR, textStatus, errorThrown) {
+        // 请求失败处理错误信息
+        console.log("请求失败：" + textStatus + ", " + errorThrown);
+      }
+    });
+  }
+
+  function getTicket (url, currentUrl) {
+    console.log("开始执行getTicket")
+    $.ajax({
+      url: url + "/api-auth/oauth/wechat/ticket?url=" + currentUrl,
+      type: "GET",
+      dataType: "json",
+      async: false,
+      success: function (data) {
+        if (data == null || data == undefined) {
+          confirm("请求失败");
+        }
+        appid = data.gzhAppid;//appid
+        console.log("gzhAppid:" + data.gzhAppid);
+        timestamp = data.timestamp;
+        noncestr = data.noncestr;
+        signature = data.signature;
+
+        console.log(appid, timestamp, noncestr, signature)
+
+      },
+      error: function (jqXHR, textStatus, errorThrown) {
+        // 请求失败处理错误信息
+        console.log("请求失败：" + textStatus + ", " + errorThrown);
+      }
+    });
+  }
+</script>
+
+</html>

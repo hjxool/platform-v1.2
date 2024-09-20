@@ -40,7 +40,11 @@ const fn = {
 							break;
 						case 'array':
 						case 'struct':
-							value = JSON.parse(this.value);
+							if (typeof this.value === 'object') {
+								value = this.value;
+							} else if (typeof this.value === 'string') {
+								value = JSON.parse(this.value);
+							}
 							break;
 						default:
 							value = this.value;
@@ -68,7 +72,7 @@ const fn = {
 	},
 	// 弹窗使用v-if 会卸载组件 但是组件监听事件不会消失 因此所有组件注销时一定要
 	methods: {
-		send_order(value, flag) {
+		send_order(value) {
 			if ((typeof value !== 'undefined' && !this.path) || this.obj.仅提交按钮下发数据) {
 				// 值不为空 且 未绑定属性 不允许下发 不继续执行
 				return;
@@ -86,12 +90,14 @@ const fn = {
 			let map = this.custom;
 			if (typeof value != 'undefined') {
 				// 提交按钮会收集一整个面板组件数据 组成键值对 所以要区分是替换还是拼接
-				if (flag === 'replace') {
-					map = { ...this.custom, ...value };
-				} else {
-					this.custom[this.path] = value;
-					map = this.custom;
-				}
+				// if (flag === 'replace') {
+				// 	map = { ...this.custom, ...value };
+				// } else {
+				//   this.custom[this.path] = value;
+				//   map = this.custom;
+				// }
+				this.custom[this.path] = value;
+				map = this.custom;
 			}
 			body.attributeMap = map;
 			// 有topic才能下发指令
@@ -134,7 +140,7 @@ const fn = {
 							switch (this.obj.type) {
 								case 'matrix':
 									// 这里稍有特殊 矩阵所选的属性不对上传错误的数据格式时不能接收值
-									if (typeof value === 'string') {
+									if (typeof value !== 'string') {
 										return;
 									}
 									// 长度不够补零
@@ -673,7 +679,7 @@ let customProgress = {
 // 下拉框
 let customSelector = {
 	template: `
-    <div class="select_box" :style="style(obj)" @click.stop="popup">
+    <div :id="id" class="select_box" :style="style(obj)" @click.stop="popup">
       <img src="./img/icon8.png" class="bg_img">
       <span class="text_ellipsis" :style="font_size(obj)" :title="label">{{label}}</span>
     </div>
@@ -685,6 +691,7 @@ let customSelector = {
 			label: '',
 			value: '',
 			id: `drop-${this.obj.id}`, // 记录组件id 在传入值时匹配用
+			data_copy: JSON.parse(JSON.stringify(this.inject_data)), // 防止计算属性随inject_data重复执行
 		};
 	},
 	methods: {
@@ -707,18 +714,49 @@ let customSelector = {
 		},
 		// 显示弹窗
 		popup() {
+			let dom = document.querySelector(`#${this.id}`);
 			this.$bus.$emit('drop_down_show', {
 				list: this.options, // 传自身存的下拉列表
 				// 计算弹窗显示位置
 				left: this.obj.x * this.radio,
+				// left: dom.getBoundingClientRect().left,
 				top: (this.obj.y + this.obj.h) * this.radio + 14,
+				// top: dom.getBoundingClientRect().top + this.obj.h + 14,
 				id: this.id,
 			});
+		},
+		// 根绝组件路径解析数值
+		get_option(path, path_index, source) {
+			for (let key in source) {
+				if (Object.prototype.hasOwnProperty.call(source, key)) {
+					if (path[path_index] == key) {
+						// 是自身属性才取值遍历
+						let value;
+						if (Array.isArray(source)) {
+							value = source[key];
+						} else {
+							if (source[key]?.propertyValue === undefined) {
+								value = source[key];
+							} else {
+								value = source[key]?.propertyValue;
+							}
+						}
+						if (path_index == path.length - 1) {
+							// 如果是path最后一层则取值
+							return value;
+						} else {
+							// 否则继续递归
+							return this.get_option(path, ++path_index, value);
+						}
+					}
+				}
+			}
 		},
 	},
 	computed: {
 		options() {
 			let arr = [];
+			// 总option选项由两部分组成 一个是手动填写的 另一个是读取物模型中属性
 			if (this.data_type === 'int' || this.data_type === 'float' || this.data_type === 'double') {
 				for (let val of this.obj.option) {
 					let t = { label: val.label };
@@ -738,7 +776,42 @@ let customSelector = {
 					arr.push(t);
 				}
 			}
-			return arr;
+			// 先过滤不是数组的选项
+			let t = this.obj.动态选项;
+			if (!t || !t.length || t[t.length - 1].type !== 'array') {
+				// 动态选项不存在 或 绑定的属性不是数组
+				return arr;
+			}
+			// 将属性解析成数组
+			let t_path = t[t.length - 1].path.split('.');
+			for (let key in t_path) {
+				let val = t_path[key];
+				if (val.indexOf('[') != -1) {
+					let t = val.split('[');
+					let t3 = [];
+					for (let key2 in t) {
+						let t2 = t[key2].replace(']', '');
+						t3.push(t2);
+					}
+					t_path.splice(Number(key), 1, ...t3);
+				}
+			}
+			// 读取物模型属性
+			let val = this.get_option(t_path, 0, this.data_copy);
+			if (val && Array.isArray(val)) {
+				let t_option = val.map((e) => ({
+					label: e.label.propertyValue,
+					value: e.value.propertyValue,
+				}));
+				// 过滤格式不符合[{label: value:}]的
+				if (t_option[0].label === undefined || t_option[0].value === undefined) {
+					// label 或 value属性不存在
+					return arr;
+				}
+				return [...arr, ...t_option];
+			} else {
+				return arr;
+			}
 		},
 	},
 	watch: {
@@ -1152,7 +1225,20 @@ let customSubmitButton = {
 		this.$bus.$on('popup_submit', (mb_id, key_value) => {
 			if (this.obj.隶属面板ID === mb_id) {
 				// 是对应面板的提交按钮则将收集的数据下发
-				this.send_order(key_value, 'replace');
+				// this.send_order(key_value, 'replace');
+				let body = {
+					contentType: 0,
+					deviceId: this.device_id,
+				};
+				// 有服务则下发
+				if (this.obj.service) {
+					body.contentType = 2;
+					body.service = this.service;
+				}
+				body.attributeMap = { ...this.custom, ...key_value };
+				if (this.topic) {
+					return this.request('put', `${sendCmdtoDevice}/${this.topic}`, this.token, body);
+				}
 			}
 		});
 	},

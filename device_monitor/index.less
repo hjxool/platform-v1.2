@@ -2,6 +2,10 @@
 	display: flex;
 	align-items: center;
 }
+.col_layout {
+	display: flex;
+	flex-direction: column;
+}
 // 主体
 #index {
 	width: 100%;
@@ -138,9 +142,21 @@
 				margin-right: auto;
 			}
 		}
-		.box2 {
+		.group_name {
+			padding: 10px;
+			min-width: 200px;
+			background: #fff;
+		}
+		.scroll {
 			flex-grow: 1;
 			overflow: auto;
+			> .col_layout {
+				margin-bottom: 20px;
+			}
+		}
+		.box2 {
+			// flex-grow: 1;
+			// overflow: auto;
 			display: flex;
 			flex-wrap: wrap;
 			align-content: start;

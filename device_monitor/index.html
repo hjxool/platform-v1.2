@@ -42,38 +42,59 @@
               <div class="num">{{item.num}}</div>
               <div class="text">{{item.type}}</div>
             </div>
+
+            <el-button @click="显示分组弹窗('新建分组')" style="margin-left: 20px;">新建分组</el-button>
           </div>
           <!-- 删除图标 -->
           <img v-show="config.del_device_show && status.user_id" src="./img/delete.png" class="icon" @drop="del_device"
             id="del_area">
         </div>
         <!-- 卡片容器 -->
-        <div class="box2">
-          <div v-for="item,index in status.place_devices" class="card" draggable="true" @dragstart="drag_device(item)">
-            <img v-show="item.statusValue==1" src="./img/deviceBg.png" class="bg_img">
-            <img v-show="item.statusValue!=1" src="./img/设备卡片报警.png" class="bg_img">
-            <div class="img">
-              <div class="bg"></div>
-              <img :src="item.pictureUrl" class="bg_img" style="z-index: 0;object-fit: cover;">
-            </div>
-            <div class="type">
-              <img v-if="item.isAlarm==1" @click="alert_detail(item.id)" src="./img/offline.png"
-                class="icon flex_shrink button">
-              <div class="box2_1 flex_shrink center">
-                {{item.productType==1?html.product_type[0]:item.productType==2?html.product_type[1]:html.product_type[2]}}
+        <div class="scroll">
+          <div class="col_layout" v-for="item in status.place_devices">
+            <div class="row_layout" style="align-self: flex-start;">
+              <div class="group_name center">{{item[0]}}</div>
+
+              <div class="row_layout" v-show="item[0]!=='未分组'" style="margin-left: 20px;">
+                <el-button @click="显示分组弹窗('分组添加设备', item[1])" type="primary" size="mini">添加设备</el-button>
+
+                <el-button @click="显示分组弹窗('分组移除设备', item[1])" size="mini" type="danger">移除设备</el-button>
+
+                <el-button @click="显示分组弹窗('编辑分组', item[1])" type="primary" icon="el-icon-edit" circle
+                  size="mini"></el-button>
+
+                <el-button @click="删除分组(item[1])" type="danger" icon="el-icon-delete" circle size="mini"></el-button>
               </div>
             </div>
-            <div class="name_box">
-              <div class="name text_ellipsis" :title="item.deviceName">{{item.deviceName}}</div>
-              <div class="status">
-                <div class="flex_shrink icon" :style="{backgroundColor:item.statusValue==1?'#00FFA2':'#F6B63C'}">
+
+            <div class="box2">
+              <div class="card" v-for="item2 in item[1].child" draggable="true" @dragstart="drag_device(item2)">
+                <img v-show="item2.statusValue==1" src="./img/deviceBg.png" class="bg_img" draggable="false">
+                <img v-show="item2.statusValue!=1" src="./img/设备卡片报警.png" class="bg_img" draggable="false">
+                <div class="img">
+                  <div class="bg"></div>
+                  <img :src="item2.pictureUrl" class="bg_img" style="z-index: 0;object-fit: cover;" draggable="false">
                 </div>
-                <span class="flex_shrink text"
-                  :style="{color:item.statusValue==1?'#00FFA2':'#F6B63C'}">{{item.statusValue==1?'在线':item.statusValue?'离线':'未注册'}}</span>
+                <div class="type">
+                  <img v-if="item2.isAlarm==1" @click="alert_detail(item2.id)" src="./img/offline.png"
+                    class="icon flex_shrink button">
+                  <div class="box2_1 flex_shrink center">
+                    {{item2.productType==1?html.product_type[0]:item2.productType==2?html.product_type[1]:html.product_type[2]}}
+                  </div>
+                </div>
+                <div class="name_box">
+                  <div class="name text_ellipsis" :title="item2.deviceName">{{item2.deviceName}}</div>
+                  <div class="status">
+                    <div class="flex_shrink icon" :style="{backgroundColor:item2.statusValue==1?'#00FFA2':'#F6B63C'}">
+                    </div>
+                    <span class="flex_shrink text"
+                      :style="{color:item2.statusValue==1?'#00FFA2':'#F6B63C'}">{{item2.statusValue==1?'在线':item2.statusValue?'离线':'未注册'}}</span>
+                  </div>
+                </div>
+                <div v-show="config.control_device_show" class="button2" @click="turn_to_device(item2)">
+                  <img src="./img/button.png" class="bg_img" draggable="false">
+                </div>
               </div>
-            </div>
-            <div v-show="config.control_device_show" class="button2" @click="turn_to_device(item)">
-              <img src="./img/button.png" class="bg_img" draggable="false">
             </div>
           </div>
         </div>
@@ -84,7 +105,7 @@
     <div class="popover" v-if="html.edit_place_display">
       <el-card class="form_layout" style="width: 400px;">
         <div class="form_head">
-          <span class="title">提示</span>
+          <span class="title">编辑场所</span>
           <div class="button" @click="html.edit_place_display=false">
             <i class="el-icon-close icon"></i>
           </div>
@@ -99,7 +120,7 @@
           <el-form-item label="场所名称" prop="name">
             <el-input v-model="edit_place_form.name"></el-input>
           </el-form-item>
-          <el-form-item class="button_layout">
+          <el-form-item class="button_layout" style="margin: 0;">
             <el-button type="primary" @click="place_submit">确定</el-button>
             <el-button @click="html.edit_place_display=false">取消</el-button>
           </el-form-item>
@@ -167,6 +188,61 @@
           :total="status.total_alert" :page-size="status.page_size"></el-pagination>
       </div>
     </div>
+    <!-- 新建分组弹窗 -->
+    <div class="popover" v-if="分组.show">
+      <el-card class="form_layout" style="width: 400px;">
+        <div class="form_head">
+          <span class="title">{{分组.title}}</span>
+          <div class="button" @click="分组.show=false">
+            <i class="el-icon-close icon"></i>
+          </div>
+        </div>
+
+        <el-form ref="分组" :model="分组" :rules="分组.rule" label-width="80px">
+          <el-form-item label="分组名" prop="name">
+            <el-input v-model="分组.name" :disabled="分组.title==='分组添加设备' || 分组.title==='分组移除设备'"></el-input>
+          </el-form-item>
+
+          <el-form-item v-if="分组.title!=='编辑分组'" label="设备" prop="select">
+            <el-select v-model="分组.select" multiple collapse-tags>
+              <el-option v-for="item in 分组.list" :label="item.deviceName" :value="item.id">
+              </el-option>
+            </el-select>
+          </el-form-item>
+
+          <el-form-item class="button_layout" style="margin: 0;">
+            <el-button type="primary" @click="分组确认()">确定</el-button>
+            <el-button @click="分组.show=false">取消</el-button>
+          </el-form-item>
+        </el-form>
+      </el-card>
+    </div>
+    <!-- 分组添加/移除设备 -->
+    <div class="popover" v-if="分组.show2">
+      <el-card class="form_layout" style="width: 400px;">
+        <div class="form_head">
+          <span class="title">{{分组.title}}</span>
+          <div class="button" @click="分组.show2=false">
+            <i class="el-icon-close icon"></i>
+          </div>
+        </div>
+
+        <el-form ref="分组设备" :model="分组" :rules="分组.rule" label-width="80px">
+          <el-form-item label="设备" prop="select">
+            <el-select v-model="分组.select" multiple collapse-tags>
+              <el-option v-for="item in 分组.list" :label="item.deviceName" :value="item.id">
+              </el-option>
+            </el-select>
+          </el-form-item>
+
+          <el-form-item class="button_layout" style="margin: 0;">
+            <el-button type="primary" @click="分组设备编辑(分组.title)">确定</el-button>
+            <el-button @click="分组.show2=false">取消</el-button>
+          </el-form-item>
+        </el-form>
+      </el-card>
+    </div>
+
   </div>
 
   <script src="../../运维人员部署请修改我.js"></script>

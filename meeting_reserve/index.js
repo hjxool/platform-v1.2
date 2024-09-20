@@ -17,6 +17,7 @@ let user_name_url = `${url}api-user/users/nickName`; // 查询所有用户名
 let paperless_url = `${无纸化第三方地址}/#/ExternalEditMeeting`; // 无纸化配置页面
 let paperless_data_url = `${url}api-portal/paperless/cache`; // 无纸化会议缓存数据
 let paperless_meetingId_url = `${url}api-portal/meeting/createMeetingIds`; // 生成会议id
+let 查询区域树url = `${url}api-portal/area/tree`;
 
 Vue.config.productionTip = false;
 new Vue({
@@ -93,6 +94,7 @@ new Vue({
 			platform: [], //第三方平台
 			goods: [], // 物品清单
 			operator: [], // 操作员
+			立即通知: 0,
 		},
 		// 当前用户信息
 		user: {
@@ -155,6 +157,7 @@ new Vue({
 			show: false, // 会议室详情弹窗
 			list: [
 				{ title: '会议室名称', content: '' },
+				{ title: '会议室区域', content: '' },
 				{ title: '会议室地址', content: '' },
 				{ title: '会议室设备', content: '' },
 				{ title: '功能定位', content: '' },
@@ -931,6 +934,8 @@ new Vue({
 				}
 				// 无纸化页面保存数据 如果为空则不能进行下一步
 				this.paperless_data = null;
+				// 立即通知
+				this.new_meeting_form.立即通知 = 0;
 			}
 			this.start_move = false;
 		},
@@ -1044,6 +1049,7 @@ new Vue({
 				moderatorId: form.emcee[0].id,
 				meetingType: form.type,
 				doorMethod: form.door_password,
+				sendMessageNow: form.立即通知,
 			};
 			for (let val of form.search_person) {
 				data.userIds.push(val.id);
@@ -1746,22 +1752,27 @@ new Vue({
 				pageSize: 999,
 			});
 			let { data: res } = await this.request('get', `${place_detail_url}/${room_id}`, this.token);
+			let { data: area_tree } = await this.request('post', 查询区域树url, this.token, {});
 			this.html.add_person_loading = false;
 			if (res.head.code !== 200 || !res.data) {
 				return;
 			}
 			this.place.list[0].content = res.data.roomName;
-			this.place.list[1].content = res.data.address;
-			this.place.list[2].content = res.data.conferencingEquipment;
-			this.place.list[3].content = res.data.functionalPosition;
-			this.place.list[4].content = res.data.num;
-			this.place.list[5].content = res.data.typeName;
+			if (area_tree.head.code === 200 && area_tree.data) {
+				let r = this.查询区域(res.data.roomAreaId || [], area_tree.data, 0);
+				this.place.list[1].content = (r.length && r.join('/')) || '无';
+			}
+			this.place.list[2].content = res.data.address;
+			this.place.list[3].content = res.data.conferencingEquipment;
+			this.place.list[4].content = res.data.functionalPosition;
+			this.place.list[5].content = res.data.num;
+			this.place.list[6].content = res.data.typeName;
 			for (let val of users) {
 				if (val.id === res.data.managementUser) {
-					this.place.list[6].content = val.username;
+					this.place.list[7].content = val.username;
 				}
 			}
-			this.place.list[7].content = res.data.approve ? '是' : '否';
+			this.place.list[8].content = res.data.approve ? '是' : '否';
 			if (res.data.approve) {
 				this.place.list[8].content = res.data.auditBranchName;
 			}
@@ -1787,6 +1798,18 @@ new Vue({
 					document.exitFullscreen();
 				}
 			}
+		},
+		查询区域(target_ids, list, index, result = []) {
+			let r = list.find((e) => e.value === target_ids[index]);
+			if (r) {
+				// 找到对应id 将其填入结果数组
+				result.push(r.label);
+				if (++index < target_ids.length && r.children) {
+					// index自增后还没有到target_ids末尾 且 当前节点还有下一级 则继续递归
+					this.查询区域(target_ids, r.children, index, result);
+				}
+			}
+			return result;
 		},
 	},
 	computed: {

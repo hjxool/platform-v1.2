@@ -27,13 +27,14 @@
           :inject_data="inject_data"></custom-slider>
         <custom-slider2 v-if="item.type=='slider'" :obj="item" :radio="page.radio" :token="token"
           :inject_data="inject_data"></custom-slider2>
-        <custom-img v-if="item.type=='image'" :obj="item" :radio="page.radio" :token="token"></custom-img>
+        <custom-img v-if="item.type=='picture'" :obj="item" :radio="page.radio" :token="token"></custom-img>
         <custom-line v-if="item.type=='连线'" :obj="item" :radio="page.radio" :page="page" :inject_data="inject_data"
           :mouse_p="mouse_p"></custom-line>
         <custom-video v-if="item.type=='videoPlayer'" :obj="item" :radio="page.radio" :token="token"></custom-video>
         <custom-device-status v-if="item.shapeNickname=='设备节点'" :obj="item" :radio="page.radio" :page_width="page.mb.w"
           :token="token" :inject_data="inject_data"></custom-device-status>
-        <custom-button v-if="item.type=='button'" :obj="item" :radio="page.radio" :token="token"></custom-button>
+        <custom-button v-if="item.type=='button' || item.shapeNickname=='自定义按钮'" :obj="item" :radio="page.radio"
+          :token="token"></custom-button>
         <current_meeting v-if="item.type=='current_meeting'" :obj="item" :radio="page.radio" :token="token">
         </current_meeting>
         <custom-online-check v-if="item.type=='巡检按钮'" :obj="item" :radio="page.radio" :token="token"
@@ -54,6 +55,33 @@
           :inject_data="inject_data"></custom-input>
         <custom-iframe-component v-if="item.type=='iframe'" :obj="item" :radio="page.radio"
           :token="token"></custom-iframe-component>
+        <custom-env v-if="item.shapeNickname=='环境检测数据组件'" :obj="item" :radio="page.radio" :token="token"
+          :inject_data="inject_data">
+        </custom-env>
+        <custom-curtain v-if="item.shapeNickname=='窗帘组件'" :obj="item" :radio="page.radio" :token="token"
+          :inject_data="inject_data">
+        </custom-curtain>
+        <custom-power-open v-if="item.shapeNickname=='智慧电源-开关'" :obj="item" :radio="page.radio" :token="token"
+          :inject_data="inject_data">
+        </custom-power-open>
+        <custom-smart-switch v-if="item.shapeNickname=='智慧开关组件'" :obj="item" :radio="page.radio" :token="token"
+          :inject_data="inject_data">
+        </custom-smart-switch>
+        <custom-loud-sound v-if="item.shapeNickname=='扩声组件（智慧运算中心）'" :obj="item" :radio="page.radio" :token="token"
+          :inject_data="inject_data">
+        </custom-loud-sound>
+        <custom-light v-if="item.shapeNickname=='灯光组件'" :obj="item" :radio="page.radio" :token="token"
+          :inject_data="inject_data">
+        </custom-light>
+        <custom-lcd v-if="item.shapeNickname=='LCD大屏组件'" :obj="item" :radio="page.radio" :token="token"
+          :inject_data="inject_data">
+        </custom-lcd>
+        <custom-meeting-mode v-if="item.shapeNickname=='会议模式'" :obj="item" :radio="page.radio" :token="token"
+          :inject_data="inject_data">
+        </custom-meeting-mode>
+        <custom-slider-inout v-if="item.shapeNickname=='智慧运算中心-IN' || item.shapeNickname=='智慧运算中心-OUT'" :obj="item"
+          :radio="page.radio" :token="token" :inject_data="inject_data">
+        </custom-slider-inout>
       </template>
     </div>
     <!-- 设备状态栏 -->

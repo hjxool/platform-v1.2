@@ -1,0 +1,223 @@
+body {
+	background: #000;
+}
+* {
+	user-select: none;
+}
+#index {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	overflow: auto;
+}
+.body {
+	// 避免居中影响到容器框
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+}
+.bg_img {
+	z-index: 0;
+}
+.col_layout {
+	display: flex;
+	flex-direction: column;
+}
+// 滑动条
+.slider_box {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	.text {
+		background: #131720;
+		border: 1px solid #424956;
+		font-size: 12px;
+		color: #fff;
+		margin-bottom: 10px;
+		padding: 4px 10px;
+		max-width: 100%;
+		z-index: 1;
+		position: absolute;
+		top: 4%;
+	}
+	.box1 {
+		width: 50%;
+		position: absolute;
+		z-index: 1;
+		display: flex;
+		justify-content: center;
+		bottom: 8%;
+		height: 70%;
+		.bg_img {
+			height: 92.4%;
+			left: 0;
+			right: 0;
+			top: 0;
+			bottom: 0;
+			margin: auto;
+		}
+	}
+}
+// 进度条
+.progress_box {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	.progress {
+		z-index: 1;
+		flex-grow: 1;
+		width: 40%; //纵向排列时height失效
+		border: 2px solid #193da5;
+		box-shadow: 0px 0px 0px 2px rgba(4, 13, 39, 0.84) inset;
+		background: linear-gradient(90deg, #051125, #0d2e6a);
+
+		display: flex;
+		flex-direction: column;
+		justify-content: space-evenly;
+		align-items: center;
+		.lump {
+			width: 96%;
+			height: 8px;
+			border-radius: 2px;
+		}
+	}
+	.text {
+		font-size: 0.875rem;
+		color: #fff;
+		// margin: 10px 0;
+		z-index: 1;
+	}
+}
+// 按钮及按钮开关
+.button_box {
+	cursor: pointer;
+	background-image: url('./img/icon2.png');
+	background-size: 100% 100%;
+	background-repeat: no-repeat;
+	&:active {
+		background-image: url('./img/icon1.png');
+	}
+}
+// 开关
+.switch_box {
+	cursor: pointer;
+	.bg_img {
+		border-radius: 10px;
+	}
+}
+// 下拉框
+.select_box {
+	padding-right: 20px;
+	display: flex;
+	align-items: center;
+	cursor: pointer;
+	.text_ellipsis {
+		z-index: 10;
+	}
+}
+// 矩阵
+.matrix {
+	display: grid;
+}
+// 单选组
+.radio_group {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-around;
+	.el-radio {
+		margin-right: 10px !important;
+	}
+	.el-radio__inner {
+		width: 20px !important;
+		height: 20px !important;
+		&::after {
+			width: 6px;
+			height: 6px;
+		}
+	}
+	.el-radio__label {
+		font-size: 20px !important;
+	}
+}
+// 多选框组
+.check_box {
+	display: flex;
+	flex-wrap: wrap;
+	.el-checkbox {
+		margin-right: 10px !important;
+	}
+}
+// 输入框
+.input_style {
+	display: flex;
+	> .el-input__inner {
+		flex-grow: 1;
+		height: auto;
+		background-color: #1c2132;
+		color: #fff;
+		border: 1px solid #82a6c4;
+	}
+	.el-input__count-inner {
+		background: transparent !important;
+	}
+}
+// 状态文字
+.custom_status {
+	display: flex;
+	align-items: center;
+}
+// 弹窗按钮
+.popup_button {
+	border-radius: 1000px;
+}
+// 弹窗
+.popup_box {
+	position: fixed;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	z-index: 990;
+	background-color: rgba(0, 0, 0, 0.2);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	> .content_box {
+		max-width: 100%;
+		max-height: 100%;
+		overflow: hidden;
+		padding: 0 20px 20px 20px;
+		// background: #fff;
+		border-radius: 10px;
+		> .head {
+			padding: 20px 0;
+			display: flex;
+			align-items: center;
+			> .title {
+				margin: 0 auto;
+				font-weight: bold;
+				color: #fff;
+			}
+		}
+		> .content {
+			overflow: auto;
+		}
+	}
+}
+// 下拉框
+.drop_down_box {
+	position: absolute;
+	z-index: 998;
+	background: #fff;
+	// border-radius: 20px;
+	padding: 0 10px;
+	max-height: 200px;
+	max-width: 200px;
+	overflow-x: hidden;
+	> .item {
+		margin: 10px 0;
+	}
+}

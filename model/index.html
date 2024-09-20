@@ -20,7 +20,7 @@
         <el-button v-show="config.add_property_show" type="primary" round @click="add_protocol"
           :disabled="history_list.length == 0">添加自定义功能</el-button>
         <div class="history_layout">
-          <span style="margin-right: 20px;">历史版本</span>
+          <span style="margin-right: 20px;white-space: nowrap;">历史版本</span>
           <el-select style="width:300px;" v-model="history_selected" placeholder="无历史版本"
             @change="model_select(history_selected)" :disabled="history_list.length == 0">
             <el-option v-for="ver,index in history_list" :key="index"
@@ -36,6 +36,8 @@
         <el-button @click="static_params.model_json_display=true" :disabled="history_list.length == 0">物模型 TSL
         </el-button>
         <el-button @click="import_click">导入物模型</el-button>
+        <el-button @click="查询修改记录()">修改记录</el-button>
+
         <input id="import_file" type="file" @change="import_model" style="display:none;">
         <div class="current_model">
           <span>当前启用物模型版本：</span>
@@ -417,16 +419,59 @@
           </div>
         </el-card>
       </div>
+      <!-- 查看当前物模型修改记录 -->
+      <div class="custom_center" v-if="修改.列表显示" style="background-color:rgba(0, 0, 0, 0.6);">
+        <div class="log_box">
+          <div class="head row_layout">
+            <div>修改记录</div>
 
-      <!-- 临时 发布物模型按钮 用绝对定位先弄个死的 -->
-      <el-card class="footer" v-if="history_list[history_selected].profile.published==='0' && config.publish_show">
-        <el-button type="primary" size="small" @click="publish_model">发布上线</el-button>
+            <div class="button center" @click="修改.列表显示=false">
+              <i class="el-icon-close icon"></i>
+            </div>
+          </div>
 
-        <span class="info">
-          注意：如物模型处于测试联调阶段，请暂时不要发布模型，更利于修改调试；如物模型已完成联调，请正常发布上线需要启用的物模型
-        </span>
-      </el-card>
+          <div class="log_table">
+            <el-table :data="修改.列表" :max-height="修改.表格高">
+              <el-table-column prop="修改人" label="修改人"></el-table-column>
+              <el-table-column prop="修改时间" label="修改时间"></el-table-column>
+              <el-table-column prop="操作" label="操作"></el-table-column>
+              <el-table-column label="查看详情">
+                <template slot-scope="scope">
+                  <el-button @click="查看修改记录详情(scope.row)" type="text" size="small">详情</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </div>
+      </div>
+      <!-- 修改详情 -->
+      <div class="custom_center" v-if="修改.详情显示">
+        <div class="log_box">
+          <div class="head row_layout">
+            <div>修改详情</div>
+
+            <div class="button center" @click="修改.详情显示=false">
+              <i class="el-icon-close icon"></i>
+            </div>
+          </div>
+
+          <div class="log_detail">
+            <pre class="border" @mousewheel="json同时滚动($event)">{{修改.修改前}}</pre>
+            <pre class="border" @mousewheel="json同时滚动($event)">{{修改.修改后}}</pre>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <!-- 临时 发布物模型按钮 用绝对定位先弄个死的 -->
+    <el-card class="footer" v-if="history_list[history_selected]?.profile.published==='0' && config.publish_show">
+      <el-button type="primary" size="small" @click="publish_model">发布上线</el-button>
+
+      <span class="info">
+        注意：如物模型处于测试联调阶段，请暂时不要发布模型，更利于修改调试；如物模型已完成联调，请正常发布上线需要启用的物模型
+      </span>
+    </el-card>
+  </div>
   </div>
 
   <script src="../../运维人员部署请修改我.js"></script>

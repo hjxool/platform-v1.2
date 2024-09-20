@@ -10,6 +10,11 @@ let limits_url = `${url}api-user/menus/current`; //获取菜单权限
 let user_list = `${url}api-user/users/tenantSimple`;
 let curent_user_name_url = `${url}api-auth/oauth/user/tenant`;
 let place_type_url = `${url}api-portal/place/placeType`;
+let 分组列表查询url = `${url}api-portal/group/page/list`;
+let 删除分组url = `${url}api-portal/group`;
+let 新建分组url = `${url}api-portal/group/save`;
+let 分组中添加设备url = `${url}api-portal/group/add/device`;
+let 分组中移除设备url = `${url}api-portal/group/remove/device`;
 
 let vm = new Vue({
 	el: '#index',
@@ -57,6 +62,17 @@ let vm = new Vue({
 			del_place_show: false,
 			del_device_show: false,
 			rename_place_show: false,
+		},
+		分组: {
+			show: false, // 新建分组
+			list: [],
+			name: '',
+			select: [],
+			rule: {
+				name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
+				select: [{ required: true, message: '请勾选设备', trigger: 'change' }],
+			},
+			title: '', // 弹窗标题
 		},
 	},
 	async mounted() {
@@ -152,17 +168,27 @@ let vm = new Vue({
 				{ num: 0, type: '在线' },
 				{ num: 0, type: '告警' },
 			];
-			this.request('post', `${device_list}/${this.status.user_id}/${this.status.place_id}`, this.token, { condition: {} }, (res) => {
+			this.request('post', `${device_list}/${this.status.user_id}/${this.status.place_id}`, this.token, { condition: {} }, async (res) => {
 				this.status.place_types = [
 					{ num: 0, type: '全部' },
 					{ num: 0, type: '在线' },
 					{ num: 0, type: '告警' },
 				];
 				if (typeof res.data == 'object' && res.data.data != null) {
-					this.status.place_devices = res.data.data;
-					for (let i = 0; i < this.status.place_devices.length; i++) {
-						let t = this.status.place_devices[i];
+					// 查询分组列表
+					let { data: 分组列表 } = await this.request('post', 分组列表查询url, this.token, { placeId: this.status.place_id });
+					分组列表 = 分组列表.data || [];
+					let map = new Map();
+					for (let val of 分组列表) {
+						map.set(val.groupName, { ...val, child: [] });
+					}
+					map.set('未分组', { child: [] });
+
+					this.分组总设备 = res.data.data; // 记录可选设备列表
+					for (let i = 0; i < res.data.data.length; i++) {
+						let t = res.data.data[i];
 						if (t.statusValue != 0) {
+							// 统计状态
 							this.status.place_types[0].num++;
 							if (t.statusValue == 1) {
 								this.status.place_types[1].num++;
@@ -171,7 +197,13 @@ let vm = new Vue({
 								this.status.place_types[2].num++;
 							}
 						}
+						// 统计分组
+						let g_name = t.groupName || '未分组';
+						// 只可能在未分组或其他分组
+						let { child: arr } = map.get(g_name);
+						arr.push(t);
 					}
+					this.status.place_devices = map;
 				}
 			});
 		},
@@ -282,7 +314,14 @@ let vm = new Vue({
 					let name = encodeURIComponent(device_obj.deviceName);
 					this.html.device_name = device_obj.deviceName;
 					// window.open(`../index.html?type=${device_obj.productUrl}&token=${this.token}&id=${device_obj.id}&device_name=${name}`);
-					this.html.device_url = `../index.html?type=${device_obj.productUrl}&token=${this.token}&id=${device_obj.id}&device_name=${name}`;
+					switch (device_obj.productUrl) {
+						case 'power_supply':
+							this.html.device_url = `../index.html?type=${device_obj.productUrl}&token=${this.token}&deviceId=${device_obj.id}&device_name=${name}&ip=${我是接口地址}&clientId=0&tenantId=0&theme=dark&system=微服务&wsip=${我是websocket地址}`;
+							break;
+						default:
+							this.html.device_url = `../index.html?type=${device_obj.productUrl}&token=${this.token}&id=${device_obj.id}&device_name=${name}`;
+							break;
+					}
 				} else {
 					this.$message('请配置产品调控页面前端标识后再试');
 				}
@@ -411,6 +450,92 @@ let vm = new Vue({
 			this.html.turn_to_device = false;
 			this.html.device_url = '';
 		},
+		删除分组(group) {
+			if (group.id) {
+				this.$confirm('确定删除分组?', '提示', {
+					confirmButtonText: '确定',
+					cancelButtonText: '取消',
+					type: 'info',
+					center: true,
+				}).then(() => {
+					this.request('delete', `${删除分组url}/${group.id}`, this.token, () => {
+						// 刷新场所设备列表
+						this.get_place_devices();
+					});
+				});
+			}
+		},
+		显示分组弹窗(title, obj) {
+			this.分组.select = [];
+			this.分组.title = title;
+			switch (title) {
+				case '新建分组':
+					this.分组.name = '';
+					this.分组.list = this.分组总设备;
+					break;
+				case '分组添加设备':
+					this.分组id = obj.id;
+					this.分组.name = obj.groupName;
+					this.分组.list = this.分组总设备;
+					break;
+				case '分组移除设备':
+					this.分组id = obj.id;
+					this.分组.name = obj.groupName;
+					this.分组.list = obj.child;
+					break;
+				case '编辑分组':
+					this.分组.name = obj.groupName;
+					break;
+			}
+			this.分组.show = true;
+		},
+		分组确认() {
+			this.$refs['分组'].validate(async (result) => {
+				if (result) {
+					// 表单验证过了以后 根据不同标题类别区分验证逻辑
+					if (this.分组.title === '新建分组' || this.分组.title === '编辑分组') {
+						// 判断是否与已有分组重名
+						for (let [name, val] of this.status.place_devices) {
+							if (name === this.分组.name) {
+								this.$message.error('不能与已有分组重名');
+								return;
+							}
+						}
+					}
+					// 区分发送请求
+					if (this.分组.title === '新建分组') {
+						let { data: res } = await this.request('post', 新建分组url, this.token, { groupName: this.分组.name, placeId: this.status.place_id });
+						if (res.head.code === 200) {
+							await this.request(
+								'post',
+								`${分组中添加设备url}/${res.data}`,
+								this.token,
+								this.分组.select.map((e) => e)
+							);
+						}
+					} else if (this.分组.title === '分组添加设备') {
+						await this.request(
+							'post',
+							`${分组中添加设备url}/${this.分组id}`,
+							this.token,
+							this.分组.select.map((e) => e)
+						);
+					} else if (this.分组.title === '分组移除设备') {
+						await this.request(
+							'post',
+							`${分组中移除设备url}/${this.分组id}`,
+							this.token,
+							this.分组.select.map((e) => e)
+						);
+					} else if (this.分组.title === '编辑分组') {
+						await this.request('post', 新建分组url, this.token, { groupName: this.分组.name, placeId: this.status.place_id, id: this.分组id });
+					}
+					this.分组.show = false;
+					this.get_place_devices();
+				}
+			});
+		},
+		分组设备编辑(type) {},
 	},
 });
 // 设备可视化编辑保存后触发方法

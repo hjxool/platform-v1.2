@@ -21,6 +21,9 @@
 	display: flex;
 	flex-direction: column;
 }
+.flex_grow {
+	flex-grow: 1;
+}
 // 面板固定样式
 .panel {
 	width: 100%;
@@ -507,6 +510,285 @@ video::-webkit-media-controls-play-button {
 				}
 				> .iconfont {
 					font-weight: bold;
+				}
+			}
+		}
+	}
+}
+// 环境监测
+.env_box {
+	justify-content: space-evenly;
+	padding: 1rem 0;
+	background: #eceefa;
+	box-shadow: 0 4px 10px 0 rgba(104, 127, 161, 0.25);
+	border-radius: 1.9rem;
+	.icon {
+		background: #ffffff;
+		border-radius: 50%;
+		font-size: 1rem;
+		color: #2a2930;
+		margin-bottom: 0.7rem;
+		width: 3rem;
+		height: 3rem;
+	}
+	.text {
+		font-size: 0.8rem;
+		color: #838096;
+	}
+}
+// 窗帘组件
+.curtain_box {
+	padding: 1rem 1.6rem;
+	justify-content: space-evenly;
+	background: #eceefa;
+	box-shadow: 0 4px 10px 0 rgba(104, 127, 161, 0.25);
+	border-radius: 1.9rem;
+	display: flex;
+	.icon {
+		width: 48%;
+		height: 100%;
+		object-fit: contain;
+		align-self: center;
+	}
+	> .col_layout {
+		justify-content: space-between;
+		> .button {
+			background: #d7ddf0;
+			border-radius: 0.9rem;
+			padding: 0.4rem 1.5rem;
+			font-size: 1.25rem;
+			color: #747379;
+		}
+		> .select {
+			background: #545674 !important;
+			color: #fff !important;
+		}
+	}
+}
+// 智慧电源-全开设备
+.power_open {
+	padding-bottom: 1.7rem;
+	justify-content: flex-end;
+	align-items: center;
+}
+// 智慧开关
+.smart_switch {
+	padding: 1rem 1.6rem;
+	background: #eceefa;
+	box-shadow: 0px 4px 10px 0px rgba(104, 127, 161, 0.25);
+	border-radius: 1.9rem;
+	> .row_layout {
+		justify-content: space-between;
+		> .text {
+			font-size: 1.2rem;
+			color: #2a2930;
+		}
+		> .icon {
+			width: 3rem;
+			height: 1.5rem;
+			cursor: pointer;
+			position: relative;
+			z-index: 10;
+		}
+	}
+	> .text {
+		align-self: center;
+	}
+}
+// 扩声组件
+.loud_sound {
+	padding: 1rem 1.6rem;
+	margin-left: 1.5rem;
+	background: #eceefa;
+	box-shadow: 0px 4px 10px 0px rgba(104, 127, 161, 0.25);
+	border-radius: 1.9rem;
+	> .text {
+		font-size: 1.25rem;
+		color: #838096;
+	}
+	> .icon {
+		margin: 1rem 0;
+		object-fit: contain;
+	}
+	> .button {
+		padding: 1rem 0;
+		font-size: 1.2rem;
+		color: #fff;
+	}
+}
+// 灯光组件
+.light_box {
+	margin-left: 1.5rem;
+	background: #eceefa;
+	box-shadow: 0px 4px 10px 0px rgba(104, 127, 161, 0.25);
+	border-radius: 1.9rem;
+	padding: 1rem 1.6rem;
+	justify-content: space-between;
+	> .row1 {
+		justify-content: space-between;
+		> .text {
+			font-size: 1.2rem;
+			color: #2a2930;
+		}
+		> .icon {
+			width: 3rem;
+			height: 1.5rem;
+			cursor: pointer;
+			position: relative;
+			z-index: 10;
+		}
+	}
+	> .icon {
+		position: absolute;
+		left: 14%;
+		top: 0;
+		width: 28%;
+		height: 72%;
+	}
+	> .row2 {
+		> .icon {
+			width: 1.8rem;
+			height: 1.8rem;
+			object-fit: contain;
+		}
+		> .slider {
+			margin: 0 1.5rem;
+			flex-grow: 1;
+		}
+	}
+}
+// LCD
+.lcd_box {
+	padding: 1rem 1.6rem;
+	justify-content: space-evenly;
+	margin-left: 1.5rem;
+	background: #eceefa;
+	box-shadow: 0px 4px 10px 0px rgba(104, 127, 161, 0.25);
+	border-radius: 1.9rem;
+	display: flex;
+	> .icon {
+		width: 48%;
+		height: 60%;
+		object-fit: contain;
+		align-self: center;
+	}
+	> .col_layout {
+		align-items: center;
+		justify-content: space-between;
+		> .text {
+			color: #2a2930;
+			font-size: 1.25rem;
+		}
+		> .icon {
+			width: 3rem;
+			height: 1.5rem;
+		}
+	}
+}
+// 会议模式
+.meeting_mode {
+	background: #eceefa;
+	box-shadow: 0px 2px 4px 0px rgba(30, 35, 45, 0.51);
+	border-radius: 1.3rem;
+	justify-content: space-evenly;
+	align-items: center;
+	> .icon {
+		width: 28%;
+		height: 33%;
+		object-fit: contain;
+	}
+}
+// 运算中心滑动条
+.slider_in_out {
+	padding: 4px;
+	overflow-y: hidden;
+	display: grid;
+	grid-auto-flow: column;
+	grid-template-columns: repeat(8, 1fr);
+	grid-auto-columns: 100px;
+	.slider {
+		min-width: 100px;
+		display: flex;
+		flex-direction: column;
+		background: linear-gradient(0deg, rgba(54, 64, 83, 0.8), rgba(35, 42, 55, 0.8));
+		border: 2px solid rgba(15, 16, 20, 0.8);
+		.text1 {
+			height: 40px;
+			color: rgba(255, 255, 255, 0.8);
+		}
+		.line1 {
+			height: 1px;
+			background: #0e1217;
+		}
+		.line2 {
+			height: 1px;
+			background: #3e435c;
+		}
+		.button1 {
+			width: 80%;
+			height: 10%;
+			margin: 5px 0;
+			align-self: center;
+			z-index: 10;
+			color: #fff;
+			font-size: 12px;
+		}
+		.text2 {
+			width: 70%;
+			height: 7.5%;
+			background: #131720;
+			border: 1px solid #424956;
+			font-size: 12px;
+			color: #fff;
+			margin-bottom: 10px;
+			align-self: center;
+		}
+		.slider_box_bottom {
+			flex-grow: 1;
+			display: flex;
+			padding: 0 10px 0 0;
+			.level_box {
+				width: 20px;
+				z-index: 10;
+				display: grid;
+				grid-template-rows: 20px auto 20px;
+				.text {
+					font-size: 12px;
+					color: #fff;
+				}
+				.level {
+					position: relative;
+					display: flex;
+					justify-content: center;
+					.cover {
+						position: absolute;
+						bottom: 4px;
+						width: 10px;
+						background: linear-gradient(0deg, #098b28, #a5c474);
+						border-radius: 4px;
+						border: 1px solid #1c2132;
+					}
+				}
+			}
+			.gain_box {
+				display: grid;
+				z-index: 10;
+				flex-grow: 1;
+				grid-template-rows: 20px auto 20px;
+				.text {
+					font-size: 12px;
+					color: #fff;
+				}
+				.gain_body {
+					position: relative;
+					display: flex;
+					justify-content: center;
+					margin: 6px 0;
+					.icon2 {
+						position: absolute;
+						z-index: 3;
+						height: 100%;
+					}
 				}
 			}
 		}

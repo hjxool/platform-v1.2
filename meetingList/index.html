@@ -26,15 +26,8 @@
         style="margin-right:20px;"></el-date-picker>
 
       <span class="text">审核状态</span>
-      <el-select v-model="html.status" @change="get_data" style="width:150px;" size="small">
+      <el-select v-model="html.status" @change="get_data" style="width:150px;" placeholder="会议状态" size="small">
         <el-option v-for="item in html.status_options" :key="item.value" :label="item.label" :value="item.value">
-        </el-option>
-      </el-select>
-
-      <span class="text">会议状态</span>
-      <el-select v-model="html.meeting_status" @change="get_data" style="width:150px;" size="small">
-        <el-option v-for="item in html.meeting_status_options" :key="item.value" :label="item.label"
-          :value="item.value">
         </el-option>
       </el-select>
     </div>
@@ -73,6 +66,11 @@
         <el-table-column label="转交状态" width="100">
           <template slot-scope="scope">
             <el-tag :type="scope.row.transferFlag?'warning':''">{{scope.row.transferFlag?'已转交':'未转交'}}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="审批流程" width="100">
+          <template slot-scope="scope">
+            <el-button @click="get_audit_process(scope.row.id)" type="primary" plain size="mini">查看</el-button>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="300">
@@ -162,6 +160,25 @@
         <div class="head">人员列表</div>
 
         <iframe class="user_list" :src="pass.url" frameborder="0" scrolling="no"></iframe>
+      </div>
+    </div>
+    <!-- 转交弹窗 -->
+    <div class="popover" v-if="process.show">
+      <div class="process pop_bg" v-loading="html.pop_loading">
+        <div class="head row_layout">
+          <span class="text">审核流程</span>
+          <el-button @click="process.show=false" type="danger" size="small" icon="el-icon-close" circle></el-button>
+        </div>
+
+        <div id="aduit_process" class="flex_grow">
+          <el-table :max-height="process.table_h" :data="process.list" border>
+            <el-table-column prop="date" label="审核时间"></el-table-column>
+            <el-table-column prop="process" label="审核环节"></el-table-column>
+            <el-table-column prop="auditor" label="审核人"></el-table-column>
+            <el-table-column prop="status" label="审核状态"></el-table-column>
+            <el-table-column prop="remark" label="备注"></el-table-column>
+          </el-table>
+        </div>
       </div>
     </div>
   </div>

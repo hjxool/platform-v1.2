@@ -85,7 +85,6 @@ new Vue({
 			model: [], //设备物模型
 			model_show: false, // 传感器条件弹窗
 			is_and: false, // 设备条件全部与/或
-			// type: '', // 分类显示
 		},
 		servers: {
 			show: false, //弹窗显示

@@ -127,3 +127,43 @@
 	font-size: 16px;
 	color: #808080;
 }
+// 修改记录弹窗
+.log_box {
+	width: 60%;
+	height: 90%;
+	background: #fff;
+	border-radius: 4px;
+	display: flex;
+	flex-direction: column;
+	padding: 20px;
+	overflow: hidden;
+	> .head {
+		padding-bottom: 10px;
+		> .button {
+			width: 26px;
+			height: 26px;
+			background-color: #fdeaea;
+			border-radius: 50%;
+			margin-left: auto;
+		}
+	}
+	> .log_table {
+		flex-grow: 1;
+	}
+	> .log_detail {
+		flex-grow: 1;
+		overflow: hidden;
+		display: flex;
+		padding-right: 6px;
+		> .border {
+			flex-grow: 1;
+			border: 1px solid;
+			border-radius: 10px;
+			padding: 10px;
+			overflow: auto;
+			& + .border {
+				margin-left: 20px;
+			}
+		}
+	}
+}

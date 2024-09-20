@@ -32,6 +32,15 @@ new Vue({
 		customProgress,
 		customInput,
 		customIframeComponent,
+		customEnv,
+		customCurtain,
+		customPowerOpen,
+		customSmartSwitch,
+		customLoudSound,
+		customLight,
+		customLcd,
+		customMeetingMode,
+		customSliderInout,
 	},
 	data: {
 		html: {
@@ -267,16 +276,18 @@ new Vue({
 			let c_w = dom.clientWidth;
 			// 设备id去重
 			this.list = [];
-			for (let val1 of res.data.data.allBindDeviceIds) {
-				let find = false;
-				for (let val2 of this.list) {
-					if (val2 === val1) {
-						find = true;
-						break;
+			if (res.data.data.allBindDeviceIds) {
+				for (let val1 of res.data.data.allBindDeviceIds) {
+					let find = false;
+					for (let val2 of this.list) {
+						if (val2 === val1) {
+							find = true;
+							break;
+						}
 					}
-				}
-				if (!find) {
-					this.list.push(val1);
+					if (!find) {
+						this.list.push(val1);
+					}
 				}
 			}
 			for (let val of res.data.data.panelParam) {

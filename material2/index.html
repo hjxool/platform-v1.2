@@ -24,7 +24,7 @@
       <el-button v-show="config.add_show" @click="select_file" class="margin" type="success"
         size="mini">新增素材</el-button>
 
-      <el-button class="margin" @click="显示资源下发弹窗()" size="mini">资源下发</el-button>
+      <el-button class="margin" @click="显示资源下发弹窗()" size="mini">批量下载</el-button>
 
       <el-button class="margin" @click="显示下发历史弹窗()" size="mini">下发历史</el-button>
 
@@ -32,7 +32,7 @@
     </div>
 
     <div class="body">
-      <el-table :data="table.data" :max-height="table.h" @selection-change="select_material">
+      <el-table ref="table" :data="table.data" :max-height="table.h" @selection-change="select_material">
         <el-table-column type="selection" width="50"></el-table-column>
 
         <el-table-column label="预览">
@@ -49,12 +49,16 @@
 
         <el-table-column prop="fileName" label="素材名称"></el-table-column>
         <el-table-column prop="fileTypeString" label="素材类型"></el-table-column>
-        <el-table-column label="操作" width="250">
+        <el-table-column label="操作">
           <template slot-scope="scope">
             <div class="row_layout">
               <el-button v-show="config.download_show" @click="download_material(scope.row)"
                 :style="{marginRight:config.show_button?'':'0.5rem'}" :disabled="scope.row.ban_download" size="mini"
                 type="primary">下载</el-button>
+
+              <el-button v-show="config.download_show" @click="下载到设备(scope.row)"
+                :style="{marginRight:config.show_button?'':'0.5rem'}" size="mini">下载到设备</el-button>
+
               <div v-show="config.show_button" class="col_layout" style="margin: 0 0.5rem;">
                 <el-button v-show="config.instant_show" @click="publish_show(scope.row,'instant')"
                   :disabled="can_publish(scope.row.fileTypeString)" size="mini" type="success"
@@ -63,6 +67,7 @@
                   :disabled="can_publish(scope.row.fileTypeString)" size="mini" type="success"
                   style="margin-left:0;">定时发布</el-button>
               </div>
+
               <el-button v-show="config.del_show" @click="del_material(scope.row)" size="mini"
                 type="danger">删除</el-button>
             </div>
@@ -118,8 +123,13 @@
 
           <div class="scroll">
             <el-cascader class="select_box" v-model="issue.select" :options="issue.list" :props="{multiple: true}"
-              clearable></el-cascader>
+              :disabled="issue.select_ban" clearable>
+            </el-cascader>
           </div>
+
+          <el-button @click="issue.select_ban = !issue.select_ban" type="text" style="margin: 0 20px;">
+            {{issue.select_ban?'取消全选':'所有设备'}}
+          </el-button>
         </div>
 
         <div class="foot">
@@ -138,16 +148,23 @@
         </div>
 
         <div class="search row_layout">
-          <el-input v-model="下发历史.search" style="margin-right:2rem;width:10rem;" placeholder="模糊搜索" size="mini"
-            clearable>
+          <el-input v-model="下发历史.search" style="width:10rem;" placeholder="模糊搜索" size="mini" clearable>
           </el-input>
 
-          <el-select v-model="下发历史.素材类型" style="margin-right:2rem;width:6rem;" size="mini">
+          <span class="title">素材类型：</span>
+          <el-select v-model="下发历史.素材类型" style="width:6rem;" size="mini">
             <el-option v-for="item in 下发历史.类型列表" :key="item.value" :label="item.label" :value="item.value">
             </el-option>
           </el-select>
 
-          <el-button @click="查询下发历史()" icon="el-icon-search" type="primary" size="mini">搜索</el-button>
+          <span class="title">下载状态：</span>
+          <el-select v-model="下发历史.状态" style="width:6rem;" size="mini">
+            <el-option v-for="item in 下发历史.状态列表" :key="item.label" :label="item.label" :value="item.value">
+            </el-option>
+          </el-select>
+
+          <el-button @click="查询下发历史()" style="margin-left: 2rem;" icon="el-icon-search" type="primary"
+            size="mini">搜索</el-button>
         </div>
 
         <div id="history_table" class="flex_grow">

@@ -18,14 +18,16 @@ const fn = {
 					body.contentType = 2;
 					body.service = val.serviceIdentifier;
 				}
-				// 有设置属性值则下发
-				if (typeof value != 'undefined' && val.attrPath) {
-					body.attributeMap = {
-						[val.attrPath]: value,
-					};
-					// for (let val of this.path_list) {
-					// 	body.attributeMap[val.path_str] = value;
-					// }
+				if (val.attrPath && (typeof value != 'undefined' || val.customJson)) {
+					// 下发属性 且 value有值 或 自定义指令有内容
+					body.attributeMap = {};
+					if (typeof value != 'undefined') {
+						body.attributeMap[val.attrPath] = value;
+					}
+					if (val.customJson.json) {
+						let t = JSON.parse(val.customJson.json);
+						body.attributeMap = { ...body.attributeMap, ...t.attributes };
+					}
 				}
 				// 有topic才能下发指令
 				if (val.topicId) {
@@ -339,6 +341,195 @@ const fn = {
 					// 更新完值以后发送给父页面
 					this.$bus.$emit('matrix_popup', { type: 'update', title, data: this.value, device_id: this.obj.dataConfig.deviceId });
 				}
+			} else if (this.obj.shapeNickname == '环境检测数据组件') {
+				if (this.obj.dataConfig.deviceId == newvalue.device_id && newvalue.data.st) {
+					let obj = newvalue.data;
+					// 区分是propertyValue还是上报数据
+					if (obj.st.propertyValue) {
+						this.list[0].value = Math.round(Number(obj.st.propertyValue.mtemp.propertyValue));
+						this.list[1].value = Math.round(Number(obj.st.propertyValue.mhumi.propertyValue));
+						this.list[2].value = Math.round(Number(obj.st.propertyValue.mlux.propertyValue));
+						this.list[3].value = Math.round(Number(obj.st.propertyValue.CO2.propertyValue));
+						this.list[4].value = Math.round(Number(obj.st.propertyValue.voc.propertyValue));
+						this.list[5].value = Math.round(Number(obj.st.propertyValue.formaldehyde.propertyValue));
+					} else {
+						for (let key in obj.st) {
+							// 设备上报的不一定是需要读取的属性
+							switch (key) {
+								case 'mtemp':
+									this.list[0].value = Math.round(Number(obj.st.mtemp));
+									break;
+								case 'mhumi':
+									this.list[1].value = Math.round(Number(obj.st.mhumi));
+									break;
+								case 'mlux':
+									this.list[2].value = Math.round(Number(obj.st.mlux));
+									break;
+								case 'CO2':
+									this.list[3].value = Math.round(Number(obj.st.CO2));
+									break;
+								case 'voc':
+									this.list[4].value = Math.round(Number(obj.st.voc));
+									break;
+								case 'formaldehyde':
+									this.list[5].value = Math.round(Number(obj.st.formaldehyde));
+									break;
+							}
+						}
+					}
+				}
+			} else if (this.obj.shapeNickname == '窗帘组件') {
+				if (this.obj.dataConfig.deviceId == newvalue.device_id) {
+					let obj = newvalue.data;
+					switch (this.dataConfig.productType) {
+						case '1792397648367259648':
+							if (!obj.st) {
+								return;
+							}
+							if (obj.st.propertyValue) {
+								this.select = obj.st.propertyValue.valhex.propertyValue;
+							} else {
+								this.select = obj.st.valhex;
+							}
+							break;
+						case '1722147067370217472':
+							if (!obj.CCCMD) {
+								return;
+							}
+							if (obj.CCCMD.propertyValue) {
+								this.select = obj.CCCMD.propertyValue.Cmd.propertyValue;
+							} else {
+								this.select = obj.CCCMD.Cmd;
+							}
+							break;
+					}
+				}
+			} else if (this.obj.shapeNickname == '智慧开关组件') {
+				if (this.obj.dataConfig.deviceId == newvalue.device_id) {
+					let obj = newvalue.data;
+					if (!obj.st) {
+						return;
+					}
+					if (obj.st.propertyValue) {
+						for (let val of this.value) {
+							val.value = obj.st.propertyValue[val.key2].propertyValue;
+						}
+					} else {
+						let t = Object.entries(obj.st);
+						for (let [key, val] of t) {
+							let ele = this.value.find((e) => key === e.key2);
+							if (ele) {
+								ele.value = val;
+							}
+						}
+					}
+				}
+			} else if (this.obj.shapeNickname == '扩声组件（智慧运算中心）') {
+				if (this.obj.dataConfig.deviceId == newvalue.device_id) {
+					let obj = newvalue.data;
+					if (!obj.OUTMS) {
+						return;
+					}
+					if (obj.OUTMS.propertyValue) {
+						this.value = obj.OUTMS.propertyValue;
+					} else {
+						this.value = obj.OUTMS;
+					}
+				}
+			} else if (this.obj.shapeNickname == '灯光组件') {
+				// 灯光分两个 开关 和 数值回显
+				let obj = newvalue.data;
+				// 开关
+				let d1 = this.on_off.find((e) => e.device_id === newvalue.device_id);
+				if (d1) {
+					if (!obj.st) {
+						return;
+					}
+					if (obj.st.propertyValue) {
+						for (let val of d1.channel) {
+							val.value = obj.st.propertyValue[val.key2].propertyValue;
+						}
+					} else {
+						let t = Object.entries(obj.st);
+						for (let [key, val] of t) {
+							let ele = d1.channel.find((e) => e.key2 === key);
+							if (ele) {
+								ele.value = val;
+							}
+						}
+					}
+				}
+				// 数值
+				let d2 = this.obj.dataConfig.lightConfig.some((e) => e.deviceId === newvalue.device_id);
+				if (d2) {
+					if (!obj.st) {
+						return;
+					}
+					if (obj.st.propertyValue) {
+						this.value = obj.st.propertyValue.bri.propertyValue;
+					} else {
+						for (let key in obj.st) {
+							switch (key) {
+								case 'bri':
+									this.value = Number(obj.st.bri);
+									break;
+							}
+						}
+					}
+				}
+			} else if (this.obj.shapeNickname == '智慧运算中心-IN' || this.obj.shapeNickname == '智慧运算中心-OUT') {
+				if (this.obj.dataConfig.deviceId == newvalue.device_id) {
+					let obj = newvalue.data;
+					let type = this.obj.shapeNickname == '智慧运算中心-IN' ? true : false;
+					let key1 = type ? 'INGS' : 'OUTGS';
+					if (obj[key1]) {
+						let t;
+						if (obj[key1].propertyValue) {
+							t = obj[key1].propertyValue;
+						} else {
+							t = obj[key1];
+						}
+						for (let i = 0; i < t.length; i++) {
+							let tt = Math.floor(t[i] / 10 + 0.5) / 10;
+							if (tt < this.gain_min) {
+								tt = this.gain_min;
+							} else if (tt > this.gain_max) {
+								tt = this.gain_max;
+							}
+							this.channel[i].gain = tt;
+						}
+					}
+					let key2 = type ? 'ILEVEL' : 'OLEVEL';
+					if (obj[key2]) {
+						let t;
+						if (obj[key2].propertyValue) {
+							t = obj[key2].propertyValue;
+						} else {
+							t = obj[key2];
+						}
+						for (let i = 0; i < t.length; i++) {
+							let tt = Math.floor(t[i] / 100);
+							if (tt < this.level_min) {
+								tt = this.level_min;
+							} else if (tt > this.level_max) {
+								tt = this.level_max;
+							}
+							this.channel[i].level = tt;
+						}
+					}
+					let key3 = type ? 'INMS' : 'OUTMS';
+					if (obj[key3]) {
+						let t;
+						if (obj[key3].propertyValue) {
+							t = obj[key3].propertyValue;
+						} else {
+							t = obj[key3];
+						}
+						for (let i = 0; i < t.length; i++) {
+							this.channel[i].mute = t[i];
+						}
+					}
+				}
 			} else {
 				// 有回显数据时 传入的是一个原始结构对象 根据path属性解析路径取任意层级的值
 				// 此时是在组件挂载完毕时接收到的数据 path已经有了
@@ -625,11 +816,23 @@ let customSlider2 = {
 // 图片
 let customImg = {
 	template: `
-    <div :style="style(obj)">
-      <img class="bg_img" :src="obj.imageUrl">
+    <div :class="[url? '' : 'center']" :style="style(obj)">
+      <img v-if="url" class="bg_img" :src="url">
+      <div v-else>无图片</div>
     </div>
   `,
 	mixins: [common_functions, fn],
+	computed: {
+		url() {
+			let t = /^http/;
+			if (t.test(this.obj.style.backgroundImg)) {
+				// 是http开头说明是图片
+				return this.obj.style.backgroundImg;
+			} else {
+				return '';
+			}
+		},
+	},
 };
 // 视频
 let customVideo = {
@@ -1005,7 +1208,16 @@ let customDeviceStatus = {
 					window.open(`../index.html?type=Visual_Preview&token=${this.token}&deviceId=${res.data.id}&device_name=${name}`);
 				} else if (res.data.productUrl) {
 					let name = encodeURIComponent(res.data.deviceName);
-					window.open(`../index.html?type=${res.data.productUrl}&token=${this.token}&id=${res.data.id}&device_name=${name}`);
+					switch (res.data.productUrl) {
+						case 'power_supply':
+							window.open(
+								`../index.html?type=${res.data.productUrl}&token=${this.token}&deviceId=${res.data.id}&device_name=${name}&ip=${我是接口地址}&clientId=0&tenantId=0&theme=dark&system=微服务&wsip=${我是websocket地址}`
+							);
+							break;
+						default:
+							window.open(`../index.html?type=${res.data.productUrl}&token=${this.token}&id=${res.data.id}&device_name=${name}`);
+							break;
+					}
 				} else {
 					this.$message('请配置产品调控页面前端标识后再试');
 				}
@@ -1047,29 +1259,51 @@ let customDeviceStatus = {
 let customButton = {
 	template: `
     <div :style="style(obj)" class="center button_box" @click="distinguish_operation">
-      <img src="./img/icon1.png" class="bg_img">
+      <img v-if="bg_url" :src="bg_url" class="bg_img">
+      <img v-else src="./img/icon1.png" class="bg_img">
       <span :style="size(obj)">{{text}}</span>
     </div>
   `,
 	mixins: [common_functions, fn],
 	data() {
 		return {
-			text: this.obj.dataConfig?.buttonLabel || '',
+			bg_url: this.obj.data?.backgroundImg || false,
 		};
 	},
 	methods: {
 		size(obj_data) {
-			let t = (203 / 22) * 16; //计算多少容器大小下 字体是16px
-			let fz = (obj_data.w * this.radio) / t;
-			return {
-				color: '#fff',
-				fontSize: fz + 'rem',
-				zIndex: 1,
-			};
+			if (this.obj.type === 'button') {
+				let t = (203 / 22) * 16; //计算多少容器大小下 字体是16px
+				let fz = (obj_data.w * this.radio) / t;
+				return {
+					color: '#fff',
+					fontSize: fz + 'rem',
+					zIndex: 1,
+					whiteSpace: 'nowrap',
+				};
+			} else if (this.obj.shapeNickname === '自定义按钮') {
+				let t = this.obj.data.attrs.label;
+				return {
+					color: t.fill,
+					fontSize: t.fontSize - this.radio + 'px',
+					fontWeight: t.fontWeight,
+					zIndex: 1,
+					whiteSpace: 'nowrap',
+				};
+			}
 		},
 		// 按钮分下发指令和切换页面两种
 		distinguish_operation() {
 			this.send_order(undefined);
+		},
+	},
+	computed: {
+		text() {
+			if (this.obj.type === 'button') {
+				return this.obj.dataConfig?.buttonLabel || '';
+			} else if (this.obj.shapeNickname === '自定义按钮') {
+				return this.obj.data.attrs.label.text || '';
+			}
 		},
 	},
 };
@@ -1177,8 +1411,12 @@ let customVisualEditor1 = {
 // 音频矩阵按钮
 let customSoundMatrix = {
 	template: `
-    <div :style="style(obj)" @click="show_matrix">
-      <img class="bg_img" src="./img/icon25.png">
+    <div class="center" :style="style(obj)" @click="show_matrix">
+      <img v-if="type===1" class="bg_img" src="./img/icon25.png">
+      <template v-if="type===2">
+        <img src="./img/icon1.png" class="bg_img">
+        <span :style="size(obj)">音频矩阵</span>
+      </template>
     </div>
   `,
 	mixins: [common_functions, fn],
@@ -1191,6 +1429,25 @@ let customSoundMatrix = {
 				device_id: this.obj.dataConfig.deviceId,
 				title: '音频矩阵',
 			});
+		},
+		size(obj_data) {
+			let t = (203 / 22) * 16; //计算多少容器大小下 字体是16px
+			let fz = (obj_data.w * this.radio) / t;
+			return {
+				color: '#fff',
+				fontSize: fz + 'rem',
+				zIndex: 1,
+			};
+		},
+	},
+	computed: {
+		type() {
+			switch (this.obj.data.preset) {
+				case '音频矩阵-样式一':
+					return 1;
+				case '音频矩阵-样式二':
+					return 2;
+			}
 		},
 	},
 };
@@ -1251,8 +1508,12 @@ let soundMatrix = {
 // 视频矩阵按钮
 let customVideoMatrix = {
 	template: `
-    <div :style="style(obj)" @click="show_matrix">
-      <img class="bg_img" src="./img/icon22.png">
+    <div class="center" :style="style(obj)" @click="show_matrix">
+      <img v-if="type===1" class="bg_img" src="./img/icon22.png">
+      <template v-if="type===2">
+        <img src="./img/icon1.png" class="bg_img">
+        <span :style="size(obj)">视频矩阵</span>
+      </template>
     </div>
   `,
 	mixins: [common_functions, fn],
@@ -1276,6 +1537,25 @@ let customVideoMatrix = {
 					t.title = '视频矩阵二代';
 					this.$bus.$emit('matrix_popup', t);
 					break;
+			}
+		},
+		size(obj_data) {
+			let t = (203 / 22) * 16; //计算多少容器大小下 字体是16px
+			let fz = (obj_data.w * this.radio) / t;
+			return {
+				color: '#fff',
+				fontSize: fz + 'rem',
+				zIndex: 1,
+			};
+		},
+	},
+	computed: {
+		type() {
+			switch (this.obj.data.preset) {
+				case '视频矩阵-样式一':
+					return 1;
+				case '视频矩阵-样式二':
+					return 2;
 			}
 		},
 	},
@@ -1570,7 +1850,7 @@ let customInput = {
 		},
 	},
 };
-// // 定制iframe组件
+// 定制iframe组件
 let customIframeComponent = {
 	template: `
     <iframe :src="url" :style="style(obj)" frameborder="0" scrolling="no"></iframe>
@@ -1586,6 +1866,719 @@ let customIframeComponent = {
 		if (placeId) {
 			this.url = `${iframeUrl}?placeId=${placeId}&token=${this.token}`;
 		}
+	},
+};
+// 环境控制组件
+let customEnv = {
+	template: `
+    <div class="env_box row_layout" :style="style(obj)">
+      <div class="col_layout" v-for="item in list">
+        <div class="icon center">{{item.value || 0}}</div>
+
+        <div class="text">{{item.title}}</div>
+      </div>
+    </div>
+  `,
+	mixins: [fn],
+	data() {
+		return {
+			list: [
+				{ title: '温度', value: '' },
+				{ title: '湿度', value: '' },
+				{ title: '光照', value: '' },
+				{ title: '二氧化碳', value: '' },
+				{ title: '挥发物', value: '' },
+				{ title: '甲醛', value: '' },
+			],
+		};
+	},
+};
+// 窗帘组件
+let customCurtain = {
+	template: `
+  <div class="curtain_box" :style="style(obj)">
+    <img class="icon" src="./img/icon28.png">
+
+    <div class="col_layout">
+      <div :class="['button','center',select===item.value?'select':'']" v-for="item,index in list"
+        @click="custom_order(item.value)">
+        {{item.title}}
+      </div>
+    </div>
+  </div>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			select: '',
+			list: [
+				{ title: '暂停', value: '550000030368FD' },
+				{ title: '全闭', value: '5500000302A93D' },
+				{ title: '全开', value: '5500000301E93C' },
+			],
+		};
+	},
+	methods: {
+		async custom_order(value) {
+			this.select = value;
+			switch (this.dataConfig.productType) {
+				case '1792397648367259648':
+					this.request('put', `${sendCmdtoDevice}/8`, this.token, {
+						contentType: 0,
+						deviceId: this.obj.dataConfig.deviceId,
+						attributeMap: {
+							protocol_code: 1002,
+							ep: 1,
+							id: '',
+							serial: 2,
+							'st.valhex': value,
+						},
+					});
+					break;
+				case '1722147067370217472':
+					await this.request('put', `${sendCmdtoDevice}/8`, this.token, {
+						contentType: 0,
+						deviceId: this.obj.dataConfig.deviceId,
+						attributeMap: {
+							UARTSET: '[2,485,9600,8,1,0]',
+						},
+					});
+					setTimeout(() => {
+						this.request('put', `${sendCmdtoDevice}/8`, this.token, {
+							contentType: 0,
+							deviceId: this.obj.dataConfig.deviceId,
+							attributeMap: {
+								'CCCMD.Count': 2,
+								'CCCMD.Type': '1',
+								'CCCMD.Fmat': '0',
+								'CCCMD.Cmd': value,
+								'CCCMD.Config': '[0,0,0,0]',
+							},
+						});
+					}, 100);
+					break;
+			}
+		},
+	},
+};
+// 智慧电源-全开/关设备
+let customPowerOpen = {
+	template: `
+    <div :style="style(obj)" class="button power_open col_layout" @click="custom_order">
+      <img class="bg_img" :src="type()">
+      <div :style="cus_style()">{{title}}</div>
+    </div>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			title: this.obj.data.attrs.label.text,
+		};
+	},
+	methods: {
+		cus_style() {
+			let t = this.obj.data.attrs.label;
+			return {
+				fontSize: t.fontSize,
+				fontWeight: t.fontWeight,
+			};
+		},
+		custom_order() {
+			this.request('put', `${sendCmdtoDevice}/11`, this.token, {
+				contentType: 2,
+				deviceId: this.obj.dataConfig.deviceId,
+				service: 'Relay_Set_State_Service',
+				attributeMap: {
+					control_relay: Number(this.obj.dataConfig.channel),
+				},
+			});
+		},
+		type() {
+			switch (this.obj.data.preset) {
+				case '智慧电源-全开设备':
+					return './img/icon29.png';
+				case '智慧电源-全关设备':
+					return './img/icon30.png';
+			}
+		},
+	},
+};
+// 智慧开关
+let customSmartSwitch = {
+	template: `
+    <div :style="style(obj)" class="smart_switch col_layout">
+      <div class="row_layout">
+        <div class="text">{{雾化开关?'ON':'OFF'}}</div>
+        <div class="icon" @click="custom_order(雾化开关)">
+          <img v-show="!雾化开关" src="./img/icon35.png" class="bg_img">
+          <img v-show="雾化开关" src="./img/icon34.png" class="bg_img">
+        </div>
+      </div>
+      <div class="flex_grow"></div>
+      <div class="text">{{title}}</div>
+    </div>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			title: this.obj.data.attrs.label.text,
+			value: [], // 因为是动态通道 所以用数组
+		};
+	},
+	created() {
+		for (let val of this.obj.dataConfig.channel) {
+			this.value.push({
+				key: val,
+				key2: val.split('.')[1],
+				value: 0,
+			});
+		}
+	},
+	computed: {
+		雾化开关: {
+			get() {
+				for (let val of this.value) {
+					if (val.value) {
+						return true;
+					}
+				}
+				return false;
+			},
+			set(value) {
+				for (let val of this.value) {
+					val.value = value ? 1 : 0;
+				}
+			},
+		},
+	},
+	methods: {
+		custom_order(value) {
+			this.雾化开关 = !value;
+			let body = {
+				contentType: 0,
+				deviceId: this.obj.dataConfig.deviceId,
+				attributeMap: {
+					ep: 1,
+					protocol_code: 1002,
+					id: '',
+					serial: 1,
+				},
+			};
+			for (let val of this.value) {
+				body.attributeMap[val.key] = val.value;
+			}
+			this.request('put', `${sendCmdtoDevice}/8`, this.token, body);
+		},
+	},
+};
+// 扩声组件
+let customLoudSound = {
+	template: `
+    <div class="loud_sound flex_shrink col_layout" :style="style(obj)">
+      <div class="text">扩声系统</div>
+
+      <img v-show="value[0]" class="icon flex_grow" src="./img/icon31.png">
+      <img v-show="!value[0]" class="icon flex_grow" src="./img/icon32.png">
+
+      <div class="button center" @click="custom_order">
+        <img class="bg_img" src="./img/icon33.png">
+        <div>{{value[0]?'取消静音':'一键静音'}}</div>
+      </div>
+    </div>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			value: [0, 0, 0, 0, 0, 0, 0, 0],
+		};
+	},
+	methods: {
+		custom_order() {
+			if (this.value[0]) {
+				this.value = [0, 0, 0, 0, 0, 0, 0, 0];
+			} else {
+				this.value = [1, 1, 1, 1, 1, 1, 1, 1];
+			}
+			this.request('put', `${sendCmdtoDevice}/8`, this.token, {
+				contentType: 0,
+				deviceId: this.obj.dataConfig.deviceId,
+				attributeMap: {
+					OUTMS: this.value,
+				},
+			});
+		},
+	},
+};
+// 灯光组件
+let customLight = {
+	template: `
+    <div class="light_box col_layout" :style="style(obj)">
+      <div class="row_layout row1">
+        <div class="text">{{my_switch?'ON':'OFF'}}</div>
+
+        <div class="icon" @click="custom_order('开关',my_switch)">
+          <img v-show="my_switch" class="bg_img" src="./img/icon34.png">
+          <img v-show="!my_switch" class="bg_img" src="./img/icon35.png">
+        </div>
+      </div>
+
+      <img class="icon" src="./img/icon36.png">
+
+      <div class="row_layout row2">
+        <img class="icon" src="./img/icon37.png">
+
+        <el-slider class="slider" v-model="value" @change="custom_order('值',value)"></el-slider>
+
+        <img class="icon" src="./img/icon38.png">
+      </div>
+    </div>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			on_off: [],
+			value: 0,
+		};
+	},
+	created() {
+		for (let val of this.obj.dataConfig.switchConfig) {
+			this.on_off.push({
+				device_id: val.deviceId,
+				channel: val.map((e) => ({
+					key: e,
+					key2: e.split('.')[1],
+					value: 0,
+				})),
+			});
+		}
+	},
+	computed: {
+		my_switch: {
+			get() {
+				for (let val of this.on_off) {
+					for (let val2 of val.channel) {
+						if (val2.value) {
+							return true;
+						}
+					}
+				}
+				return false;
+			},
+			set(value) {
+				for (let val of this.on_off) {
+					for (let val2 of val.channel) {
+						val2.value = value ? 1 : 0;
+					}
+				}
+			},
+		},
+	},
+	methods: {
+		custom_order(tag, value) {
+			switch (tag) {
+				case '开关':
+					this.switch = !value;
+					for (let val of this.on_off) {
+						this.light_switch(0, val.channel, val.device_id);
+					}
+					break;
+				case '值':
+					for (let val of this.obj.dataConfig.lightConfig) {
+						this.request('put', `${sendCmdtoDevice}/8`, this.token, {
+							contentType: 0,
+							deviceId: val.deviceId,
+							attributeMap: {
+								ep: 1,
+								'st.bri': value,
+								protocol_code: 1002,
+								id: '',
+								serial: 1,
+							},
+						});
+					}
+					break;
+			}
+		},
+		// 递归下发指令
+		light_switch(index, list, device_id) {
+			this.request(
+				'put',
+				`${sendCmdtoDevice}/8`,
+				this.token,
+				{
+					contentType: 0,
+					deviceId: device_id,
+					attributeMap: {
+						ep: 1,
+						protocol_code: 1002,
+						id: '',
+						serial: 1,
+						[list[index].key]: list[index].value,
+					},
+				},
+				() => {
+					index++;
+					if (list[index]) {
+						setTimeout(() => {
+							this.light_switch(index, list, device_id);
+						}, 500);
+					}
+				}
+			);
+		},
+	},
+};
+// LCD大屏
+let customLcd = {
+	template: `
+    <div class="lcd_box" :style="style(obj)">
+      <img class="icon" src="./img/icon39.png">
+
+      <div class="col_layout">
+        <template v-for="item in titles">
+          <div class="text">{{item.label}}</div>
+
+          <img class="icon" @click="custom_order(item)" v-show="item.status" src="img/icon34.png">
+          <img class="icon" @click="custom_order(item)" v-show="!item.status" src="img/icon35.png">
+        </template>
+      </div>
+    </div>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			titles: [
+				{ label: 'LCD电源', status: false },
+				{ label: 'LCD背光', status: false },
+			],
+		};
+	},
+	methods: {
+		async custom_order(ele) {
+			ele.status = !ele.status;
+			let d;
+			switch (ele.label) {
+				case 'LCD电源':
+					if (ele.status) {
+						t = '55AA004DFE0000000000010010000005010000B756';
+					} else {
+						t = '55AA004FFE0000000000010010000005010001BA56';
+					}
+					break;
+				case 'LCD背光':
+					if (ele.status) {
+						t = '55AA0041FE0000000000010011000005010000AC56';
+					} else {
+						t = '55AA0043FE0000000000010011000005010001AF56';
+					}
+					break;
+			}
+			await this.request('put', `${sendCmdtoDevice}/8`, this.token, {
+				contentType: 0,
+				deviceId: this.obj.dataConfig.deviceId,
+				attributeMap: {
+					UARTSET: '[1,232,115200,8,1,0]',
+				},
+			});
+			setTimeout(() => {
+				this.request('put', `${sendCmdtoDevice}/8`, this.token, {
+					contentType: 0,
+					deviceId: this.obj.dataConfig.deviceId,
+					attributeMap: {
+						'CCCMD.Count': 1,
+						'CCCMD.Type': '0',
+						'CCCMD.Fmat': '0',
+						'CCCMD.Cmd': d,
+						'CCCMD.Config': '[0,0,0,0]',
+					},
+				});
+			}, 100);
+		},
+	},
+};
+// 会议模式
+let customMeetingMode = {
+	template: `
+    <div class="button meeting_mode col_layout" @click="custom_order"
+     :style="style(obj)">
+      <img class="icon" :src="url">
+      <div :style="title_style">{{title}}</div>
+    </div>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			title: this.obj.data.attrs.label.text,
+		};
+	},
+	computed: {
+		url() {
+			switch (this.obj.data.preset) {
+				case '会议模式-样式一':
+					return './img/icon40.png';
+				case '会议模式-样式二':
+					return './img/icon41.png';
+				case '会议模式-样式三':
+					return './img/icon42.png';
+				case '会议模式-样式四':
+					return './img/icon43.png';
+			}
+		},
+		title_style() {
+			let t = this.obj.data.attrs.label;
+			return {
+				fontSize: t.fontSize,
+				fontWeight: t.fontWeight,
+				color: t.fill,
+			};
+		},
+	},
+	methods: {
+		custom_order() {
+			this.send(0, this.obj.dataConfig.products);
+		},
+		async send(index, list) {
+			// 根绝产品类型区分下发指令格式
+			let t1 = list[index];
+			switch (t1.productName) {
+				case '智慧电源':
+					for (let val of t1.config) {
+						this.request('put', `${sendCmdtoDevice}/11`, this.token, {
+							contentType: 2,
+							deviceId: val.deviceId,
+							service: 'Relay_Set_State_Service',
+							attributeMap: {
+								control_relay: Number(val.channel),
+							},
+						});
+					}
+					break;
+				case '运算中心':
+					try {
+						for (let val of t1.config) {
+							let d = JSON.parse(val.customDirectives);
+							if (typeof d !== 'object') {
+								throw '运算中心配置JSON错误';
+							}
+							this.request('put', `${sendCmdtoDevice}/8`, this.token, {
+								contentType: 0,
+								deviceId: val.deviceId,
+								attributeMap: d,
+							});
+						}
+					} catch (error) {
+						this.$message.error(error);
+					}
+					break;
+				case '灯光':
+					// 开关
+					for (let val of t1.config.switchConfig) {
+						let t2 = val.channel.map((e) => ({
+							key: e,
+							value: Number(val.customValue) || 0,
+						}));
+						this.light_switch(0, t2, val.deviceId);
+					}
+					// 值
+					for (let val of t1.config.lightConfig) {
+						this.request('put', `${sendCmdtoDevice}/8`, this.token, {
+							contentType: 0,
+							deviceId: val.deviceId,
+							attributeMap: {
+								ep: 1,
+								'st.bri': Number(val.customValue) || 0,
+								protocol_code: 1002,
+								id: '',
+								serial: 1,
+							},
+						});
+					}
+					break;
+				case '智慧开关':
+					for (let val of t1.config) {
+						let body = {
+							contentType: 0,
+							deviceId: val.deviceId,
+							attributeMap: {
+								ep: 1,
+								protocol_code: 1002,
+								id: '',
+								serial: 1,
+							},
+						};
+						for (let val2 of val.channel) {
+							body.attributeMap[val2] = Number(val.customValue);
+						}
+						this.request('put', `${sendCmdtoDevice}/8`, this.token, body);
+					}
+					break;
+				case '窗帘':
+					for (let val of t1.config) {
+						switch (val.productType) {
+							case '1792397648367259648':
+								this.request('put', `${sendCmdtoDevice}/8`, this.token, {
+									contentType: 0,
+									deviceId: val.deviceId,
+									attributeMap: {
+										protocol_code: 1002,
+										ep: 1,
+										id: '',
+										serial: 2,
+										'st.valhex': val.customValue,
+									},
+								});
+								break;
+							case '1722147067370217472':
+								await this.request('put', `${sendCmdtoDevice}/8`, this.token, {
+									contentType: 0,
+									deviceId: val.deviceId,
+									attributeMap: {
+										UARTSET: '[2,485,9600,8,1,0]',
+									},
+								});
+								setTimeout(() => {
+									this.request('put', `${sendCmdtoDevice}/8`, this.token, {
+										contentType: 0,
+										deviceId: val.deviceId,
+										attributeMap: {
+											'CCCMD.Count': 2,
+											'CCCMD.Type': '1',
+											'CCCMD.Fmat': '0',
+											'CCCMD.Cmd': val.customValue,
+											'CCCMD.Config': '[0,0,0,0]',
+										},
+									});
+								}, 100);
+								break;
+						}
+					}
+					break;
+				case '空调':
+					break;
+			}
+			if (list[++index]) {
+				setTimeout(() => {
+					this.send(index, list);
+				}, 500);
+			}
+		},
+		light_switch(index, list, device_id) {
+			this.request(
+				'put',
+				`${sendCmdtoDevice}/8`,
+				this.token,
+				{
+					contentType: 0,
+					deviceId: device_id,
+					attributeMap: {
+						ep: 1,
+						protocol_code: 1002,
+						id: '',
+						serial: 1,
+						[list[index].key]: list[index].value,
+					},
+				},
+				() => {
+					index++;
+					if (list[index]) {
+						setTimeout(() => {
+							this.light_switch(index, list, device_id);
+						}, 500);
+					}
+				}
+			);
+		},
+	},
+};
+// 智慧运算中心IN
+let customSliderInout = {
+	template: `
+    <div class="slider_in_out" :style="style(obj)">
+      <div class="slider" v-for="item,index in channel">
+        <div class="text1 center flex_shrink">{{item.label}}</div>
+        <div class="line1 flex_shrink"></div>
+        <div class="line2 flex_shrink"></div>
+        <div class="button button1 center flex_shrink" @click="custom_order('静音',item)">
+          <img v-show="item.mute==0" src="./img/icon44.png" class="bg_img">
+          <img v-show="item.mute==1" src="./img/icon45.png" class="bg_img">
+          静音
+        </div>
+        <div class="text2 center text_ellipsis flex_shrink">
+          {{item.gain}} dB
+        </div>
+        <div class="slider_box_bottom flex_shrink">
+          <div class="level_box flex_shrink">
+            <span class="text center">{{level_max}}</span>
+            <div class="level">
+              <img src="./img/icon46.png" class="bg_img">
+              <div class="cover" :style="level(item.level)"></div>
+            </div>
+            <span class="text center">{{level_min}}</span>
+          </div>
+          <div class="gain_box flex_shrink">
+            <span class="text center">{{gain_max}}</span>
+            <div class="gain_body flex_shrink">
+              <img src="./img/icon47.png" class="bg_img">
+              <el-slider class="icon2" v-model="item.gain" @change="custom_order('增益',$event)" vertical :show-tooltip="false"
+                :min="gain_min" :max="gain_max" :step="step">
+              </el-slider>
+            </div>
+            <span class="text center">{{gain_min}}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			channel: [], // 通道
+			level_max: 0,
+			level_min: -72,
+			gain_max: 12,
+			gain_min: -72,
+			step: 0.1,
+		};
+	},
+	created() {
+		this.channel = this.obj.dataConfig.channel.map((e) => ({
+			gain: 0,
+			level: 0,
+			mute: 0,
+			label: e.value,
+		}));
+	},
+	methods: {
+		// 电平样式
+		level(level) {
+			let p = (level - this.level_min) / (this.level_max - this.level_min);
+			return { height: `${p * 100}%` };
+		},
+		custom_order(tag, params) {
+			// 区分是IN OUT
+			let type = this.obj.shapeNickname == '智慧运算中心-IN' ? true : false;
+			switch (tag) {
+				case '静音':
+					params.mute = params.mute ? 0 : 1;
+					this.request('put', `${sendCmdtoDevice}/8`, this.token, {
+						contentType: 0,
+						deviceId: this.obj.dataConfig.deviceId,
+						attributeMap: {
+							[type ? 'INMS' : 'OUTMS']: this.channel.map((e) => e.mute),
+						},
+					});
+					break;
+				case '增益':
+					this.request('put', `${sendCmdtoDevice}/8`, this.token, {
+						contentType: 0,
+						deviceId: this.obj.dataConfig.deviceId,
+						attributeMap: {
+							[type ? 'INGS' : 'OUTGS']: this.channel.map((e) => e.gain * 100),
+						},
+					});
+					break;
+			}
+		},
 	},
 };
 

@@ -62,7 +62,7 @@ new Vue({
 					path = 'other/DS-CS310M';
 					break;
 				case 'power_supply':
-					location.href = `../智慧设备/电源设备/index.html${location.search}`;
+					location.href = `../智慧设备/电源设备_新/index.html${location.search}`;
 					return;
 				case 'power_supply2':
 					location.href = `../智慧设备/电源设备2/index.html${location.search}`;
@@ -138,6 +138,12 @@ new Vue({
 					break;
 				case 'screen_control':
 					path = 'screen_control';
+					break;
+				case 'qt_visual':
+					path = 'qt_visual';
+					break;
+				case 'user_scene':
+					path = 'user_scene';
 					break;
 				default:
 					location.href = `${this.path}${location.search}`;

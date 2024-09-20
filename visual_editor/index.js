@@ -46,6 +46,7 @@ new Vue({
 		inject_data: null, // 注入组件的数据
 		drop: {
 			show: false, // 下拉框显示
+			show2: false, // 弹窗内的下拉框显示
 			style: {
 				left: 0, // 下拉框定位
 				top: 0,
@@ -96,7 +97,12 @@ new Vue({
 		});
 		// 监听下拉框事件
 		this.$bus.$on('drop_down_show', ({ list, left, top, id }) => {
-			this.drop.show = true;
+			// 区分是弹窗内下拉框还是外层页面下拉框
+			if (this.popup.show) {
+				this.drop.show2 = true;
+			} else {
+				this.drop.show = true;
+			}
 			this.drop.style.left = left;
 			this.drop.style.top = top;
 			this.drop.options = list;
@@ -346,7 +352,7 @@ new Vue({
 		},
 		// 关闭需要关闭的弹窗
 		close_popup() {
-			this.drop.show = false;
+			this.drop.show = this.drop.show2 = false;
 		},
 	},
 });

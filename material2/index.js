@@ -52,6 +52,7 @@ new Vue({
 			show: false, // 资源下发弹窗
 			list: [], // 设备列表
 			select: [], // 勾选项
+			select_ban: false, // 下发至全部设备时 禁用下拉列表
 		},
 		下发历史: {
 			show: false,
@@ -69,6 +70,16 @@ new Vue({
 			],
 			素材列表: [],
 			表格高度: 0,
+			状态: '',
+			状态列表: [
+				{ label: '无', value: '' },
+				{ label: '等待下载', value: '0' },
+				{ label: '下载中', value: '1' },
+				{ label: '下载成功', value: '2' },
+				{ label: '下载超时', value: '3' },
+				{ label: '取消下载', value: '4' },
+				{ label: '下载失败', value: '5' },
+			],
 		},
 	},
 	async mounted() {
@@ -428,31 +439,60 @@ new Vue({
 			}
 			// 查询发布设备列表
 			this.issue.select = []; // 重置勾选设备
-			let { data: res } = await this.request('get', get_place_devices_url, this.token);
-			if (res.head.code !== 200 || !res.data?.length) {
-				this.$message('未查询到设备');
-				return;
+			this.issue.select_ban = false; // 重置禁用按钮
+
+			if (this.issue.list.length) {
+				this.issue.show = true;
+			} else {
+				let { data: res } = await this.request('get', get_place_devices_url, this.token);
+				if (res.head.code !== 200 || !res.data?.length) {
+					this.$message('未查询到设备');
+					return;
+				}
+				this.issue.show = true;
+				this.issue.list = res.data.map((e) => ({
+					label: e.nodeName,
+					value: e.id,
+					children: e.children.map((e2) => ({
+						label: e2.deviceName,
+						value: e2.deviceId,
+					})),
+				}));
 			}
-			this.issue.show = true;
-			this.issue.list = res.data.map((e) => ({
-				label: e.nodeName,
-				value: e.id,
-				children: e.children.map((e2) => ({
-					label: e2.deviceName,
-					value: e2.deviceId,
-				})),
-			}));
 		},
 		async 下发至设备() {
-			// 未勾选设备不执行
-			if (!this.issue.select.length) {
+			if (!this.issue.select.length && !this.issue.select_ban) {
+				// 未勾选设备 且 未选全部设备下发
+				this.$message('未勾选设备');
 				return;
 			}
+			// 全部设备下发时给个提示
+			if (this.issue.select_ban) {
+				let r = await this.$confirm('确定下载到所有设备?', '提示', {
+					confirmButtonText: '确定',
+					cancelButtonText: '取消',
+					type: 'warning',
+					center: true,
+				})
+					.then(() => true)
+					.catch(() => false);
+				if (!r) {
+					return;
+				}
+			}
 			this.issue.show = false;
-			let { data: res } = await this.request('post', 资源下发至设备url, this.token, {
-				deviceIds: this.issue.select.map((e) => e.pop()),
+			let body = {
 				fileIds: this.selected_material.map((e) => e.id),
-			});
+			};
+			if (this.issue.select_ban) {
+				let t = this.issue.list.map((e) => {
+					return e.children.map((e2) => e2.value);
+				});
+				body.deviceIds = t.reduce((pre, cur) => pre.concat(cur), []);
+			} else {
+				body.deviceIds = this.issue.select.map((e) => e[e.length - 1]);
+			}
+			let { data: res } = await this.request('post', 资源下发至设备url, this.token, body);
 			if (res.head.code !== 200) {
 				this.$message.error('下发失败');
 			} else {
@@ -463,6 +503,7 @@ new Vue({
 			// 重置表单数据
 			this.下发历史.search = '';
 			this.下发历史.素材类型 = 0;
+			this.下发历史.状态 = '';
 			let res = await this.查询下发历史();
 			if (res) {
 				this.下发历史.show = true;
@@ -490,10 +531,13 @@ new Vue({
 			if (this.下发历史.素材类型) {
 				body.condition.fileType = this.下发历史.素材类型;
 			}
+			if (this.下发历史.状态) {
+				body.condition.downloadStatus = this.下发历史.状态;
+			}
 			let { data: res } = await this.request('post', 查询下发历史url, this.token, body);
-			if (res.head.code == 200 && res.data.total) {
-				this.下发历史.total = res.data.total;
-				this.下发历史.素材列表 = res.data.data;
+			if (res.head.code == 200) {
+				this.下发历史.total = res.data.total || 0;
+				this.下发历史.素材列表 = res.data.data || [];
 				return true;
 			} else {
 				return false;
@@ -520,11 +564,11 @@ new Vue({
 				case '2':
 					return '下载成功';
 				case '3':
-					return '下载失败';
+					return '下载超时';
 				case '4':
 					return '取消下载';
 				case '5':
-					return '已删除';
+					return '下载失败';
 			}
 		},
 		重试下载任务(obj) {
@@ -590,6 +634,12 @@ new Vue({
 					}
 				});
 			});
+		},
+		下载到设备(obj) {
+			this.$refs.table.clearSelection();
+			this.$refs.table.toggleRowSelection(obj);
+			this.selected_material = [obj];
+			this.显示资源下发弹窗();
 		},
 	},
 });

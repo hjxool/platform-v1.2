@@ -201,7 +201,14 @@ new Vue({
 					this.html.turn_to_device = true;
 					let name = encodeURIComponent(device_obj.deviceName);
 					this.html.device_name = device_obj.deviceName;
-					this.html.device_url = `../index.html?type=${device_obj.productUrl}&token=${this.token}&id=${device_obj.id}&device_name=${name}`;
+					switch (device_obj.productUrl) {
+						case 'power_supply':
+							this.html.device_url = `../index.html?type=${device_obj.productUrl}&token=${this.token}&deviceId=${device_obj.id}&device_name=${name}&ip=${我是接口地址}&clientId=0&tenantId=0&theme=dark&system=微服务&wsip=${我是websocket地址}`;
+							break;
+						default:
+							this.html.device_url = `../index.html?type=${device_obj.productUrl}&token=${this.token}&id=${device_obj.id}&device_name=${name}`;
+							break;
+					}
 				} else {
 					this.$message('请配置产品调控页面前端标识后再试');
 				}

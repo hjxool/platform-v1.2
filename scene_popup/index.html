@@ -148,11 +148,6 @@
       <div class="place_box" :style="theme_bg_border()" v-loading="devices.loading">
         <div class="head flex_shrink" :style="theme_pophead()">智慧设备</div>
 
-        <!-- <div class="row_layout" style="margin: 10px 0 10px 20px;">
-          <el-button :type="devices.type=='place'?'primary':''" round size="mini">按场所分类</el-button>
-          <el-button :type="devices.type=='product'?'primary':''" round size="mini">按产品分类</el-button>
-        </div> -->
-
         <div v-if="devices.list.length" class="scroll" style="padding-left: 20px;">
           <div v-for="place in devices.list">
             <div class="place_box2 row_layout" @click="select_place(place)">

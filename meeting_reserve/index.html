@@ -294,6 +294,13 @@
             </template>
 
             <template v-if="new_meeting_form.step===2">
+              <el-form-item label="立即通知">
+                <el-select v-model="new_meeting_form.立即通知">
+                  <el-option v-for="item,index in html.bool_options" :label="item" :value="index">
+                  </el-option>
+                </el-select>
+              </el-form-item>
+
               <el-form-item label="是否回复">
                 <el-select v-model="new_meeting_form.reply">
                   <el-option v-for="item,index in html.bool_options" :label="item" :value="index">

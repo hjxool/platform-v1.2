@@ -53,7 +53,7 @@
     </div>
     <!-- 弹窗 -->
     <div class="popup_box" v-if="popup.show">
-      <div class="content_box" :style="{background:popup.style.ys}">
+      <div class="content_box col_layout" :style="{background:popup.style.ys}">
         <div class="head">
           <div class="title">{{this.popup.title}}</div>
           <el-button @click.stop="popup.show=false" type="danger" icon="el-icon-close" circle size="mini"></el-button>
@@ -98,6 +98,14 @@
               <custom-submit-button v-if="item.type=='提交按钮'" :obj="item" :radio="popup.radio" :token="token"
                 :device_id="device_id"></custom-submit-button>
             </template>
+
+            <!-- 下拉框 -->
+            <div class="drop_down_box" v-show="drop.show2"
+              :style="{left:`${drop.style.left}px`, top:`${drop.style.top}px`}">
+              <div class="item text_ellipsis" v-for="item in drop.options" :title="item.label"
+                @click="drop_select(item)">
+                {{item.label}}</div>
+            </div>
           </div>
         </div>
       </div>

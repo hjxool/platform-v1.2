@@ -13,6 +13,7 @@ let protocol_unit_delete = `${url}api-device/protocol/delete`; // 删除单位
 let product_model = `${url}api-device/product/model`; // 启用物模型
 let default_property_url = `${url}api-device/protocol/property/default/list/`; // 查询默认属性列表
 let limits_url = `${url}api-user/menus/current`; //获取菜单权限
+let 查询修改记录url = `${url}api-device/protocol/log`;
 
 Vue.config.productionTip = false;
 new Vue({
@@ -77,7 +78,7 @@ new Vue({
 			},
 			//历史版本列表
 			history_list: [],
-			history_selected: '', //记录选择的是历史版本中的哪一个
+			history_selected: 0, //记录选择的是历史版本中的哪一个
 			model: {}, //当前版本
 			//物模型属性等列表——表格用
 			protocol_list: [],
@@ -133,6 +134,14 @@ new Vue({
 			tips: {
 				all_send: '如果关闭后，将只发送结构体中的字段的值，比如结构构体属性为：T：{"a":1,"b":2},那么如果选择下发控制b的指令时，只会下发b参数的值',
 			},
+			修改: {
+				列表显示: false,
+				列表: [],
+				详情显示: false,
+				修改前: null,
+				修改后: null,
+				表格高: 0,
+			},
 		};
 	},
 	async mounted() {
@@ -180,7 +189,7 @@ new Vue({
 
 		// 页面第一次加载时要根据当前启用物模型查
 		this.first_load = true;
-		this.res_history_model(0);
+		await this.res_history_model(0);
 		this.get_unit();
 		this.get_default_property();
 	},
@@ -1383,6 +1392,79 @@ new Vue({
 					this.res_history_model(this.history_selected);
 				});
 			};
+		},
+		async 查询修改记录() {
+			let { data: res } = await this.request('get', `${查询修改记录url}/${this.model_id}`, this.token);
+			if (res.head.code === 200 && res.data.length) {
+				this.修改.列表显示 = true;
+				this.修改.列表 = res.data.map((e) => {
+					let t1 = e.operation == 0 ? '删除' : e.operation == 1 ? '新增' : '修改';
+					let t2;
+					let pre;
+					let cur;
+					switch (true) {
+						case Boolean(e.properties.length):
+							t2 = '属性';
+							pre = e.propertiesBefore[0];
+							cur = e.properties[0];
+							break;
+						case Boolean(e.services.length):
+							t2 = '服务';
+							pre = e.servicesBefore[0];
+							cur = e.services[0];
+							break;
+						case Boolean(e.events.length):
+							t2 = '事件';
+							pre = e.eventsBefore[0];
+							cur = e.events[0];
+							break;
+					}
+					return {
+						操作: `${t1}${t2}`,
+						修改人: e.modifyUserName,
+						修改时间: e.modifyTime,
+						修改前: pre,
+						修改后: cur,
+					};
+				});
+				this.$nextTick(() => {
+					this.修改.表格高 = document.querySelector('.log_table').offsetHeight;
+				});
+			} else {
+				this.$message('未查询到当前物模型修改记录');
+			}
+		},
+		查看修改记录详情(row_data) {
+			this.修改.详情显示 = true;
+			this.修改.修改前 = this.json加行号(row_data.修改前);
+			this.修改.修改后 = this.json加行号(row_data.修改后);
+			this.$nextTick(() => {
+				this.json_list = document.querySelectorAll('.log_detail > .border');
+			});
+		},
+		json加行号(obj) {
+			let t = JSON.stringify(obj, null, 2);
+			// 根据换行符截断成数组
+			let t2 = t.split('\n');
+			// 每一行前加行号
+			let t3 = t2.map((row, index) => `${index + 1} ${row}`);
+			// 再恢复换行符 合并成字符串返回
+			return t3.join('\n');
+		},
+		json同时滚动(e) {
+			e.preventDefault();
+			switch (true) {
+				case e.wheelDelta > 0:
+					for (let val of this.json_list) {
+						val.scrollTop -= 30;
+					}
+					break;
+				case e.wheelDelta < 0:
+					for (let val of this.json_list) {
+						val.scrollTop += 30;
+					}
+					break;
+			}
 		},
 	},
 });
