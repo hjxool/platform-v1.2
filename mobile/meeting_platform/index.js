@@ -146,6 +146,7 @@ new Vue({
 					endTime: this.today_end,
 					meetingStatus: '0,1,2',
 					auditStatus: 2,
+					isOnlyParticipants: true,
 				},
 			});
 			if (data.head.code !== 200) {

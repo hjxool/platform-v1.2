@@ -8,6 +8,7 @@ let edit_playlist_url = `${url}api-portal/video/update/playList`;
 let get_file_page_url = `${url}api-file/doc/showDocPreViewTotalPage`;
 let get_play_list_url = `${url}api-portal/video/search/playList`; //获取播放列表
 let get_template_list_url = `${url}api-portal/displayBoard/template/list`; //获取模板列表
+let 上传大小限制url = `${url}api-portal/system/config/configKey`;
 
 new Vue({
 	el: '#index',
@@ -81,6 +82,21 @@ new Vue({
 		window.onresize = () => {
 			this.resize();
 		};
+		// 获取上传文件大小限制
+		this.request('get', `${上传大小限制url}/upload_files_limit`, this.token, ({ data }) => {
+			if (data.head.code == 200 && !isNaN(Number(data.data))) {
+				this.图片等限制 = Number(data.data) * Math.pow(1024, 2);
+			} else {
+				this.图片等限制 = 200 * Math.pow(1024, 2);
+			}
+		});
+		this.request('get', `${上传大小限制url}/upload_video_limit`, this.token, ({ data }) => {
+			if (data.head.code == 200 && !isNaN(Number(data.data))) {
+				this.视频限制 = Number(data.data) * Math.pow(1024, 2);
+			} else {
+				this.视频限制 = 2 * Math.pow(1024, 3);
+			}
+		});
 	},
 	methods: {
 		resize() {
@@ -959,9 +975,17 @@ new Vue({
 			let file = document.querySelector('#select_file').files[0];
 			let suffix = file.name.split('.').pop();
 			if (suffix === 'mp4') {
+				if (file.size > this.视频限制) {
+					this.$message.error(`只能上传 ${this.视频限制 / Math.pow(1024, 3)}G 以内的视频`);
+					return;
+				}
 				let t = await this.canvas_video(file);
 				this.upload_file(t);
 			} else {
+				if (file.size > this.图片等限制) {
+					this.$message.error(`只能上传 ${this.图片等限制 / Math.pow(1024, 2)}M 以内的文件`);
+					return;
+				}
 				switch (suffix) {
 					case 'ppt':
 					case 'doc':

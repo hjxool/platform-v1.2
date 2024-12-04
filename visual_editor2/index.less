@@ -280,7 +280,7 @@ video::-webkit-media-controls-play-button {
 // 设备节点名
 .device_name {
 	color: rgb(204, 204, 204);
-	font-size: 16px;
+	// font-size: 16px;
 	position: absolute;
 	left: 50%;
 	transform: translateX(-50%);
@@ -289,60 +289,63 @@ video::-webkit-media-controls-play-button {
 }
 // 当前会议及下场会议
 .cur_meeting {
-	padding: 1rem 1.5rem;
+	display: flex;
 	justify-content: space-between;
+	> .col_layout {
+		justify-content: space-between;
+	}
+	> .row_layout {
+		min-width: 30%;
+		align-self: center;
+		padding: 20px 10px;
+		border-radius: 10px;
+		max-width: 50%;
+		background: #b2ccf3;
+		font-size: 16px;
+	}
 	.icon1 {
 		width: 0.8rem;
 		height: 1rem;
 		margin-right: 0.6rem;
 	}
 	.text1 {
-		color: #3675ff;
+		color: #232a32;
 	}
 	.text2 {
-		font-size: 1.5rem;
-		color: #31313d;
-	}
-	> .box {
-		position: relative;
-		padding: 0.5rem 1rem;
-		width: 50%;
-		overflow: hidden;
-		color: #fff;
-		border-radius: 1000px;
-	}
-	.bg_img {
-		// object-fit: none;
+		color: #2a2930;
 	}
 }
 // 会议结束倒计时
 .count_down {
-	align-items: center;
-	padding: 10px 0;
-	> .title {
-		color: #ffffff;
+	padding-bottom: 16px;
+	justify-content: space-between;
+	background: #eceefa;
+	border-radius: 10px;
+	> .text1 {
+		font-size: 16px;
+		align-self: center;
+		margin: 20px 0;
 	}
 	> .time_box {
-		font-size: 1.2rem;
-		color: #31313d;
-		margin-top: 10px;
+		position: relative;
+		z-index: 10;
+		margin: 0 14px;
+		flex-grow: 1;
 		> .time {
-			position: relative;
-			padding: 5px;
-			& + .time {
-				margin-left: 10px;
+			position: absolute;
+			top: 45%;
+			left: 0;
+			right: 0;
+			margin: auto;
+			> .text2 {
+				letter-spacing: 6px;
+				white-space: nowrap;
+				font-weight: bold;
 			}
-			> .icon {
-				position: relative;
-				padding: 5px;
-				& + .icon {
-					margin-left: 5px;
-				}
+			> .text3 {
+				align-self: center;
 			}
 		}
-	}
-	.bg_img {
-		object-fit: none;
 	}
 }
 // 当前日期
@@ -534,6 +537,7 @@ video::-webkit-media-controls-play-button {
 	.text {
 		font-size: 0.8rem;
 		color: #838096;
+		align-self: center;
 	}
 }
 // 窗帘组件
@@ -567,8 +571,7 @@ video::-webkit-media-controls-play-button {
 }
 // 智慧电源-全开设备
 .power_open {
-	padding-bottom: 1.7rem;
-	justify-content: flex-end;
+	justify-content: center;
 	align-items: center;
 }
 // 智慧开关
@@ -598,7 +601,6 @@ video::-webkit-media-controls-play-button {
 // 扩声组件
 .loud_sound {
 	padding: 1rem 1.6rem;
-	margin-left: 1.5rem;
 	background: #eceefa;
 	box-shadow: 0px 4px 10px 0px rgba(104, 127, 161, 0.25);
 	border-radius: 1.9rem;
@@ -618,7 +620,6 @@ video::-webkit-media-controls-play-button {
 }
 // 灯光组件
 .light_box {
-	margin-left: 1.5rem;
 	background: #eceefa;
 	box-shadow: 0px 4px 10px 0px rgba(104, 127, 161, 0.25);
 	border-radius: 1.9rem;
@@ -661,7 +662,6 @@ video::-webkit-media-controls-play-button {
 .lcd_box {
 	padding: 1rem 1.6rem;
 	justify-content: space-evenly;
-	margin-left: 1.5rem;
 	background: #eceefa;
 	box-shadow: 0px 4px 10px 0px rgba(104, 127, 161, 0.25);
 	border-radius: 1.9rem;
@@ -792,5 +792,12 @@ video::-webkit-media-controls-play-button {
 				}
 			}
 		}
+	}
+}
+// 跳转路径
+.path {
+	padding: 10px 0;
+	.button {
+		color: #fff;
 	}
 }

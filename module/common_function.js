@@ -50,6 +50,7 @@ const common_functions = {
 					}
 				} else if (res.data.head.code == 401) {
 					window.parent.postMessage({ type: 'log_out' });
+					window.android && window.android.logout();
 				} else {
 					if (this.$alert) {
 						this.$alert(res?.data?.head?.message, '提示', {

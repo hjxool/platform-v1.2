@@ -63,17 +63,18 @@
 			> .head {
 				height: 50px;
 				display: grid;
-				grid-template-columns: repeat(3, 1fr);
-				justify-items: center;
+				grid-template-columns: 40px repeat(3, 1fr);
 				align-items: center;
 				overflow: hidden;
 				position: relative;
-				padding-left: 20px;
 				> .icon {
 					position: absolute;
 					left: 0;
 					top: 50%;
 					transform: translateY(-50%);
+				}
+				> .text_ellipsis {
+					max-width: 100%;
 				}
 			}
 			.row_box {
@@ -99,6 +100,7 @@
 	border: 1px solid;
 	border-radius: 6px;
 	display: flex;
+	margin-bottom: 4px;
 	> .list_box {
 		flex-grow: 1;
 		border-right: 1px solid;

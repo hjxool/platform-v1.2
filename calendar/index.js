@@ -1,6 +1,8 @@
 let url = `${我是接口地址}/`;
 let calender_search = `${url}api-portal/meeting/calender/search`;
 let limits_url = `${url}api-user/menus/current`; //获取菜单权限
+let 查询会议室列表url = `${url}api-portal/room/allowOrder/search`;
+let 调整会议url = `${url}api-portal/meeting/adjust`;
 
 Vue.config.productionTip = false;
 new Vue({
@@ -18,6 +20,7 @@ new Vue({
 			meeting_type: 3, // 查询的会议类型 3已通过 4全部用户
 		},
 		week_meeting: [], //周下的会议列表
+		week_meeting2: [], //周样式2的会议列表
 		month_meeting: [], //月下的会议列表
 		meeting_count: [
 			// 会议统计
@@ -29,6 +32,15 @@ new Vue({
 		config: {
 			detail_show: false,
 			create_show: false,
+			编辑会议: false,
+		},
+		编辑会议: {
+			show: false,
+			会议室列表: [],
+			会议室id: '',
+			日期: '',
+			开始时间: '',
+			结束时间: '',
 		},
 	},
 	async mounted() {
@@ -62,6 +74,7 @@ new Vue({
 		}
 		this.config.detail_show = this.is_element_show(limits, '详情');
 		this.config.create_show = this.is_element_show(limits, '创建会议');
+		this.config.编辑会议 = this.is_element_show(limits, '调整会议');
 
 		this.time_display(this.html.time_option);
 	},
@@ -81,12 +94,7 @@ new Vue({
 			for (let val of this.meeting_count) {
 				val.num = 0;
 			}
-			if (index == 0) {
-				// this.week_meeting = [];
-				// 有多个查询条件 就不每次都计算时间了 不改变时间开始和结束日期就不变 只有在切换周/月显示时需要重新计算时间
-				this.start_time = `${this.week_start.getFullYear()}-${this.week_start.getMonth() + 1}-${this.week_start.getDate()} 06:00:00`;
-				this.end_time = `${this.week_end.getFullYear()}-${this.week_end.getMonth() + 1}-${this.week_end.getDate()} 23:00:00`;
-			} else if (index == 1) {
+			if (index == 1) {
 				// 先获取当前年月 然后算当月的1号是周几 然后根据时间戳算周日的日期
 				let d = this.html.month_date.getDate();
 				let t_start = this.html.month_date;
@@ -136,13 +144,16 @@ new Vue({
 				this.start_time = `${d_start.getFullYear()}-${d_start.getMonth() + 1}-${d_start.getDate()} 06:00:00`;
 				let end_day = new Date(d_start.getTime() + 34 * 24 * 60 * 60 * 1000);
 				this.end_time = `${end_day.getFullYear()}-${end_day.getMonth() + 1}-${end_day.getDate()} 23:00:00`;
+			} else {
+				// 有多个查询条件 就不每次都计算时间了 不改变时间开始和结束日期就不变 只有在切换周/月显示时需要重新计算时间
+				this.start_time = `${this.week_start.getFullYear()}-${this.week_start.getMonth() + 1}-${this.week_start.getDate()} 06:00:00`;
+				this.end_time = `${this.week_end.getFullYear()}-${this.week_end.getMonth() + 1}-${this.week_end.getDate()} 23:00:00`;
 			}
 			this.get_meeting_list(index);
 		},
 		// 获取周会议列表
 		get_meeting_list(page_index) {
 			this.meeting_list = [];
-			this.week_meeting = [];
 			this.month_meeting = [];
 			let data = {
 				queryType: this.html.meeting_type,
@@ -152,7 +163,10 @@ new Vue({
 			this.request('post', calender_search, this.token, data, (res) => {
 				console.log(`${page_index ? '月' : '周'}会议`, res);
 				let array = Object.entries(res.data.data);
+				this.week_meeting = [];
+				this.week_meeting2 = [];
 				if (array.length == 0) {
+					this.周会议格式化(array, []);
 					return;
 				}
 				if (page_index) {
@@ -185,7 +199,9 @@ new Vue({
 						}
 					}
 				} else {
-					this.block_height = document.querySelector('.week').offsetHeight / 2;
+					if (page_index === 0) {
+						this.block_height = document.querySelector('.week').offsetHeight / 2;
+					}
 					// 先将页面渲染数组构造出来 再计算位置
 					let t_a = [];
 					for (let i = 0; i < array.length; i++) {
@@ -208,6 +224,7 @@ new Vue({
 							}
 						}
 					}
+					// 周样式1
 					for (let i = 0; i < 7; i++) {
 						let flag = false;
 						for (let j = 0; j < t_a.length; j++) {
@@ -221,6 +238,8 @@ new Vue({
 							this.week_meeting.push([]);
 						}
 					}
+					// 周会议样式2
+					this.周会议格式化(array, t_a);
 				}
 			});
 		},
@@ -264,6 +283,7 @@ new Vue({
 				// 	this.html.date = new Date(this.html.date.getTime() - 24 * 60 * 60 * 1000);
 				// 	break;
 				case 0:
+				case 2:
 					this.html.week_date = new Date(this.html.week_date.getTime() - 7 * 24 * 60 * 60 * 1000);
 					// this.week_format();
 					break;
@@ -290,6 +310,7 @@ new Vue({
 				// 	this.html.date = new Date(this.html.date.getTime() + 24 * 60 * 60 * 1000);
 				// 	break;
 				case 0:
+				case 2:
 					this.html.week_date = new Date(this.html.week_date.getTime() + 7 * 24 * 60 * 60 * 1000);
 					// this.week_format();
 					break;
@@ -339,6 +360,130 @@ new Vue({
 					break;
 			}
 			return `background:${color}`;
+		},
+		周会议格式化(data, map) {
+			for (let i = 0; i < 7; i++) {
+				let flag = false;
+				for (let j = 0; j < map.length; j++) {
+					if (i == map[j]) {
+						flag = true;
+						let t = {
+							日期: this.根据星期获取日期(i),
+							星期: this.星期格式化(i),
+							上午: [],
+							下午: [],
+						};
+						// 遍历当天会议 分成上午下午
+						// 以当天 12点前为上午 12点后为下午
+						let t2 = new Date(`${data[j][0]} 12:00:00`).getTime();
+						for (let val of data[j][1]) {
+							let t3 = new Date(val.startTime).getTime();
+							if (t3 < t2) {
+								t.上午.push(val);
+							} else {
+								t.下午.push(val);
+							}
+						}
+						this.week_meeting2.push(t);
+						break;
+					}
+				}
+				if (!flag) {
+					this.week_meeting2.push({
+						日期: this.根据星期获取日期(i),
+						星期: this.星期格式化(i),
+						上午: [],
+						下午: [],
+					});
+				}
+			}
+		},
+		星期格式化(day) {
+			switch (day) {
+				case 0:
+					return '周日';
+				case 1:
+					return '周一';
+				case 2:
+					return '周二';
+				case 3:
+					return '周三';
+				case 4:
+					return '周四';
+				case 5:
+					return '周五';
+				case 6:
+					return '周六';
+			}
+		},
+		根据星期获取日期(day) {
+			let t = this.week_start.getTime() + day * 24 * 60 * 60 * 1000;
+			let t2 = new Date(t);
+			return `${t2.getMonth() + 1}月${t2.getDate()}日`;
+		},
+		async 显示编辑会议(meeting) {
+			let r = await this.查询会议室列表();
+			if (r) {
+				this.编辑会议.show = true;
+				this.编辑会议.会议室id = meeting.roomId;
+				this.编辑会议.日期 = new Date(meeting.date);
+				this.编辑会议.开始时间 = meeting.start;
+				this.编辑会议.结束时间 = meeting.end;
+				this.编辑会议.id = meeting.id;
+			}
+		},
+		// 预约日期不能是当天之前的
+		date_options() {
+			return {
+				disabledDate(curr_time) {
+					return curr_time.getTime() < Date.now() - 86400000;
+				},
+			};
+		},
+		async 查询会议室列表() {
+			let { data: res } = await this.request('post', 查询会议室列表url, this.token, {});
+			if (res.head.code !== 200 || !res.data?.length) {
+				return false;
+			}
+			this.编辑会议.会议室列表 = res.data.map((e) => ({
+				id: e.id,
+				name: e.roomName,
+			}));
+			return true;
+		},
+		async 确认编辑() {
+			let d = `${this.编辑会议.日期.getFullYear()}-${this.编辑会议.日期.getMonth() + 1}-${this.编辑会议.日期.getDate()}`;
+			this.html.loading = true;
+			let { data: res } = await this.request('put', 调整会议url, this.token, {
+				id: this.编辑会议.id,
+				startTime: `${d} ${this.编辑会议.开始时间}:00`,
+				endTime: `${d} ${this.编辑会议.结束时间}:00`,
+				roomId: this.编辑会议.会议室id,
+			});
+			this.html.loading = false;
+			if (res.head.code === 200) {
+				this.编辑会议.show = false;
+				this.time_display(this.html.time_option);
+			}
+		},
+		切换样式() {
+			// 根据当前 time_option 取反
+			switch (this.html.time_option) {
+				case 0:
+					this.html.time_option = 2;
+					break;
+				case 2:
+					this.html.time_option = 0;
+					break;
+			}
+		},
+		周月按钮样式(index) {
+			switch (index) {
+				case 0:
+					return this.html.time_option === 0 || this.html.time_option === 2;
+				case 1:
+					return this.html.time_option === index;
+			}
 		},
 	},
 });

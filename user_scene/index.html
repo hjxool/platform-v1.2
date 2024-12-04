@@ -1,413 +1,436 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>用户场景设置</title>
+    <link rel="stylesheet" href="../module/element-ui.css" />
+    <link rel="stylesheet" href="../module/common_style.css" />
+    <link rel="stylesheet" href="./index.css" />
+  </head>
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>用户场景设置</title>
-  <link rel="stylesheet" href="../module/element-ui.css">
-  <link rel="stylesheet" href="../module/common_style.css">
-  <link rel="stylesheet" href="./index.css">
-</head>
+  <body>
+    <div id="index" v-cloak v-loading="loading">
+      <div class="header row_layout">
+        <div class="label">状态</div>
+        <el-select class="input" v-model="search.status" @change="get_scene_list" :disabled="search.status_ban">
+          <el-option v-for="item in search.status_options" :key="item.value" :label="item.label" :value="item.value"> </el-option>
+        </el-select>
 
-<body>
-  <div id="index" v-cloak v-loading="loading">
-    <div class="header row_layout">
-      <div class="label">状态</div>
-      <el-select class="input" v-model="search.status" @change="get_scene_list" :disabled="search.status_ban">
-        <el-option v-for="item in search.status_options" :key="item.value" :label="item.label" :value="item.value">
-        </el-option>
-      </el-select>
+        <div class="label">创建时间</div>
+        <el-date-picker
+          class="input"
+          v-model="search.time_range"
+          @change="get_scene_list"
+          type="daterange"
+          range-separator="-"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
+        >
+        </el-date-picker>
 
-      <div class="label">创建时间</div>
-      <el-date-picker class="input" v-model="search.time_range" @change="get_scene_list" type="daterange"
-        range-separator="-" start-placeholder="开始日期" end-placeholder="结束日期">
-      </el-date-picker>
+        <div class="label">场景名称</div>
+        <el-input class="input" v-model="search.keyword" @change="get_scene_list" clearable></el-input>
+      </div>
 
-      <div class="label">场景名称</div>
-      <el-input class="input" v-model="search.keyword" @change="get_scene_list" clearable></el-input>
-    </div>
+      <div class="header row_layout">
+        <el-button class="input" @click="edit_scene('add')" type="primary" icon="el-icon-plus">新建场景</el-button>
 
-    <div class="header row_layout">
-      <el-button class="input" @click="edit_scene('add')" type="primary" icon="el-icon-plus">新建场景</el-button>
+        <el-radio-group v-model="search.type" @change="change_scene_type" size="medium">
+          <el-radio-button v-for="item in search.type_options" :label="item.value"> {{item.label}} </el-radio-button>
+        </el-radio-group>
+      </div>
 
-      <el-radio-group v-model="search.type" @change="change_scene_type" size="medium">
-        <el-radio-button v-for="item in search.type_options" :label="item.value">
-          {{item.label}}
-        </el-radio-button>
-      </el-radio-group>
-    </div>
+      <div class="body">
+        <el-table :data="table.data" :max-height="table.h">
+          <el-table-column label="名称" align="center" prop="sceneName"> </el-table-column>
+          <!-- 手动场景 -->
+          <template v-if="search.type === 1">
+            <el-table-column label="创建时间" align="center" prop="created"> </el-table-column>
 
-    <div class="body">
-      <el-table :data="table.data" :max-height="table.h">
-        <el-table-column label="名称" align="center" prop="sceneName">
-        </el-table-column>
-        <!-- 手动场景 -->
-        <template v-if="search.type === 1">
-          <el-table-column label="创建时间" align="center" prop="createTime">
-          </el-table-column>
+            <el-table-column label="更新时间" align="center" prop="modified"> </el-table-column>
+          </template>
+          <!-- 自动场景 -->
+          <template v-if="search.type === 2">
+            <el-table-column label="执行周期" align="center">
+              <template slot-scope="scope">
+                <el-tag v-for="t in scope.row.excu_list" type="warning">{{ excu_text(t) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="执行时间" align="center" prop="executeTime"> </el-table-column>
+            <el-table-column label="起止日期" align="center">
+              <template slot-scope="scope">
+                <div class="col_layout" style="align-items: center">
+                  <div>{{ scope.row.planDatetimeStart }}</div>
+                  <div style="margin: 10px 0">~</div>
+                  <div>{{ scope.row.planDatetimeEnd }}</div>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" align="center">
+              <template slot-scope="scope">
+                <el-tag :type="scope.row.status ? 'success' : 'danger'">{{ scope.row.status ? '启动' : '停止' }}</el-tag>
+              </template>
+            </el-table-column>
+          </template>
+          <!-- 条件场景 -->
+          <template v-if="search.type === 3">
+            <el-table-column label="状态" align="center">
+              <template slot-scope="scope">
+                <el-tag :type="scope.row.status ? 'success' : 'danger'">{{ scope.row.status ? '启动' : '停止' }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="条件类型" align="center">
+              <template slot-scope="scope">
+                <div>{{ conditiom_text(scope.row.sceneConditionParamVOS) }}</div>
+              </template>
+            </el-table-column>
+          </template>
 
-          <el-table-column label="更新时间" align="center" prop="updateTime">
-          </el-table-column>
-        </template>
-        <!-- 自动场景 -->
-        <template v-if="search.type === 2">
-          <el-table-column label="执行周期" align="center">
+          <el-table-column fixed="right" label="操作" align="center" width="300">
             <template slot-scope="scope">
-              <el-tag v-for="t in scope.row.excu_list" type="warning">{{ excu_text(t) }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="执行时间" align="center" prop="executeTime">
-          </el-table-column>
-          <el-table-column label="起止日期" align="center">
-            <template slot-scope="scope">
-              <div class="col_layout" style="align-items: center">
-                <div>{{ scope.row.planDatetimeStart }}</div>
-                <div style="margin: 10px 0">~</div>
-                <div>{{ scope.row.planDatetimeEnd }}</div>
+              <div class="row_layout">
+                <el-button v-if="search.type === 1" @click="excu_scene(scope.row)" type="success" size="medium">执行</el-button>
+                <el-button v-if="search.type !== 1" @click="start_stop(scope.row)" :type="scope.row.status ? 'danger' : 'success'" size="medium">
+                  {{ scope.row.status ? '停止' : '启动' }}
+                </el-button>
+                <el-button @click="edit_scene('edit', scope.row)" type="primary" size="medium">编辑</el-button>
+                <el-button @click="edit_scene('del', scope.row)" type="primary" size="medium">删除</el-button>
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="状态" align="center">
-            <template slot-scope="scope">
-              <el-tag :type="scope.row.status ? 'success' : 'danger'">{{ scope.row.status ? '启动' : '停止' }}</el-tag>
-            </template>
-          </el-table-column>
-        </template>
-        <!-- 条件场景 -->
-        <template v-if="search.type === 3">
-          <el-table-column label="状态" align="center">
-            <template slot-scope="scope">
-              <el-tag :type="scope.row.status ? 'success' : 'danger'">{{ scope.row.status ? '启动' : '停止' }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="条件类型" align="center">
-            <template slot-scope="scope">
-              <div>{{ conditiom_text(scope.row.sceneConditionParamVOS) }}</div>
-            </template>
-          </el-table-column>
-        </template>
+        </el-table>
+      </div>
 
-        <el-table-column fixed="right" label="操作" align="center" width="300">
-          <template slot-scope="scope">
-            <div class="row_layout">
-              <el-button v-if="search.type === 1" @click="excu_scene(scope.row)" type="success"
-                size="medium">执行</el-button>
-              <el-button v-if="search.type !== 1" @click="start_stop(scope.row)"
-                :type="scope.row.status ? 'danger' : 'success'" size="medium">
-                {{ scope.row.status ? '停止' : '启动' }}
-              </el-button>
-              <el-button @click="edit_scene('edit', scope.row)" type="primary" size="medium">编辑</el-button>
-              <el-button @click="edit_scene('del', scope.row)" type="primary" size="medium">删除</el-button>
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
-    </div>
+      <div class="footer row_layout">
+        <el-pagination
+          @current-change="page_change"
+          :current-page="search.page.cur"
+          :page-size="search.page.size"
+          layout="total, prev, pager, next"
+          :total="search.page.total"
+          background
+        >
+        </el-pagination>
+      </div>
 
-    <div class="footer row_layout">
-      <el-pagination @current-change="page_change" :current-page="search.page.cur" :page-size="search.page.size"
-        layout="total, prev, pager, next" :total="search.page.total" background>
-      </el-pagination>
-    </div>
+      <!-- 弹窗 -->
+      <!-- 表单 -->
+      <div class="popover" v-if="form.show">
+        <div class="form_box col_layout" v-loading="form.loading">
+          <div class="head row_layout">
+            <div>场景规则</div>
 
-    <!-- 弹窗 -->
-    <!-- 表单 -->
-    <div class="popover" v-if="form.show">
-      <div class="form_box col_layout" v-loading="form.loading">
-        <div class="head row_layout">
-          <div>场景规则</div>
+            <el-button @click="form.show=false" type="danger" icon="el-icon-close" circle size="mini"></el-button>
+          </div>
 
-          <el-button @click="form.show=false" type="danger" icon="el-icon-close" circle size="mini"></el-button>
-        </div>
-
-        <div class="col_layout flex_grow">
-          <div class="body flex_grow">
-            <el-form :model="form.data" label-width="auto">
-              <el-form-item label="场景名称" prop="name" required :show-message="false">
-                <el-input v-model="form.data.name"></el-input>
-              </el-form-item>
-
-              <el-form-item label="执行方式" prop="method" required :show-message="false">
-                <el-select v-model="form.data.method" :disabled="form.ban">
-                  <el-option v-for="item in form.methods" :label="item.name" :value="item.val"></el-option>
-                </el-select>
-              </el-form-item>
-              <!-- 自动执行 -->
-              <template v-if="form.data.method === 2">
-                <el-form-item label="执行日期" prop="date_range" required :show-message="false">
-                  <el-date-picker v-model="form.data.date_range" type="daterange" range-separator="至"
-                    start-placeholder="开始日期" end-placeholder="结束日期">
-                  </el-date-picker>
+          <div class="col_layout flex_grow">
+            <div class="body flex_grow">
+              <el-form :model="form.data" label-width="auto">
+                <el-form-item label="场景名称" prop="name" required :show-message="false">
+                  <el-input v-model="form.data.name"></el-input>
                 </el-form-item>
 
-                <el-form-item label="执行时间" prop="start_time" required :show-message="false">
-                  <el-time-picker v-model="form.data.start_time">
-                  </el-time-picker>
-                </el-form-item>
-
-                <el-form-item label="执行周期" prop="cycle" required :show-message="false">
-                  <el-select v-model="form.data.cycle" multiple placeholder="每周执行">
-                    <el-option v-for="item in form.weeks" :label="item.name" :value="item.val">
-                    </el-option>
+                <el-form-item label="执行方式" prop="method" required :show-message="false">
+                  <el-select v-model="form.data.method" :disabled="form.ban">
+                    <el-option v-for="item in form.methods" :label="item.name" :value="item.val"></el-option>
                   </el-select>
                 </el-form-item>
-              </template>
-              <!-- 条件执行 -->
-              <template v-if="form.data.method === 3">
-                <el-form-item label="条件类型" prop="condition_type" required :show-message="false">
-                  <el-select v-model="form.data.condition_type">
-                    <el-option label="场所活动开始前" :value="0"></el-option>
-                    <el-option label="场所活动结束后" :value="1"></el-option>
-                  </el-select>
-                </el-form-item>
+                <!-- 自动执行 -->
+                <template v-if="form.data.method === 2">
+                  <el-form-item label="执行日期" prop="date_range" required :show-message="false">
+                    <el-date-picker
+                      v-model="form.data.date_range"
+                      type="daterange"
+                      range-separator="至"
+                      start-placeholder="开始日期"
+                      end-placeholder="结束日期"
+                    >
+                    </el-date-picker>
+                  </el-form-item>
 
-                <el-form-item :label="form.condition_type ? '结束后' : '开始前'" prop="time_unit">
-                  <div class="row_layout">
-                    <el-input-number size="small" v-model="form.data.condition_time" :step="1" :min="0"
-                      step-strictly></el-input-number>
-                    <el-select v-model="form.data.condition_unit" size="small" style="width: 80px; margin-left: 20px">
-                      <el-option v-for="item in form.units" :label="item.name" :value="item.val"></el-option>
+                  <el-form-item label="执行时间" prop="start_time" required :show-message="false">
+                    <el-time-picker v-model="form.data.start_time"> </el-time-picker>
+                  </el-form-item>
+
+                  <el-form-item label="执行周期" prop="cycle" required :show-message="false">
+                    <el-select v-model="form.data.cycle" multiple placeholder="每周执行">
+                      <el-option v-for="item in form.weeks" :label="item.name" :value="item.val"> </el-option>
                     </el-select>
-                  </div>
-                </el-form-item>
-              </template>
-              <!-- 传感器 -->
-              <template v-if="form.data.method === 4">
-                <el-form-item label="阈值" required :show-message="false">
-                  <div class="threshold_box">
-                    <div class="list_box flex_grow">
-                      <div class="title flex_shrink">
-                        <span v-for="text in form.threshold_titles">
-                          {{ text }}
-                        </span>
+                  </el-form-item>
+                </template>
+                <!-- 条件执行 -->
+                <template v-if="form.data.method === 3">
+                  <el-form-item label="条件类型" prop="condition_type" required :show-message="false">
+                    <el-select v-model="form.data.condition_type">
+                      <el-option label="场所活动开始前" :value="0"></el-option>
+                      <el-option label="场所活动结束后" :value="1"></el-option>
+                    </el-select>
+                  </el-form-item>
+
+                  <el-form-item :label="form.condition_type ? '结束后' : '开始前'" prop="time_unit">
+                    <div class="row_layout">
+                      <el-input-number size="small" v-model="form.data.condition_time" :step="1" :min="0" step-strictly></el-input-number>
+                      <el-select v-model="form.data.condition_unit" size="small" style="width: 80px; margin-left: 20px">
+                        <el-option v-for="item in form.units" :label="item.name" :value="item.val"></el-option>
+                      </el-select>
+                    </div>
+                  </el-form-item>
+                </template>
+                <!-- 传感器 -->
+                <template v-if="form.data.method === 4">
+                  <el-form-item label="阈值" required :show-message="false">
+                    <div class="threshold_box">
+                      <div class="list_box flex_grow">
+                        <div class="title flex_shrink">
+                          <span v-for="text in form.threshold_titles"> {{ text }} </span>
+                        </div>
+
+                        <div class="scroll">
+                          <div class="box" v-for="(item, index) in form.data.threshold" :key="index">
+                            <div class="head" @click="select_server(item)">
+                              <i v-show="!item.check" class="el-icon-arrow-right"></i>
+                              <i v-show="item.check" class="el-icon-arrow-down"></i>
+
+                              <span class="text_ellipsis" :title="item.id"> {{ item.id }} </span>
+                              <span class="text_ellipsis" :title="item.name"> {{ item.name }} </span>
+                              <el-select v-model="item.type" size="mini" style="width: 100px; justify-self: center">
+                                <el-option label="全部与" :value="true"> </el-option>
+                                <el-option label="全部或" :value="false"> </el-option>
+                              </el-select>
+                            </div>
+
+                            <div v-show="item.check">
+                              <div class="row_box row_layout" v-for="item2 in item.condition">
+                                <div>{{ item2.name }}</div>
+
+                                <el-select v-model="item2.ct" size="mini" style="width: 100px">
+                                  <el-option v-for="op in form.operators" :key="op.value" :label="op.label" :value="op.value"> </el-option>
+                                </el-select>
+
+                                <el-input v-model="item2.value" clearable size="mini" style="width: 100px"></el-input>
+                              </div>
+                            </div>
+
+                            <div v-show="item.check" class="bg2 bg_img"></div>
+                          </div>
+                        </div>
                       </div>
 
-                      <div class="scroll">
-                        <div class="box" v-for="(item, index) in form.data.threshold" :key="index">
-                          <div class="head" @click="select_server(item)">
-                            <i v-show="!item.check" class="el-icon-arrow-right"></i>
-                            <i v-show="item.check" class="el-icon-arrow-down"></i>
+                      <!-- 功能按钮 -->
+                      <div class="buttons flex_shrink col_layout">
+                        <img class="icon flex_shrink button" @click="threshold_tool(0)" :src="threshold_button_img('添加')" />
+                        <img
+                          class="icon flex_shrink"
+                          @click="threshold_tool(1)"
+                          :style="threshold_button_style()"
+                          :src="threshold_button_img('删除')"
+                        />
+                      </div>
+                    </div>
+                  </el-form-item>
+                </template>
+                <!-- 服务列表 需修改 -->
+                <div class="server_box flex_shrink">
+                  <div class="list_box">
+                    <div class="title flex_shrink">
+                      <span v-for="text in form.titles">{{ text }}</span>
+                    </div>
 
-                            <span class="text_ellipsis" :title="item.id" style="justify-self: start">
-                              {{ item.id }}
-                            </span>
-                            <span class="text_ellipsis" :title="item.name">
-                              {{ item.name }}
-                            </span>
-                            <el-select v-model="item.type" size="mini" style="width: 100px">
-                              <el-option label="全部与" :value="true">
-                              </el-option>
-                              <el-option label="全部或" :value="false">
-                              </el-option>
-                            </el-select>
-                          </div>
+                    <div class="scroll">
+                      <div class="server" v-for="(item, index) in form.data.servers" :key="index">
+                        <div class="head" @click="select_server(item)">
+                          <i v-if="item.deviceCommandType === 2" v-show="!item.check" class="el-icon-arrow-right"></i>
+                          <i v-if="item.deviceCommandType === 2" v-show="item.check" class="el-icon-arrow-down"></i>
+                          <span v-else> </span>
+                          <span class="text_ellipsis" :title="item.configName">{{ item.configName }}</span>
+                          <span class="text_ellipsis" :title="item.deviceName">{{ item.deviceName }}</span>
+                          <span class="text_ellipsis" :title="item.placeName">{{ item.placeName }}</span>
+                          <!-- <span>{{ item.delay }}</span> -->
+                          <div v-show="item.check" class="bg2 bg_img"></div>
+                        </div>
 
-                          <div v-show="item.check">
-                            <div class="row_box row_layout" v-for="item2 in item.condition">
-                              <div>{{ item2.name }}</div>
-
-                              <el-select v-model="item2.ct" size="mini" style="width: 100px">
-                                <el-option v-for="op in form.operators" :key="op.value" :label="op.label"
-                                  :value="op.value">
-                                </el-option>
-                              </el-select>
-
-                              <el-input v-model="item2.value" clearable size="mini" style="width: 100px"></el-input>
+                        <div
+                          v-show="item.check && item.deviceCommandType === 2"
+                          style="height: 50px; width: 100%; background: rgba(86, 158, 248, 0.1)"
+                        >
+                          <div class="setting_box">
+                            <!-- 可选组件 -->
+                            <div class="row_layout">
+                              <span>配置：</span>
+                              <all_components :server="item"></all_components>
+                            </div>
+                            <!-- 延迟设置 -->
+                            <div class="row_layout">
+                              <span style="color: #05050b">延迟：</span>
+                              <el-input v-model="item.delayExecuteMillis" style="width: 60px" size="mini"></el-input>
+                              <span style="color: #05050b">毫秒</span>
                             </div>
                           </div>
-
-                          <div v-show="item.check" class="bg2 bg_img"></div>
                         </div>
                       </div>
                     </div>
-
-                    <!-- 功能按钮 -->
-                    <div class="buttons flex_shrink col_layout">
-                      <img class="icon flex_shrink button" @click="threshold_tool(0)"
-                        :src="threshold_button_img('添加')" />
-                      <img class="icon flex_shrink" @click="threshold_tool(1)" :style="threshold_button_style()"
-                        :src="threshold_button_img('删除')" />
-                    </div>
                   </div>
-                </el-form-item>
+                  <!-- 功能按钮 -->
+                  <div class="buttons flex_shrink col_layout">
+                    <img
+                      class="icon flex_shrink"
+                      v-for="(img, index) in form.button_light"
+                      :src="button_img(img, index)"
+                      :style="button_style(index)"
+                      @click="server_tool(index)"
+                    />
+                  </div>
+                </div>
+              </el-form>
+            </div>
+
+            <div class="row_layout flex_shrink" style="justify-content: center; margin-top: 20px">
+              <el-button type="primary" @click="save_scene">保存</el-button>
+              <el-button @click="form.show = false">取消</el-button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 场所设备列表弹窗 -->
+      <div class="popover" v-if="devices.show">
+        <div class="place_box" v-loading="devices.loading">
+          <div class="head flex_shrink">智慧设备</div>
+
+          <div v-if="devices.list.length" class="scroll" style="padding-left: 20px">
+            <div v-for="place in devices.list">
+              <div class="place_box2 row_layout" @click="select_place(place)">
+                <i v-show="devices.place_id != place.id" class="el-icon-arrow-right icon"></i>
+                <i v-show="devices.place_id == place.id" class="el-icon-arrow-down icon"></i>
+
+                <span class="text">{{ place.placeName }}</span>
+              </div>
+
+              <div style="padding-left: 20px" v-show="devices.place_id == place.id">
+                <div class="device_box row_layout" v-for="device in place.devices">
+                  <span class="text text_ellipsis" :title="device.deviceName"> {{ device.deviceName }} </span>
+
+                  <el-button class="flex_shrink" size="mini" round @click.stop="set_config(device, place)">配置</el-button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-show="!devices.list.length" class="center">无设备</div>
+
+          <div class="foot flex_shrink">
+            <el-button @click="devices.show = false">关闭</el-button>
+          </div>
+        </div>
+      </div>
+      <!-- 服务配置弹窗 需修改 -->
+      <div class="popover" v-if="servers.show">
+        <div class="server_box2">
+          <div class="head flex_shrink">可选服务</div>
+
+          <div class="search flex_shrink row_layout">
+            <el-checkbox class="flex_shrink" :indeterminate="servers.isIndeterminate" v-model="servers.checkAll" @change="server_checkall"
+              >全选</el-checkbox
+            >
+          </div>
+
+          <div class="scroll">
+            <div class="row_layout" v-for="server in servers.list">
+              <el-divider v-if="server.partingLine" content-position="left" border-style="dashed">{{server.partingLine}}</el-divider>
+              <template v-else>
+                <el-checkbox class="flex_shrink" v-model="server.check" @change="select_server2(null)"></el-checkbox>
+
+                <span class="text text_ellipsis" @click="select_server2(server)" :title="server.configName"> {{ server.configName }} </span>
+                <all_components v-if="server.deviceCommandType === 2" :server="server"></all_components>
               </template>
-              <!-- 服务列表 -->
-              <div class="server_box flex_shrink">
-                <div class="list_box">
-                  <div class="title flex_shrink">
-                    <span v-for="text in form.titles">{{ text }}</span>
-                  </div>
-
-                  <div class="scroll">
-                    <div class="server" v-for="(item, index) in form.data.servers" :key="index"
-                      @click="select_server(item)">
-                      <span class="text_ellipsis" :title="item.configName">{{ item.configName }}</span>
-                      <span class="text_ellipsis" :title="item.deviceName">{{ item.deviceName }}</span>
-                      <span class="text_ellipsis" :title="item.placeName">{{ item.placeName }}</span>
-                      <!-- <span>{{ item.delay }}</span> -->
-                      <div v-show="item.check" class="bg2 bg_img"></div>
-                    </div>
-                  </div>
-                </div>
-                <!-- 功能按钮 -->
-                <div class="buttons flex_shrink col_layout">
-                  <img class="icon flex_shrink" v-for="(img, index) in form.button_light" :src="button_img(img, index)"
-                    :style="button_style(index)" @click="server_tool(index)" />
-                </div>
-              </div>
-            </el-form>
-          </div>
-
-          <div class="row_layout flex_shrink" style="justify-content: center; margin-top: 20px">
-            <el-button type="primary" @click="save_scene">保存</el-button>
-            <el-button @click="form.show = false">取消</el-button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- 场所设备列表弹窗 -->
-    <div class="popover" v-if="devices.show">
-      <div class="place_box" v-loading="devices.loading">
-        <div class="head flex_shrink">智慧设备</div>
-
-        <div v-if="devices.list.length" class="scroll" style="padding-left: 20px">
-          <div v-for="place in devices.list">
-            <div class="place_box2 row_layout" @click="select_place(place)">
-              <i v-show="devices.place_id != place.id" class="el-icon-arrow-right icon"></i>
-              <i v-show="devices.place_id == place.id" class="el-icon-arrow-down icon"></i>
-
-              <span class="text">{{ place.placeName }}</span>
-            </div>
-
-            <div style="padding-left: 20px" v-show="devices.place_id == place.id">
-              <div class="device_box row_layout" v-for="device in place.devices">
-                <span class="text text_ellipsis" :title="device.deviceName">
-                  {{ device.deviceName }}
-                </span>
-
-                <el-button class="flex_shrink" size="mini" round @click.stop="set_config(device, place)">配置</el-button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div v-show="!devices.list.length" class="center">无设备</div>
-
-        <div class="foot flex_shrink">
-          <el-button @click="devices.show = false">关闭</el-button>
-        </div>
-      </div>
-    </div>
-    <!-- 服务配置弹窗 -->
-    <div class="popover" v-if="servers.show">
-      <div class="server_box2">
-        <div class="head flex_shrink">可选服务</div>
-
-        <div class="search flex_shrink row_layout">
-          <el-checkbox class="flex_shrink" :indeterminate="servers.isIndeterminate" v-model="servers.checkAll"
-            @change="server_checkall">全选</el-checkbox>
-        </div>
-
-        <div class="scroll">
-          <div class="row_layout" v-for="server in servers.list">
-            <el-checkbox class="flex_shrink" v-model="server.check" @change="select_server2(null)"></el-checkbox>
-
-            <span class="text text_ellipsis" @click="select_server2(server)" :title="server.configName">
-              {{ server.configName }}
-            </span>
-
-            <!-- <div class="row_layout">
+              <!-- <div class="row_layout">
 							<div>延迟</div>
 							<el-input v-model="server.delay" style="width: 100px"></el-input>
 							<div>秒</div>
 						</div> -->
-          </div>
-        </div>
-
-        <div class="foot flex_shrink">
-          <el-button @click="server_submit" type="primary">确定</el-button>
-          <el-button @click="servers.show = false">取消</el-button>
-        </div>
-      </div>
-    </div>
-    <!-- 延迟配置 -->
-    <div class="popover" v-if="delay.show">
-      <div class="server_box3">
-        <div class="head flex_shrink">延迟设置</div>
-
-        <div class="scroll">
-          <div class="row_layout" v-for="server in delay.list">
-            <span class="text text_ellipsis flex_shrink" :title="server.configName">
-              {{ server.configName }}
-            </span>
-
-            <div class="row_layout">
-              <span style="color: #05050b">延迟</span>
-
-              <el-input v-model="server.delay" style="width: 60px" size="small"></el-input>
-
-              <span style="color: #05050b">秒</span>
             </div>
           </div>
-        </div>
 
-        <div class="foot flex_shrink">
-          <el-button @click="delay_submit" type="primary">确定</el-button>
-          <el-button @click="delay.show = false">取消</el-button>
-        </div>
-      </div>
-    </div>
-    <!-- 传感器条件设置弹窗 -->
-    <div class="popover" v-if="threshold.show">
-      <div class="server_box2">
-        <div class="head flex_shrink">设置条件</div>
-        <!-- 按钮 -->
-        <div class="search flex_shrink row_layout">
-          <el-button @click="add_condition" icon="Plus">添加条件</el-button>
-
-          <el-select v-model="threshold.is_and" style="width: 100px; margin-left: 30px">
-            <el-option label="全部与" :value="true"></el-option>
-            <el-option label="全部或" :value="false"></el-option>
-          </el-select>
-        </div>
-        <!-- 列标题 -->
-        <div class="set_condition flex_shrink">
-          <div>绑定属性</div>
-          <div>选择条件</div>
-          <div>阈值</div>
-        </div>
-        <!-- 条件列表 -->
-        <div class="scroll">
-          <div class="set_condition" v-for="(item1, index) in threshold.list">
-            <el-select v-model="item1.config_id" placeholder="请选择" size="small">
-              <el-option v-for="item2 in threshold.select_list" :key="item2.id" :label="item2.configName"
-                :value="item2.id"> </el-option>
-            </el-select>
-
-            <el-select v-model="item1.operator" placeholder="条件" size="small" style="width: 100px">
-              <el-option v-for="op in form.operators" :key="op.value" :label="op.label" :value="op.value"></el-option>
-            </el-select>
-
-            <el-input v-model="item1.value" clearable size="small" style="width: 100px"></el-input>
-
-            <el-button @click="del_device_condition(index)" type="danger" icon="Delete" circle size="small"></el-button>
+          <div class="foot flex_shrink">
+            <el-button @click="server_submit" type="primary">确定</el-button>
+            <el-button @click="servers.show = false">取消</el-button>
           </div>
         </div>
+      </div>
+      <!-- 延迟配置 -->
+      <div class="popover" v-if="delay.show">
+        <div class="server_box3">
+          <div class="head flex_shrink">延迟设置</div>
 
-        <div class="foot flex_shrink">
-          <el-button @click="threshold_submit" type="primary">确定</el-button>
-          <el-button @click="threshold.show = false">取消</el-button>
+          <div class="scroll">
+            <div class="row_layout" v-for="server in delay.list">
+              <span class="text text_ellipsis flex_shrink" :title="server.configName"> {{ server.configName }} </span>
+
+              <div class="row_layout">
+                <span style="color: #05050b">延迟</span>
+
+                <el-input v-model="server.delay" style="width: 60px" size="small"></el-input>
+
+                <span style="color: #05050b">秒</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="foot flex_shrink">
+            <el-button @click="delay_submit" type="primary">确定</el-button>
+            <el-button @click="delay.show = false">取消</el-button>
+          </div>
+        </div>
+      </div>
+      <!-- 传感器条件设置弹窗 -->
+      <div class="popover" v-if="threshold.show">
+        <div class="server_box2">
+          <div class="head flex_shrink">设置条件</div>
+          <!-- 按钮 -->
+          <div class="search flex_shrink row_layout">
+            <el-button @click="add_condition" icon="Plus">添加条件</el-button>
+
+            <el-select v-model="threshold.is_and" style="width: 100px; margin-left: 30px">
+              <el-option label="全部与" :value="true"></el-option>
+              <el-option label="全部或" :value="false"></el-option>
+            </el-select>
+          </div>
+          <!-- 列标题 -->
+          <div class="set_condition flex_shrink">
+            <div>绑定属性</div>
+            <div>选择条件</div>
+            <div>阈值</div>
+          </div>
+          <!-- 条件列表 -->
+          <div class="scroll">
+            <div class="set_condition" v-for="(item1, index) in threshold.list">
+              <el-select v-model="item1.config_id" placeholder="请选择" size="small">
+                <el-option v-for="item2 in threshold.select_list" :key="item2.id" :label="item2.configName" :value="item2.id"> </el-option>
+              </el-select>
+
+              <el-select v-model="item1.operator" placeholder="条件" size="small" style="width: 100px">
+                <el-option v-for="op in form.operators" :key="op.value" :label="op.label" :value="op.value"></el-option>
+              </el-select>
+
+              <el-input v-model="item1.value" clearable size="small" style="width: 100px"></el-input>
+
+              <el-button @click="del_device_condition(index)" type="danger" icon="Delete" circle size="small"></el-button>
+            </div>
+          </div>
+
+          <div class="foot flex_shrink">
+            <el-button @click="threshold_submit" type="primary">确定</el-button>
+            <el-button @click="threshold.show = false">取消</el-button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <script src="../../运维人员部署请修改我.js"></script>
-  <script src="../module/vue.js"></script>
-  <script src="../module/element-ui.js"></script>
-  <script src="../module/axios.min.js"></script>
-  <script src="../module/common_function.js"></script>
-  <script src="./index.js"></script>
-</body>
-
+    <script src="../../运维人员部署请修改我.js"></script>
+    <script src="../module/vue.js"></script>
+    <script src="../module/element-ui.js"></script>
+    <script src="../module/axios.min.js"></script>
+    <script src="../module/common_function.js"></script>
+    <script src="./components.js"></script>
+    <script src="./index.js"></script>
+  </body>
 </html>

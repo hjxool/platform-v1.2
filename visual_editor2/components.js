@@ -44,6 +44,7 @@ const fn = {
 				top: obj_data.y * this.radio + 'px',
 				left: obj_data.x * this.radio + 'px',
 				zIndex: obj_data.z_index,
+				transform: `rotate(${obj_data.angle}deg)`,
 			};
 		},
 		// 根绝组件路径解析数值
@@ -173,24 +174,16 @@ const fn = {
 			// 不同组件判断条件不同
 			if (this.obj.type === '连线') {
 				// 连线两端任意端是设备节点就 显示状态 或 更新连线信息
-				if (this.obj.bindDeviceId?.targetDevice || this.obj.bindDeviceId?.sourceDevice) {
-					// 判断当前设备上报消息 与当前连线组件是否相关
+				if ((this.obj.bindDeviceId?.targetDevice || this.obj.bindDeviceId?.sourceDevice) && typeof newvalue.device_status === 'boolean') {
+					// 判断当前设备上报消息 与当前连线组件是否相关 且 携带设备在线状态字段
 					// 断连条件 有一个设备离线就断开 在线条件 两个设备都在线
 					switch (newvalue.device_id) {
 						case this.obj.bindDeviceId.targetDevice:
-							// 相关则判断设备在线状态 4离线 5在线
-							if (newvalue.device_status === 6 && this.target_status) {
-								this.target_status = false;
-							} else if (newvalue.device_status === 5 && !this.target_status) {
-								this.target_status = true;
-							}
+							// 相关则判断设备在线状态
+							this.target_status = newvalue.device_status;
 							break;
 						case this.obj.bindDeviceId.sourceDevice:
-							if (newvalue.device_status === 6 && this.source_status) {
-								this.source_status = false;
-							} else if (newvalue.device_status === 5 && !this.source_status) {
-								this.source_status = true;
-							}
+							this.source_status = newvalue.device_status;
 							break;
 						default:
 							// 当接收的数据与当前线两端的设备id都不符 则不继续向下执行
@@ -275,13 +268,8 @@ const fn = {
 				// 本质是多属性回显 以往组件是单属性回显
 				if (this.obj.dataConfig.deviceId === newvalue.device_id) {
 					// 设备状态
-					switch (newvalue.device_status) {
-						case 5:
-							this.is_normal = true;
-							break;
-						case 6:
-							this.is_normal = false;
-							break;
+					if (typeof newvalue.device_status === 'boolean') {
+						this.is_normal = newvalue.device_status;
 					}
 					// 只要设备id匹配 把原先的单属性解析改为遍历取出每个属性解析并并存到数组下而不是this.value
 					for (let val of this.status) {
@@ -381,7 +369,7 @@ const fn = {
 			} else if (this.obj.shapeNickname == '窗帘组件') {
 				if (this.obj.dataConfig.deviceId == newvalue.device_id) {
 					let obj = newvalue.data;
-					switch (this.dataConfig.productType) {
+					switch (this.obj.dataConfig.productType) {
 						case '1792397648367259648':
 							if (!obj.st) {
 								return;
@@ -583,7 +571,7 @@ let customText = {
 	methods: {
 		// 有跳转id时 进行跳转功能
 		turn_to_page() {
-			this.obj.url ? this.$bus.$emit('turn_to_page', this.obj.url) : '';
+			this.obj.jumpTo?.length && this.$bus.$emit('turn_to_page', this.obj.jumpTo[this.obj.jumpTo.length - 1]);
 		},
 		// 文本框样式
 		cus_style(obj_data) {
@@ -816,7 +804,7 @@ let customSlider2 = {
 // 图片
 let customImg = {
 	template: `
-    <div :class="[url? '' : 'center']" :style="style(obj)">
+    <div :class="[url? '' : 'center']" @click="turn_to_page" :style="style(obj)">
       <img v-if="url" class="bg_img" :src="url">
       <div v-else>无图片</div>
     </div>
@@ -831,6 +819,12 @@ let customImg = {
 			} else {
 				return '';
 			}
+		},
+	},
+	methods: {
+		// 有跳转id时 进行跳转功能
+		turn_to_page() {
+			this.obj.jumpTo?.length && this.$bus.$emit('turn_to_page', this.obj.jumpTo[this.obj.jumpTo.length - 1]);
 		},
 	},
 };
@@ -880,7 +874,7 @@ let customVideo = {
 // 连线
 let customLine = {
 	template: `
-    <svg :style="cus_style(obj,page)">
+    <svg :style="cus_style(panel)">
       <!-- 预设的箭头图标 -->
       <defs>
         <marker :id="cus_id('arrow-end')" refX="-3" orient="auto" markerUnits="userSpaceOnUse" overflow="visible">
@@ -907,7 +901,7 @@ let customLine = {
       <path :class="['path',isBidirect?'path_bothway':'path_line']" :d="line_path" :style="line_style()"></path>
     </svg>
   `,
-	props: ['page', 'mouse_p'],
+	props: ['panel', 'mouse_p'],
 	mixins: [common_functions, fn],
 	data() {
 		return {
@@ -970,7 +964,7 @@ let customLine = {
 		}
 	},
 	methods: {
-		cus_style(obj, page) {
+		cus_style(panel) {
 			return {
 				position: 'absolute',
 				// zIndex: obj.z_index,
@@ -978,7 +972,7 @@ let customLine = {
 				left: 0,
 				top: 0,
 				width: '100%',
-				height: `${page.mb.h * page.radio}px`,
+				height: `${panel.mb.h * this.radio}px`,
 			};
 		},
 		// 线的样式 因为线末尾的箭头是必须动态添加的 所以要保留
@@ -1164,10 +1158,9 @@ let customDeviceStatus = {
   <div :style="style(obj)" @mouseenter="hover(true)" @mouseleave="hover(false)" @click="go_to">
     <img class="bg_img" :src="obj.imageUrl" style="object-fit:contain;">
     <!-- 设备名称 -->
-    <div class="device_name">{{obj.nickName}}</div>
+    <div class="device_name" :style="{fontSize:设备名}">{{obj.nickName}}</div>
   </div>
 `,
-	props: ['page_width'],
 	mixins: [common_functions, fn],
 	data() {
 		return {
@@ -1232,17 +1225,19 @@ let customDeviceStatus = {
 			let { backgroundColor, h, textColor, w } = this.obj.dataConfig.statPanelStyle;
 			// 浏览器缩放时 里面元素会等比例变化 只要对比原始大小是否超出宽度
 			let left;
-			let parent_left = this.obj.x + this.obj.w;
-			if (w + parent_left > this.page_width) {
-				left = `${(this.obj.x - w) * this.radio}px`;
+			let parent_left = (this.obj.x + this.obj.w) * this.radio;
+			let c_w = document.documentElement.clientWidth;
+			w = w * this.radio;
+			if (w + parent_left > c_w) {
+				left = `${this.obj.x * this.radio - w}px`;
 			} else {
-				left = `${parent_left * this.radio}px`;
+				left = `${parent_left}px`;
 			}
 			this.$bus.$emit('device_status', {
 				list: this.status,
 				show,
 				style: {
-					width: `${w * this.radio}px`,
+					width: `${w}px`,
 					// 默认显示在中心点右下
 					top: `${(this.obj.h / 2 + this.obj.y) * this.radio}px`,
 					backgroundColor,
@@ -1254,11 +1249,16 @@ let customDeviceStatus = {
 			});
 		},
 	},
+	computed: {
+		设备名() {
+			return `${16 * this.radio}px`;
+		},
+	},
 };
 // 按钮
 let customButton = {
 	template: `
-    <div :style="style(obj)" class="center button_box" @click="distinguish_operation">
+    <div :style="style(obj)" class="center button_box" @click="turn_to_page">
       <img v-if="bg_url" :src="bg_url" class="bg_img">
       <img v-else src="./img/icon1.png" class="bg_img">
       <span :style="size(obj)">{{text}}</span>
@@ -1293,8 +1293,9 @@ let customButton = {
 			}
 		},
 		// 按钮分下发指令和切换页面两种
-		distinguish_operation() {
+		turn_to_page() {
 			this.send_order(undefined);
+			this.obj.jumpTo?.length && this.$bus.$emit('turn_to_page', this.obj.jumpTo[this.obj.jumpTo.length - 1]);
 		},
 	},
 	computed: {
@@ -1310,28 +1311,19 @@ let customButton = {
 // 一键巡检
 let customOnlineCheck = {
 	template: `
-    <div :style="style(obj)" class="center button" @click="check_devices">
-      <img src="./img/icon1.png" class="bg_img">
-      <span :style="size(obj)">{{text}}</span>
+    <div :style="style(obj)" class="button power_open col_layout" @click="check_devices">
+      <img class="bg_img" src="./img/icon20.png">
+      <div :style="cus_style()">{{title}}</div>
     </div>
   `,
 	mixins: [common_functions, fn],
 	props: ['is_checking', 'random_num'],
 	data() {
 		return {
-			text: this.obj.dataConfig?.buttonLabel || '',
+			title: this.obj.data.attrs.label.text || '',
 		};
 	},
 	methods: {
-		size(obj_data) {
-			let t = (203 / 22) * 16; //计算多少容器大小下 字体是16px
-			let fz = (obj_data.w * this.radio) / t;
-			return {
-				color: '#fff',
-				fontSize: fz + 'rem',
-				zIndex: 1,
-			};
-		},
 		async check_devices() {
 			// 全局限制巡检按钮触发频率
 			if (this.is_checking) {
@@ -1342,44 +1334,57 @@ let customOnlineCheck = {
 			setTimeout(() => {
 				this.$emit('checking_event', false);
 			}, 60000);
-			let list = [];
 			// 从按钮绑定的behaviorList列表中取出绑定了服务的设备
+			let list = [];
+			this.check_list = [];
 			for (let val of this.obj.behaviorList) {
-				let t = {
-					deviceId: val.deviceId,
-					// placeId: this.obj.dataConfig.placeId,
-					serviceIdentifier: val.serviceIdentifier,
+				let t = { deviceId: val.deviceId };
+				let t2 = {
+					message_id: '',
+					device_name: val.deviceName,
+					device_id: val.deviceId,
+					service_identifier: '',
+					service_name: '',
+					result: '巡检中',
 				};
+				if (!val.statusCheckConfig) {
+					// 不检查在线状态 则添加服务
+					t.serviceIdentifier = val.serviceIdentifier;
+					t2.service_identifier = val.serviceIdentifier;
+					t2.service_name = val.serviceName;
+				}
 				list.push(t);
+				this.check_list.psuh(t2);
 			}
 			// 先打开弹窗等请求回来再加载数据
-			this.$bus.$emit('online_check', { type: 'open', data: [] });
+			this.$bus.$emit('online_check', { type: 'open', data: this.check_list });
 			// 取得每个请求关联的消息id
 			let { data: res } = await this.request('post', `${online_check_url}/${this.random_num}`, this.token, list).catch((err) => false);
 			if (res?.head.code !== 200) {
 				return;
 			}
 			// 存储消息id列表 等到推流消息时查看是否有对应id
-			this.check_list = [];
 			for (let val of res.data) {
-				let t = {
-					message_id: val.messageId,
-					device_name: val.deviceName,
-					device_id: val.deviceId,
-					service_identifier: val.serviceIdentifier,
-					result: '巡检中',
-				};
 				// 获取服务名称
-				for (let val2 of this.obj.behaviorList) {
-					if (val2.deviceId == t.device_id && val2.serviceIdentifier == t.service_identifier) {
-						t.service_name = val2.serviceName;
+				for (let val2 of this.check_list) {
+					if (val.deviceId == val2.device_id && val.serviceIdentifier == val2.service_identifier) {
+						val2.message_id = val.messageId;
 						break;
 					}
 				}
-				this.check_list.push(t);
 			}
 			// 发送消息 打开弹窗
 			this.$bus.$emit('online_check', { type: 'open', data: this.check_list });
+		},
+		cus_style() {
+			let t = this.obj.data.attrs.label;
+			return {
+				fontSize: t.fontSize * this.radio + 'px',
+				fontWeight: t.fontWeight,
+				color: t.fill,
+				position: 'relative',
+				top: '16%',
+			};
 		},
 	},
 };
@@ -1411,15 +1416,24 @@ let customVisualEditor1 = {
 // 音频矩阵按钮
 let customSoundMatrix = {
 	template: `
-    <div class="center" :style="style(obj)" @click="show_matrix">
+    <div class="button center" :style="style(obj)" @click="show_matrix">
       <img v-if="type===1" class="bg_img" src="./img/icon25.png">
       <template v-if="type===2">
         <img src="./img/icon1.png" class="bg_img">
-        <span :style="size(obj)">音频矩阵</span>
+        <div :style="cus_style()">{{title}}</div>
+      </template>
+      <template v-if="type===3">
+        <img src="./img/icon21.png" class="bg_img">
+        <div :style="cus_style()">{{title}}</div>
       </template>
     </div>
   `,
 	mixins: [common_functions, fn],
+	data() {
+		return {
+			title: this.obj.data.attrs.label.text || '',
+		};
+	},
 	methods: {
 		// 显示矩阵弹窗
 		show_matrix() {
@@ -1430,13 +1444,13 @@ let customSoundMatrix = {
 				title: '音频矩阵',
 			});
 		},
-		size(obj_data) {
-			let t = (203 / 22) * 16; //计算多少容器大小下 字体是16px
-			let fz = (obj_data.w * this.radio) / t;
+		cus_style() {
+			let t = this.obj.data.attrs.label;
 			return {
-				color: '#fff',
-				fontSize: fz + 'rem',
-				zIndex: 1,
+				fontSize: t.fontSize * this.radio + 'px',
+				fontWeight: t.fontWeight,
+				color: t.fill,
+				position: 'relative',
 			};
 		},
 	},
@@ -1447,6 +1461,8 @@ let customSoundMatrix = {
 					return 1;
 				case '音频矩阵-样式二':
 					return 2;
+				case '音频矩阵-样式三':
+					return 3;
 			}
 		},
 	},
@@ -1508,15 +1524,24 @@ let soundMatrix = {
 // 视频矩阵按钮
 let customVideoMatrix = {
 	template: `
-    <div class="center" :style="style(obj)" @click="show_matrix">
+    <div class="button center" :style="style(obj)" @click="show_matrix">
       <img v-if="type===1" class="bg_img" src="./img/icon22.png">
       <template v-if="type===2">
         <img src="./img/icon1.png" class="bg_img">
-        <span :style="size(obj)">视频矩阵</span>
+        <div :style="cus_style()">{{title}}</div>
+      </template>
+      <template v-if="type===3">
+        <img src="./img/icon48.png" class="bg_img">
+        <div :style="cus_style()">{{title}}</div>
       </template>
     </div>
   `,
 	mixins: [common_functions, fn],
+	data() {
+		return {
+			title: this.obj.data.attrs.label.text || '',
+		};
+	},
 	methods: {
 		// 显示矩阵弹窗
 		show_matrix() {
@@ -1539,13 +1564,13 @@ let customVideoMatrix = {
 					break;
 			}
 		},
-		size(obj_data) {
-			let t = (203 / 22) * 16; //计算多少容器大小下 字体是16px
-			let fz = (obj_data.w * this.radio) / t;
+		cus_style() {
+			let t = this.obj.data.attrs.label;
 			return {
-				color: '#fff',
-				fontSize: fz + 'rem',
-				zIndex: 1,
+				fontSize: t.fontSize * this.radio + 'px',
+				fontWeight: t.fontWeight,
+				color: t.fill,
+				position: 'relative',
 			};
 		},
 	},
@@ -1556,6 +1581,8 @@ let customVideoMatrix = {
 					return 1;
 				case '视频矩阵-样式二':
 					return 2;
+				case '视频矩阵-样式三':
+					return 3;
 			}
 		},
 	},
@@ -1659,14 +1686,14 @@ let videoMatrix2 = {
 		},
 		matrix_order(value, index) {
 			// 因为只绑定了设备id 且这是自己创建的组件不是编辑器里的所以没有存属性
+			this.list.splice(Math.floor(index / 4), 1, index % 4);
 			let body = {
 				contentType: 0,
 				deviceId: this.device_id,
 				attributeMap: {
-					VSWT: value,
+					VSWT: this.list,
 				},
 			};
-			this.list.splice(Math.floor(index / 4), 1, index % 4);
 			this.request('put', `${sendCmdtoDevice}/8`, this.token, body);
 		},
 	},
@@ -1921,7 +1948,7 @@ let customCurtain = {
 	methods: {
 		async custom_order(value) {
 			this.select = value;
-			switch (this.dataConfig.productType) {
+			switch (this.obj.dataConfig.productType) {
 				case '1792397648367259648':
 					this.request('put', `${sendCmdtoDevice}/8`, this.token, {
 						contentType: 0,
@@ -1979,8 +2006,11 @@ let customPowerOpen = {
 		cus_style() {
 			let t = this.obj.data.attrs.label;
 			return {
-				fontSize: t.fontSize,
+				fontSize: t.fontSize * this.radio + 'px',
 				fontWeight: t.fontWeight,
+				color: t.fill,
+				position: 'relative',
+				top: '16%',
 			};
 		},
 		custom_order() {
@@ -2015,7 +2045,7 @@ let customSmartSwitch = {
         </div>
       </div>
       <div class="flex_grow"></div>
-      <div class="text">{{title}}</div>
+      <div class="text" :style="字体样式">{{title}}</div>
     </div>
   `,
 	mixins: [common_functions, fn],
@@ -2049,6 +2079,14 @@ let customSmartSwitch = {
 					val.value = value ? 1 : 0;
 				}
 			},
+		},
+		字体样式() {
+			let t = this.obj.data.attrs.label;
+			return {
+				fontSize: t.fontSize * this.radio + 'px',
+				fontWeight: t.fontWeight,
+				color: t.fill,
+			};
 		},
 	},
 	methods: {
@@ -2144,7 +2182,7 @@ let customLight = {
 		for (let val of this.obj.dataConfig.switchConfig) {
 			this.on_off.push({
 				device_id: val.deviceId,
-				channel: val.map((e) => ({
+				channel: val.channel.map((e) => ({
 					key: e,
 					key2: e.split('.')[1],
 					value: 0,
@@ -2177,7 +2215,7 @@ let customLight = {
 		custom_order(tag, value) {
 			switch (tag) {
 				case '开关':
-					this.switch = !value;
+					this.my_switch = !value;
 					for (let val of this.on_off) {
 						this.light_switch(0, val.channel, val.device_id);
 					}
@@ -2201,30 +2239,25 @@ let customLight = {
 		},
 		// 递归下发指令
 		light_switch(index, list, device_id) {
-			this.request(
-				'put',
-				`${sendCmdtoDevice}/8`,
-				this.token,
-				{
-					contentType: 0,
-					deviceId: device_id,
-					attributeMap: {
-						ep: 1,
-						protocol_code: 1002,
-						id: '',
-						serial: 1,
-						[list[index].key]: list[index].value,
-					},
+			let t = {
+				contentType: 0,
+				deviceId: device_id,
+				attributeMap: {
+					ep: 1,
+					protocol_code: 1002,
+					id: '',
+					serial: 1,
+					[list[index].key]: list[index].value,
 				},
-				() => {
-					index++;
-					if (list[index]) {
-						setTimeout(() => {
-							this.light_switch(index, list, device_id);
-						}, 500);
-					}
+			};
+			this.request('put', `${sendCmdtoDevice}/8`, this.token, t, () => {
+				index++;
+				if (index < list.length) {
+					setTimeout(() => {
+						this.light_switch(index, list, device_id);
+					}, 500);
 				}
-			);
+			});
 		},
 	},
 };
@@ -2256,7 +2289,7 @@ let customLcd = {
 	methods: {
 		async custom_order(ele) {
 			ele.status = !ele.status;
-			let d;
+			let t;
 			switch (ele.label) {
 				case 'LCD电源':
 					if (ele.status) {
@@ -2288,7 +2321,7 @@ let customLcd = {
 						'CCCMD.Count': 1,
 						'CCCMD.Type': '0',
 						'CCCMD.Fmat': '0',
-						'CCCMD.Cmd': d,
+						'CCCMD.Cmd': t,
 						'CCCMD.Config': '[0,0,0,0]',
 					},
 				});
@@ -2327,7 +2360,7 @@ let customMeetingMode = {
 		title_style() {
 			let t = this.obj.data.attrs.label;
 			return {
-				fontSize: t.fontSize,
+				fontSize: t.fontSize * this.radio + 'px',
 				fontWeight: t.fontWeight,
 				color: t.fill,
 			};
@@ -2581,341 +2614,184 @@ let customSliderInout = {
 		},
 	},
 };
+// 当前会议
+let customCurrentMeeting = {
+	template: `
+    <div class="cur_meeting" :style="style(obj)">
+      <img v-if="obj.data.backgroundImg" :src="obj.data.backgroundImg" class="bg_img">
 
-// // 下拉框
-// let customSelector = {
-// 	template: `
-//     <div class="select_box" :style="style(obj)" @click.stop="popup">
-//       <img src="./img/icon8.png" class="bg_img">
-//       <span class="text_ellipsis" :style="font_size(obj)" :title="label">{{label}}</span>
-//     </div>
-//   `,
-// 	mixins: [common_functions, fn],
-// 	props: ['group'],
-// 	data() {
-// 		return {
-// 			label: '',
-// 			value: '',
-// 		};
-// 	},
-// 	beforeMount() {
-// 		this.$bus.$on('selector', (...params) => {
-// 			if (params[0] == this.group) {
-// 				this.label = params[1].label;
-// 				this.value = params[1].value;
-// 			}
-// 		});
-// 	},
-// 	methods: {
-// 		// 字体样式
-// 		font_size(obj_data) {
-// 			let t = (203 / 16) * 16; //计算多少容器大小下 字体是16px
-// 			let fz = (obj_data.w * this.radio) / t;
-// 			// 计算字体大小(px) 如果超过组件高度 则字体大小设为组件高度 小于组件高度则正常显示
-// 			let fpx = ((obj_data.w * this.radio) / 203) * 16;
-// 			if (fpx >= obj_data.h - 8) {
-// 				// 上下各留4px间距 默认根节点字体大小16px
-// 				fz = (obj_data.h - 8) / 16;
-// 			}
-// 			return {
-// 				color: '#fff',
-// 				fontSize: fz + 'rem',
-// 				paddingRight: obj_data.w * this.radio * 0.152 + 'px',
-// 				paddingLeft: obj_data.w * this.radio * 0.076 + 'px',
-// 			};
-// 		},
-// 		// 显示弹窗
-// 		popup() {
-// 			this.$bus.$emit('display_popup', this.group, true);
-// 			this.$bus.$emit('current_group', this.group);
-// 		},
-// 	},
-// 	computed: {
-// 		options() {
-// 			let arr = [];
-// 			if (this.data_type === 'int' || this.data_type === 'float' || this.data_type === 'double') {
-// 				for (let val of this.obj.option) {
-// 					let t = { label: val.label };
-// 					// 选项中可能有字符
-// 					t.value = isNaN(Number(val.value)) ? 0 : Number(val.value);
-// 					arr.push(t);
-// 				}
-// 			} else if (this.data_type === 'any') {
-// 				for (let val of this.obj.option) {
-// 					let t = { label: val.label };
-// 					t.value = isNaN(Number(val.value)) ? val.value : Number(val.value);
-// 					arr.push(t);
-// 				}
-// 			}
-// 			return arr;
-// 		},
-// 	},
-// 	watch: {
-// 		value(newvalue, oldvalue) {
-// 			if (isNaN(newvalue)) {
-// 				return;
-// 			}
-// 			for (let val of this.options) {
-// 				if (val.value == newvalue) {
-// 					this.label = val.label;
-// 					break;
-// 				}
-// 			}
-// 		},
-// 	},
-// };
-// let customPopup = {
-// 	template: `
-//     <el-card v-show="display" :style="position(obj)" :body-style="{overflow:'auto',maxHeight:'500px'}" shadow="never">
-//       <div class="popup_text" :style="size(obj)" v-for="item,index in options" :key="index" @click="select(item)">{{item.label}}</div>
-//     </el-card>
-//   `,
-// 	mixins: [common_functions, fn],
-// 	props: ['group'],
-// 	beforeMount() {
-// 		this.$bus.$on('display_popup', (index, show) => {
-// 			if (index == this.group) {
-// 				this.display = show;
-// 			}
-// 		});
-// 	},
-// 	data() {
-// 		return {
-// 			display: false,
-// 		};
-// 	},
-// 	methods: {
-// 		// 弹窗定位
-// 		position(obj_data) {
-// 			// 当弹窗显示不下在反方向显示
-// 			let t = (obj_data.y + obj_data.h) * this.radio + 14;
-// 			let t2 = obj_data.x * this.radio;
-// 			return {
-// 				position: 'absolute',
-// 				zIndex: '990',
-// 				left: t2 + 'px',
-// 				top: t + 'px',
-// 			};
-// 		},
-// 		// 选择值
-// 		select(obj) {
-// 			this.$bus.$emit('selector', this.group, obj);
-// 			this.send_order(obj.value);
-// 		},
-// 		// 字体大小 控制弹窗缩放
-// 		size(obj) {
-// 			let t = (203 / 22) * 16; //计算多少容器大小下 字体是16px
-// 			let fz = (obj.w * this.radio) / t;
-// 			if (fz > 1) {
-// 				fz = 1;
-// 			}
-// 			return {
-// 				fontSize: fz + 'rem',
-// 			};
-// 		},
-// 	},
-// 	computed: {
-// 		options() {
-// 			let arr = [];
-// 			if (this.data_type === 'int' || this.data_type === 'float' || this.data_type === 'double') {
-// 				for (let val of this.obj.option) {
-// 					let t = { label: val.label };
-// 					// 选项中可能有字符
-// 					t.value = isNaN(Number(val.value)) ? 0 : Number(val.value);
-// 					arr.push(t);
-// 				}
-// 			} else if (this.data_type === 'any') {
-// 				for (let val of this.obj.option) {
-// 					let t = { label: val.label };
-// 					t.value = isNaN(Number(val.value)) ? val.value : Number(val.value);
-// 					arr.push(t);
-// 				}
-// 			}
-// 			return arr;
-// 		},
-// 	},
-// };
-// // 矩阵
-// let customMatrix = {
-// 	template: `
-//   <div class="matrix" :style="matrix_style(obj)">
-//     <div class="matrix" v-for="row in obj.nh" :style="row_style(obj)">
-//       <div class="center button" v-for="col in obj.mw" @click="control(row-1,col-1)">
-//         <img v-show="value[row-1][col-1]" src="./img/icon9.png" class="bg_img">
-//         <img v-show="!value[row-1][col-1]" src="./img/icon10.png" class="bg_img">
-//       </div>
-//     </div>
-//   </div>
-//   `,
-// 	mixins: [common_functions, fn],
-// 	data() {
-// 		return {
-// 			value: this.init(),
-// 		};
-// 	},
-// 	methods: {
-// 		matrix_style(obj_data) {
-// 			return {
-// 				position: 'absolute',
-// 				width: obj_data.w * this.radio + 'px',
-// 				height: obj_data.h * this.radio + 'px',
-// 				top: obj_data.y * this.radio + 'px',
-// 				left: obj_data.x * this.radio + 'px',
-// 				zIndex: obj_data.z_index,
-// 				gridTemplateRows: `repeat(${obj_data.nh}, 1fr)`,
-// 			};
-// 		},
-// 		row_style(obj_data) {
-// 			return {
-// 				gridTemplateColumns: `repeat(${obj_data.mw}, 1fr)`,
-// 			};
-// 		},
-// 		control(row, col) {
-// 			this.value[row].splice(col, 1, this.value[row][col] ? 0 : 1);
-// 			let str = '';
-// 			for (let val of this.value) {
-// 				str += val.join('');
-// 			}
-// 			this.send_order(str);
-// 		},
-// 		init() {
-// 			let t = [];
-// 			for (let index = 0; index < this.obj.nh; index++) {
-// 				let t2 = [];
-// 				for (let index2 = 0; index2 < this.obj.mw; index2++) {
-// 					t2.push(0);
-// 				}
-// 				t.push(t2);
-// 			}
-// 			return t;
-// 		},
-// 	},
-// };
-// // 单选框组
-// let customRadioGroup = {
-// 	template: `
-//     <el-radio-group class="radio_group" :style="style(obj)" v-model="value" @change="send_order(value)">
-//       <el-radio v-for="item,index in options" :key="index" :label="item.value">{{item.label}}</el-radio>
-//     </el-radio-group>
-//   `,
-// 	mixins: [common_functions, fn],
-// 	data() {
-// 		return {
-// 			value: '',
-// 		};
-// 	},
-// 	computed: {
-// 		options() {
-// 			let arr = [];
-// 			if (this.data_type === 'int' || this.data_type === 'float' || this.data_type === 'double') {
-// 				for (let val of this.obj.option) {
-// 					let t = { label: val.label };
-// 					// 选项中可能有字符
-// 					t.value = isNaN(Number(val.value)) ? 0 : Number(val.value);
-// 					arr.push(t);
-// 				}
-// 			} else if (this.data_type === 'any') {
-// 				for (let val of this.obj.option) {
-// 					let t = { label: val.label };
-// 					t.value = isNaN(Number(val.value)) ? val.value : Number(val.value);
-// 					arr.push(t);
-// 				}
-// 			}
-// 			return arr;
-// 		},
-// 	},
-// };
-// // 多选框
-// let customCheckBox = {
-// 	template: `
-//     <el-checkbox-group class="check_box" :style="style(obj)" v-model="value" @change="send_order(value)">
-//       <el-checkbox v-for="item,index in options" :key="index" :label="item.value">{{item.label}}</el-checkbox>
-//     </el-checkbox-group>
-//   `,
-// 	mixins: [common_functions, fn],
-// 	data() {
-// 		return {
-// 			value: [],
-// 		};
-// 	},
-// 	computed: {
-// 		options() {
-// 			let arr = [];
-// 			if (this.data_type === 'int' || this.data_type === 'float' || this.data_type === 'double') {
-// 				for (let val of this.obj.option) {
-// 					let t = { label: val.label };
-// 					// 选项中可能有字符
-// 					t.value = isNaN(Number(val.value)) ? 0 : Number(val.value);
-// 					arr.push(t);
-// 				}
-// 			} else if (this.data_type === 'any') {
-// 				for (let val of this.obj.option) {
-// 					let t = { label: val.label };
-// 					t.value = isNaN(Number(val.value)) ? val.value : Number(val.value);
-// 					arr.push(t);
-// 				}
-// 			}
-// 			return arr;
-// 		},
-// 	},
-// };
-// // 表格及控制按钮
-// let customTable = {
-// 	template: `
-//     <el-table :data="value" :style="table_style(obj)" :max-height="maxheight">
-//       <el-table-column v-for="item in obj.option" :prop="item.value" :label="item.label"></el-table-column>
-//       <el-table-column label="操作">
-//         <template slot-scope="scope">
-//           <el-button v-for="button in obj.button" @click="table_button_order(button)" size="mini">{{button.label}}</el-button>
-//         </template>
-//       </el-table-column>
-//     </el-table>
-//   `,
-// 	mixins: [common_functions, fn],
-// 	data() {
-// 		return {
-// 			value: [],
-// 		};
-// 	},
-// 	methods: {
-// 		// 表格样式
-// 		table_style(obj) {
-// 			return {
-// 				position: 'absolute',
-// 				width: obj.w * this.radio + 'px',
-// 				top: obj.y * this.radio + 'px',
-// 				left: obj.x * this.radio + 'px',
-// 				zIndex: obj.z_index,
-// 			};
-// 		},
-// 		// 表格下发指令
-// 		table_button_order(button) {
-// 			let body = {
-// 				contentType: 0,
-// 				deviceId: this.obj.deviceId,
-// 			};
-// 			// 有服务则下发
-// 			if (button.service) {
-// 				body.contentType = 2;
-// 				body.service = button.service;
-// 			}
-// 			// 有设置属性值则下发
-// 			let t = JSON.parse(JSON.stringify(this.custom)); // 拷贝一份不修改原值
-// 			if (button.value) {
-// 				let p = button.attribute[button.attribute.length - 1];
-// 				let path = p?.path || p;
-// 				t[path] = button.value;
-// 			}
-// 			body.attributeMap = t;
-// 			// 有topic才能下发指令
-// 			if (button.topic) {
-// 				this.request('put', `${sendCmdtoDevice}/${button.topic}`, this.token, body);
-// 			}
-// 		},
-// 	},
-// 	computed: {
-// 		maxheight() {
-// 			return this.obj.h * this.radio;
-// 		},
-// 	},
-// };
+      <div class="col_layout">
+        <span class="text1" :style="字体样式('当前会议')">{{当前会议}}</span>
+
+        <div class="row_layout">
+          <img src="./img/icon18.png" class="icon1">
+
+          <span class="text2" :style="字体样式('会议地点')">{{会议地点}}</span>
+        </div>
+      </div>
+
+    <div class="row_layout text_ellipsis">{{下场会议}}</div>
+  </div>
+  `,
+	mixins: [fn, common_functions],
+	data() {
+		return {
+			当前会议: '暂无进行中的会议',
+			会议地点: '',
+			下场会议: '无',
+		};
+	},
+	created() {
+		this.查询会议室名称();
+		this.查询会议();
+		setInterval(() => {
+			this.查询会议();
+		}, 10 * 60 * 1000);
+	},
+	methods: {
+		字体样式(type) {
+			switch (type) {
+				case '当前会议':
+					return { fontSize: `${36 * this.radio}px` };
+				case '会议地点':
+					return { fontSize: `${20 * this.radio}px` };
+			}
+		},
+		查询会议室名称() {
+			if (this.obj.dataConfig.placeId) {
+				this.request('get', `${我是接口地址}/api-portal/room/search/${this.obj.dataConfig.placeId}`, this.token, ({ data: res }) => {
+					if (res.head.code === 200) {
+						this.会议地点 = res.data.roomName;
+					}
+				});
+			}
+		},
+		查询会议() {
+			if (this.obj.dataConfig.placeId) {
+				this.request('get', `${我是接口地址}/api-portal/room/currentAndNextMeeting/${this.obj.dataConfig.placeId}`, this.token, ({ data: res }) => {
+					if (res.head && res.head.code == 200) {
+						this.下场会议 = res.data[1] ? res.data[1].theme : '无';
+						this.当前会议 = res.data[0] ? res.data[0].theme : '暂无进行中的会议';
+					}
+				});
+			}
+		},
+	},
+};
+// 会议结束时间
+let customMeetingEndTime = {
+	template: `
+  <div class="count_down col_layout" :style="style(obj)">
+    <div class="text1 row_layout flex_shrink" :style="字体样式('日期')">{{日期}}</div>
+
+    <div class="time_box flex_shrink">
+      <img class="bg_img" src="./img/icon19.png">
+
+      <div class="time col_layout">
+        <span class="text3" :style="字体样式('结束时间')">结束时间</span>
+
+        <div class="text2 text3" :style="字体样式('时间数字')">{{结束时间}}</div>
+      </div>
+    </div>
+  </div>
+  `,
+	mixins: [fn, common_functions],
+	data() {
+		return {
+			日期: '',
+			结束时间: '',
+		};
+	},
+	created() {
+		this.查询会议();
+		setInterval(() => {
+			this.查询会议();
+		}, 10 * 60 * 1000);
+	},
+	methods: {
+		查询会议() {
+			let d2 = new Date();
+			let 星期 = this.获取星期(d2);
+			this.日期 = `${d2.getFullYear()}年${d2.getMonth() + 1}月${d2.getDate()}日 ${星期}`;
+			if (this.obj.dataConfig.placeId) {
+				this.request('get', `${我是接口地址}/api-portal/room/currentAndNextMeeting/${this.obj.dataConfig.placeId}`, this.token, ({ data: res }) => {
+					if (res.head && res.head.code == 200) {
+						let t = res.data[0].endTime;
+						// let date = new Date(t.replace(/-/g, '/'));
+						// let 星期 = this.获取星期(date);
+						// let arr = t.split(' ')[0].split('-');
+						// this.日期 = `${arr[0]}年${arr[1]}月${arr[2]}日 ${星期}`;
+						this.结束时间 = t.split(' ')[1].substring(0, 5);
+					}
+				});
+			}
+		},
+		获取星期(date) {
+			switch (date.getDay()) {
+				case 0:
+					return '周日';
+				case 1:
+					return '周一';
+				case 2:
+					return '周二';
+				case 3:
+					return '周三';
+				case 4:
+					return '周四';
+				case 5:
+					return '周五';
+				case 6:
+					return '周六';
+			}
+		},
+		字体样式(type) {
+			switch (type) {
+				case '结束时间':
+					return {
+						fontSize: `${20 * this.radio}px`,
+						marginBottom: `${20 * this.radio}px`,
+					};
+				case '时间数字':
+					return { fontSize: `${30 * this.radio}px` };
+				case '日期':
+					return { fontSize: `${20 * this.radio}px` };
+			}
+		},
+	},
+};
+// 场景按钮
+let customScene = {
+	template: `
+    <div class="button center" :style="style(obj)" @click="执行场景()">
+      <img src="./img/icon49.png" class="bg_img">
+      <div :style="cus_style()">{{title}}</div>
+    </div>
+  `,
+	mixins: [common_functions, fn],
+	data() {
+		return {
+			title: this.obj.data.attrs.label.text || '',
+		};
+	},
+	methods: {
+		cus_style() {
+			let t = this.obj.data.attrs.label;
+			return {
+				fontSize: t.fontSize * this.radio + 'px',
+				fontWeight: t.fontWeight,
+				color: t.fill,
+				position: 'relative',
+			};
+		},
+		async 执行场景() {
+			if (this.obj.dataConfig.sceneId) {
+				let {
+					data: {
+						head: { code },
+					},
+				} = await this.request('post', `${执行场景规则}/${this.obj.dataConfig.sceneId}`, this.token);
+				this.$message[`${code == 200 ? 'success' : 'error'}`](`场景执行${code == 200 ? '成功' : '失败'}`);
+			}
+		},
+	},
+};

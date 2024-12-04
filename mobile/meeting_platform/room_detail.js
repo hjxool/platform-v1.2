@@ -14,10 +14,14 @@ let roomDetail = {
             <div class="text margin" v-if="detail.type===0">办公室管理会议室</div>
             <div class="text margin" v-if="detail.type===1">学院/部门管理会议室对内</div>
             <div class="text margin" v-if="detail.type===2">学院/部门管理会议室开放</div>
-            <div class="title margin">会议室设备</div>
-            <div class="text margin">{{detail.conferencingEquipment || '空'}}</div>
+            <div class="row_layout margin">
+              <div class="title">会议室容量:</div>
+              <div class="text">{{detail.num || '0'}}</div>
+            </div>
             <div class="title margin">功能定位</div>
             <div class="text margin">{{detail.functionalPosition || '空'}}</div>
+            <div class="title margin">会议室设备</div>
+            <div class="text margin">{{detail.conferencingEquipment || '空'}}</div>
           </div>
         </div>
 

@@ -12,13 +12,13 @@
 
 <body>
   <div id="index" v-cloak v-loading="loading">
-    <div class="grid_box">
+    <div class="grid_box flex_shrink">
       <el-button @click="throttle('clearCache',1)" class="left" size="medium">清除应用缓存</el-button>
       <div class="line"></div>
       <el-button @click="throttle('restart',1)" class="right" size="medium">重启应用</el-button>
     </div>
 
-    <div class="row_layout" style="margin: 0 1rem 1rem 1rem;">
+    <div class="row_layout flex_shrink" style="margin: 0 1rem 1rem 1rem;">
       <!-- <el-button @click="throttle('volumeUp',1)" class="left" size="medium">音量
         +</el-button>
       
@@ -29,16 +29,23 @@
       <el-slider class="flex_grow" v-model="volume" @change="throttle('volume',volume)"></el-slider>
     </div>
 
-    <div class="row_layout margin">
+    <div class="row_layout flex_shrink" style="margin: 0 1rem 1rem 1rem;">
+      <div style="margin-right: 20px;">亮屏:</div>
+
+      <el-switch v-model="亮屏" @change="throttle('turnBacklight',亮屏,'setScreenStatus')" :active-value="1"
+        :inactive-value="0"></el-switch>
+    </div>
+
+    <div class="row_layout margin flex_shrink">
       <span class="label flex_shrink">当前任务:</span>
       <span class="text_ellipsis" :title="cur_task_name">{{cur_task_name}}</span>
     </div>
-    <div class="row_layout margin">
+    <div class="row_layout margin flex_shrink">
       <span class="label flex_shrink">当前播放:</span>
       <span class="text_ellipsis" :title="cur_play_source">{{cur_play_source}}</span>
     </div>
 
-    <div class="row_layout margin" v-if="play_ctrl_show">
+    <div class="row_layout margin flex_shrink" v-if="play_ctrl_show">
       <span class="label flex_shrink">播放控制:</span>
       <!-- 播放器样式 -->
       <div class="player row_layout">

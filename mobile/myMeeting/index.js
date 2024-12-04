@@ -133,6 +133,8 @@ new Vue({
 					return 'success';
 				case status === 1 && audit === 2:
 					return 'primary';
+				case status === -1 && audit === 2:
+					return 'danger';
 				default:
 					return 'warning';
 			}

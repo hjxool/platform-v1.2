@@ -15,6 +15,7 @@ new Vue({
 		volume: 0, // 音量
 		play_ctrl_show: false, //单个资源且只有音视频和文档才显示
 		loading: false,
+		亮屏: 0,
 	},
 	async mounted() {
 		this.get_token();
@@ -37,6 +38,7 @@ new Vue({
 				this.cur_task_name = data.taskName.propertyValue || '空';
 				this.cur_play_source = data.resName.propertyValue || '空';
 				this.volume = Number(res.data.data.properties.volume.propertyValue); // 当前音量
+				this.亮屏 = res.data.data.properties.turnBacklight.propertyValue;
 			});
 		},
 		// 获取设备当前任务
@@ -75,23 +77,30 @@ new Vue({
 					// 播放结束 从头开始播放
 					this.current = 0;
 					this.send_order('seekto', this.current);
+					clearInterval(this.play_timer);
 				}
 			}, 1000);
 		},
 		// 下发指令 设置属性
-		send_order(key, ...params) {
-			let topic = 8;
+		send_order(key, value, service) {
+			let topic = service ? 11 : 8;
 			let body = {
-				contentType: 0,
+				contentType: service ? 2 : 0,
 				contents: [{ deviceId: this.id, attributes: {} }],
 			};
-			body.contents[0].attributes[key] = params[0];
+			if (service) {
+				body.contents[0].identifier = service;
+			}
+			body.contents[0].attributes[key] = value;
 			this.request('put', `${sendCmdtoDevice}/${topic}`, this.token, body);
 		},
 		// 控制按钮点击频率
 		throttle(key, ...params) {
 			if (this.control_timer) {
 				this.$message('点击太快');
+				if (key === 'turnBacklight') {
+					this.亮屏 = this.亮屏 ? 0 : 1;
+				}
 				return;
 			}
 			this.control_timer = true; // 点击进来就会置为禁止

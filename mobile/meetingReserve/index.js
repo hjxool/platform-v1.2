@@ -413,10 +413,10 @@ new Vue({
 					this.picker.date = this.form.start_date ? new Date(this.form.start_date) : '';
 					break;
 				case 'start_time':
-					this.picker.date = this.form.start_time ? new Date(`${this.form.start_date} ${this.form.start_time}`) : '';
+					this.picker.date = this.form.start_time || '';
 					break;
 				case 'end_time':
-					this.picker.date = this.form.end_time ? new Date(`${this.form.start_date} ${this.form.end_time}`) : '';
+					this.picker.date = this.form.end_time || '';
 					break;
 				// case 'holder':
 				case 'join':

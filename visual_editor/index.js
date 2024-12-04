@@ -70,8 +70,8 @@ new Vue({
 		// 区分是跳转还是本地缓存数据
 		if (this.device_id && this.token) {
 			// 开启设备实时数据上报
-			this.start_report(this.device_id);
 			this.get_components();
+			this.start_report(this.device_id);
 		} else {
 			// 监听父页面传入的缓存数据
 			window.onmessage = (data) => {
@@ -110,11 +110,29 @@ new Vue({
 			this.drop.id = id;
 		});
 		// 监听跳转页面事件
-		this.$bus.$on('turn_to_page', (page_id) => {
+		this.$bus.$on('turn_to_page', async (page_id) => {
+			// 跳转过来时 先找到对应面板
+			let panel;
+			for (let val of this.component_list) {
+				if (val.id === page_id) {
+					panel = val;
+					break;
+				}
+			}
+			// 看是否需要密码
+			if (panel.面板密码 && !(await this.提示输入面板密码(panel))) {
+				// 密码正确才能赋值page_id(显示面板)
+				return;
+			}
+			// 不需要密码的直接赋值
 			this.page_id = page_id;
 		});
 		// 监听弹窗事件
-		this.$bus.$on('open_popup_data', (popup_data) => {
+		this.$bus.$on('open_popup_data', async (popup_data) => {
+			if (popup_data.面板密码 && !(await this.提示输入面板密码(popup_data))) {
+				// 密码正确才能赋值page_id(显示面板)
+				return;
+			}
 			this.popup.style = popup_data.mb;
 			this.popup.components = popup_data.data;
 			this.popup.show = true;
@@ -126,7 +144,7 @@ new Vue({
 	methods: {
 		// 获取组件布局
 		get_components() {
-			this.request('get', `${components_url}/${this.device_id}`, this.token, (res) => {
+			this.request('get', `${components_url}/${this.device_id}`, this.token, async (res) => {
 				if (res.data.head.code != 200 || !res.data.data) {
 					this.html.page_loading = false;
 					this.$message('未配置产品可视化界面');
@@ -180,7 +198,10 @@ new Vue({
 						}
 					}
 				}
-				this.page_id = this.component_list[0].id;
+				// 首次加载 如果有面板密码 先进行验证 验证不通过则不显示面板内容 即不赋值page_id
+				if (!this.component_list[0].面板密码 || (await this.提示输入面板密码(this.component_list[0]))) {
+					this.page_id = this.component_list[0].id;
+				}
 				this.$nextTick(() => {
 					// component_list原本为空，组件尚未初始化，赋值后立即发送消息，组件收不到
 					// this.$bus.$emit('common_params', this.token, this.device_id);
@@ -353,6 +374,22 @@ new Vue({
 		// 关闭需要关闭的弹窗
 		close_popup() {
 			this.drop.show = this.drop.show2 = false;
+		},
+		提示输入面板密码(panel) {
+			return this.$prompt('请输入密码', '提示', {
+				confirmButtonText: '确定',
+				cancelButtonText: '取消',
+			})
+				.then(({ value }) => {
+					// 提交时验证
+					if (value == panel.面板密码) {
+						return true;
+					} else {
+						this.$message.error('密码错误');
+						return false;
+					}
+				})
+				.catch(() => false);
 		},
 	},
 });

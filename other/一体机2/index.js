@@ -372,7 +372,7 @@ new Vue({
 			} else if (key == 'SSAVE') {
 				attributes[key] = [this.html.config_select];
 			} else if (key == 'VSWT') {
-				attributes[key] = params[0].value;
+				// attributes[key] = params[0].value;
 				let index = params[1];
 				switch (true) {
 					case index < 4:
@@ -388,6 +388,7 @@ new Vue({
 						this.video_matrix.splice(3, 1, index - 12);
 						break;
 				}
+				attributes[key] = this.video_matrix;
 			}
 			this.request('put', `${sendCmdtoDevice}/8`, this.token, { contentType: 0, contents: [{ deviceId: this.id, attributes: attributes }] }, (res) => {
 				// if (key == 'SCALL') {

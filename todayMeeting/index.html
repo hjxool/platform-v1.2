@@ -28,9 +28,9 @@
       </div>
 
       <div class="box3">
-        <div v-for="day in calendar.days" :class="['box3_1','center','button',calendar.select_day===day?'bg':'']"
+        <div v-for="day in calendar.days" :style="{backgroundColor:day.bg}" :class="['box3_1','center','button',calendar.select_day===day.data?'bg':'']"
           @click="select_day(day)">
-          {{day}}</div>
+          {{day.data}}</div>
       </div>
     </div>
 

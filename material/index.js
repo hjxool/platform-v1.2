@@ -6,6 +6,7 @@ let del_material_url = `${url}api-file/doc/file/delete`;
 let get_file_url = `${url}api-file/doc/catalogue/shareMaterial`; // 下载文件
 let upload_error_url = `${url}api-file/files`;
 let limits_url = `${url}api-user/menus/current`; //获取菜单权限
+let 上传大小限制url = `${url}api-portal/system/config/configKey`;
 
 new Vue({
 	el: '#index',
@@ -149,6 +150,21 @@ new Vue({
 					break;
 			}
 		};
+		// 获取上传文件大小限制
+		this.request('get', `${上传大小限制url}/upload_files_limit`, this.token, ({ data }) => {
+			if (data.head.code == 200 && !isNaN(Number(data.data))) {
+				this.图片等限制 = Number(data.data) * Math.pow(1024, 2);
+			} else {
+				this.图片等限制 = 200 * Math.pow(1024, 2);
+			}
+		});
+		this.request('get', `${上传大小限制url}/upload_video_limit`, this.token, ({ data }) => {
+			if (data.head.code == 200 && !isNaN(Number(data.data))) {
+				this.视频限制 = Number(data.data) * Math.pow(1024, 2);
+			} else {
+				this.视频限制 = 2 * Math.pow(1024, 3);
+			}
+		});
 	},
 	methods: {
 		// 解析权限树
@@ -203,9 +219,17 @@ new Vue({
 			let file = document.querySelector('#select_file').files[0];
 			let suffix = file.name.split('.').pop();
 			if (suffix === 'mp4') {
+				if (file.size > this.视频限制) {
+					this.$message.error(`只能上传 ${this.视频限制 / Math.pow(1024, 3)}G 以内的视频`);
+					return;
+				}
 				let t = await this.canvas_video(file);
 				this.upload_file(t);
 			} else {
+				if (file.size > this.图片等限制) {
+					this.$message.error(`只能上传 ${this.图片等限制 / Math.pow(1024, 2)}M 以内的文件`);
+					return;
+				}
 				switch (suffix) {
 					case 'ppt':
 					case 'doc':

@@ -63,6 +63,28 @@
         {{b.name}}
       </div>
     </div>
+    <!-- 校领导 -->
+    <div class="person_title row_layout">
+      <img src="./img/icon8.png" style="width: 1.6rem;height: 1.6rem;margin-right: 1rem;">
+      <div class="text1">校领导</div>
+
+      <div v-show="校领导.add_ban" class="button" @click="添加人员('校领导')" style="margin-left: 3rem;">添加</div>
+    </div>
+    <div class="scroll_box flex_grow">
+      <div class="box col_layout" v-for="p in 校领导.list">
+        <div class="title row_layout">
+          <div class="text1 text_ellipsis">{{p.name}}</div>
+
+          <div v-show="校领导.del_ban" class="button center flex_shrink" @click="移除人员('校领导',p.userId)">移除</div>
+        </div>
+
+        <div class="status row_layout flex_grow">
+          <div :class="['text',p.reply?'blue':'orange']">{{reply_text(p.reply)}}</div>
+          <div class="line"></div>
+          <div :class="['text',p.sign_in?'blue':'orange']">{{sign_text(p.sign_in)}}</div>
+        </div>
+      </div>
+    </div>
     <!-- 参会人员 -->
     <div class="person_title row_layout">
       <img src="./img/icon8.png" style="width: 1.6rem;height: 1.6rem;margin-right: 1rem;">

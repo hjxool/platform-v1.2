@@ -10,6 +10,8 @@ let download_summary_url = `${url}api-portal/meeting/summary/download`; //信息
 let remove_dup_url = `${url}api-user/department/deptUsers/distinct`; //用户去重
 let get_file_img_url = `${url}api-portal/meeting/files/preview`; // 获取会议附件预览地址
 let get_audit_process_url = `${url}api-portal/audit-operation/query`; // 根据业务ID查询审核流水
+let limits_url = `${url}api-user/menus/current`; //获取菜单权限
+let 修改校领导url = `${url}api-portal/meeting/leader`;
 
 Vue.use(vant.Popup);
 Vue.use(vant.Dialog);
@@ -17,6 +19,7 @@ Vue.use(vant.Picker);
 // Vue.use(vant.Swipe);
 // Vue.use(vant.SwipeItem);
 Vue.use(vant.Lazyload);
+Vue.use(vant.Button);
 
 new Vue({
 	el: '#index',
@@ -71,6 +74,15 @@ new Vue({
 			通过: [], // 通过的索引数组
 			data: [], // 原始数据
 		},
+		config: {
+			添加校领导: false,
+			移除校领导: false,
+		},
+		校领导: {
+			list: [],
+			add_ban: false, // 按钮是否可用
+			del_ban: false,
+		},
 	},
 	async mounted() {
 		if (!location.search) {
@@ -82,25 +94,74 @@ new Vue({
 		}
 		this.resize();
 		await this.get_cur_user();
+		if (!sessionStorage.hushanwebmenuTree) {
+			await this.request('get', limits_url, this.token, (res) => {
+				if (res.data.head.code !== 200) {
+					return;
+				}
+				sessionStorage.hushanwebmenuTree = JSON.stringify(res.data.data.menuTree);
+			});
+		}
+		// 解析权限树
+		let limits;
+		for (let val of JSON.parse(sessionStorage.hushanwebmenuTree)) {
+			if (val.path === '云会管平台') {
+				for (let val2 of val.subMenus) {
+					if (val2.path === '云会管平台_会议管理') {
+						for (let val3 of val2.subMenus) {
+							if (val3.path === '云会管平台_会议管理_会议详情') {
+								limits = val3.subMenus;
+								break;
+							}
+						}
+						break;
+					}
+				}
+				break;
+			}
+		}
+		this.config.添加校领导 = this.is_element_show(limits, '添加校领导');
+		this.config.移除校领导 = this.is_element_show(limits, '移除校领导');
 		this.get_data();
 		// 引入pdf库文件
 		// pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.bootcdn.net/ajax/libs/pdf.js/3.10.111/pdf.worker.js';
 		window.onmessage = async ({ data: res }) => {
 			console.log('页面消息', res);
 			if (res.type === 'close_pop') {
-				this.pop.show = false;
 				let d = res.data;
 				if (Array.isArray(d)) {
 					switch (this.pop.type) {
 						case 'person':
-							let list = await this.de_weight(d);
-							this.meeting.transfer = [];
-							for (let val of list) {
-								let t = {
-									name: val.username,
-									id: val.id,
-								};
-								this.meeting.transfer.push(t);
+							if (this.添加人员类型 === '校领导') {
+								if (!d.length) {
+									this.info('err', '添加不能为空');
+									return;
+								}
+								vant.Dialog.confirm({
+									title: '提示',
+									message: '确定添加校领导？',
+								})
+									.then(async () => {
+										this.loading = true;
+										let { data: res } = await this.request('post', 修改校领导url, this.token, { meetingId: this.id, userIdList: d.map((e) => e.id) });
+										this.loading = false;
+										if (res.head.code == 200) {
+											this.pop.show = false;
+											this.get_data();
+										}
+									})
+									.catch(() => {});
+							} else {
+								let list = await this.de_weight(d);
+								this.meeting.transfer = [];
+								for (let val of list) {
+									let t = {
+										name: val.username,
+										id: val.id,
+									};
+									this.meeting.transfer.push(t);
+								}
+								this.pop.show = false;
 							}
 							break;
 					}
@@ -115,6 +176,16 @@ new Vue({
 		}
 	},
 	methods: {
+		// 解析权限树
+		is_element_show(source, key) {
+			for (let val of source) {
+				let t = val.path.split('_');
+				if (t[t.length - 1] === key) {
+					return true;
+				}
+			}
+			return false;
+		},
 		// 浏览器大小改变后执行方法
 		resize() {
 			let dom = document.documentElement;
@@ -146,14 +217,25 @@ new Vue({
 			this.meeting.files = res.data.meetingFiles;
 			// 按钮操作会刷新页面数据 必须清理原数组
 			this.meeting.users = [];
+			this.校领导.list = [];
 			for (let val of res.data.users) {
-				let t = {
-					name: val.username,
-					reply: val.reply,
-					sign_in: val.signIn,
-					userId: val.userId,
-				};
-				this.meeting.users.push(t);
+				if (val.userType === 1) {
+					let t = {
+						name: val.username,
+						reply: val.reply,
+						sign_in: val.signIn,
+						userId: val.userId,
+					};
+					this.校领导.list.push(t);
+				} else {
+					let t = {
+						name: val.username,
+						reply: val.reply,
+						sign_in: val.signIn,
+						userId: val.userId,
+					};
+					this.meeting.users.push(t);
+				}
 			}
 			// 未开始/已开始 且 需要回复 且 未转交 且 是参会人 且 未回复
 			let find = false;
@@ -192,6 +274,16 @@ new Vue({
 			if (res.data.isMeetingUser && !res.data.transferFlag && res.data.status === 0 && res.data.auditStatus === 2) {
 				// 参会人 未转交 会议未开始 审核通过
 				this.buttons[5].show = true;
+			}
+			// 校领导按钮具有权限时设置定时器
+			if (this.校领导定时器) {
+				clearInterval(this.校领导定时器); // 有定时器则刷新时清除
+			}
+			if (this.config.添加校领导 || this.config.移除校领导) {
+				this.判断校领导按钮是否禁用();
+				this.校领导定时器 = setInterval(() => {
+					this.判断校领导按钮是否禁用();
+				}, 60000);
 			}
 		},
 		// 会议功能
@@ -638,6 +730,38 @@ new Vue({
 				case 2:
 					return '迟到';
 			}
+		},
+		判断校领导按钮是否禁用() {
+			let t = new Date(`${this.meeting.date} ${this.meeting.start}`.replace(/\-/g, '/'));
+			// 按钮仅可在会前1小时可用
+			let t2 = t.getTime() - Date.now();
+			let t3 = t2 > 60 * 60 * 1000;
+			this.校领导.add_ban = this.config.添加校领导 && t3;
+			this.校领导.del_ban = this.config.移除校领导 && t3;
+		},
+		移除人员(type, user_id) {
+			vant.Dialog.confirm({
+				title: '提示',
+				message: `确定从当前会议移除${type}？`,
+			})
+				.then(async () => {
+					await this.request('delete', `${修改校领导url}/${this.id}?userId=${user_id}`, this.token);
+					this.get_data();
+				})
+				.catch(() => {});
+		},
+		添加人员(type) {
+			this.pop.show = true;
+			this.pop.type = 'person';
+			this.添加人员类型 = type;
+			switch (type) {
+				case '校领导':
+					this.pop.url = `../add_person/index.html?token=${this.token}&prePage=leader`;
+					break;
+			}
+			this.$nextTick(() => {
+				document.querySelector('#pop_window').contentWindow.postMessage([]);
+			});
 		},
 	},
 });

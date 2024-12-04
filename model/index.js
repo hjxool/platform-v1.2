@@ -1405,18 +1405,18 @@ new Vue({
 					switch (true) {
 						case Boolean(e.properties.length):
 							t2 = '属性';
-							pre = e.propertiesBefore[0];
-							cur = e.properties[0];
+							pre = e.propertiesBefore[0] || {};
+							cur = e.properties[0] || {};
 							break;
 						case Boolean(e.services.length):
 							t2 = '服务';
-							pre = e.servicesBefore[0];
-							cur = e.services[0];
+							pre = e.servicesBefore[0] || {};
+							cur = e.services[0] || {};
 							break;
 						case Boolean(e.events.length):
 							t2 = '事件';
-							pre = e.eventsBefore[0];
-							cur = e.events[0];
+							pre = e.eventsBefore[0] || {};
+							cur = e.events[0] || {};
 							break;
 					}
 					return {

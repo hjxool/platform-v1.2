@@ -433,8 +433,8 @@ let customText = {
 // 图片
 let customImg = {
 	template: `
-    <div @click="distinguish_operation" :style="style(obj)">
-      <img class="bg_img" :src="obj.src" :style="{objectFit:obj.fls?'contain':'',cursor: 'pointer'}">
+    <div @click="distinguish_operation" :style="cus_style">
+      <img v-if="img_src" class="bg_img" :src="img_src" :style="img_style">
     </div>
   `,
 	mixins: [common_functions, fn],
@@ -443,6 +443,26 @@ let customImg = {
 		distinguish_operation() {
 			if (this.obj.url) {
 				this.$bus.$emit('turn_to_page', this.obj.url);
+			}
+		},
+	},
+	computed: {
+		cus_style() {
+			let t = this.style(this.obj);
+			if (this.obj.type === 'container') {
+				t.background = this.obj.background;
+			}
+			return t;
+		},
+		img_src() {
+			let reg = /^http/;
+			return reg.test(this.obj.src) ? this.obj.src : '';
+		},
+		img_style() {
+			if (this.obj.type === 'img') {
+				return { objectFit: this.obj.fls ? 'contain' : '', cursor: 'pointer' };
+			} else {
+				return null;
 			}
 		},
 	},
@@ -899,13 +919,14 @@ let customMatrix = {
 let customRadioGroup = {
 	template: `
     <el-radio-group class="radio_group" :style="style(obj)" v-model="value" @change="send_order(value)">
-      <el-radio v-for="item,index in options" :key="index" :label="item.value">{{item.label}}</el-radio>
+      <el-radio v-for="item,index in options" :key="index" :label="item.value" :style="{color:color}">{{item.label}}</el-radio>
     </el-radio-group>
   `,
 	mixins: [common_functions, fn],
 	data() {
 		return {
 			value: '',
+			color: `${this.obj.color}`,
 		};
 	},
 	computed: {
@@ -1104,7 +1125,7 @@ let customStatus = {
 		cus_style(obj) {
 			let t = this.style(obj);
 			t.background = obj.background;
-			t.fontSize = obj.fontSize;
+			t.fontSize = obj.fontSize + 'px';
 			switch (obj.align) {
 				case 'left':
 					t.justifyContent = 'flex-start';

@@ -6,6 +6,7 @@ let user_info_url = `${url}api-auth/oauth/userinfo`; //获取用户信息
 let decive_report_url = `${url}api-device/device/panel/switch`; //设备开始上报
 let online_check_url = `${url}api-portal/centralized-control/onlineCheck/devices`; // 一键巡检
 let device_detail_url = `${url}api-device/device`; // 查询单设备详情
+let 执行场景规则 = `${url}api-portal/scene-rule/execute`;
 
 new Vue({
 	el: '#index',
@@ -41,16 +42,17 @@ new Vue({
 		customLcd,
 		customMeetingMode,
 		customSliderInout,
+		customCurrentMeeting,
+		customMeetingEndTime,
+		customScene,
 	},
 	data: {
 		html: {
 			page_loading: true,
 			random_num: Math.floor(Math.random() * 100),
 		},
-		page_id: '', //面板id
-		component_list: [], //组件列表
-		// data_and_path: [], //对象数组 存储数据和路径
-		radio: 0, //所有组件缩放比例
+		panel: null, // 面板数据
+		radio: 0, // 根据视窗缩放比率
 		// 设备状态栏
 		device_status: {
 			show: false, //设备状态显示
@@ -90,6 +92,8 @@ new Vue({
 			style: {},
 			isBidirect: false, // 如果是双向 则用↔ 否则用→
 		},
+		路径: [],
+		prePage: '',
 	},
 	beforeCreate() {
 		Vue.prototype.$bus = this;
@@ -111,11 +115,16 @@ new Vue({
 			} else {
 				await this.get_components();
 			}
-			this.html.page_loading = false;
+			setTimeout(() => {
+				this.html.page_loading = false;
+			}, 1500);
 		} catch (error) {
 			console.log('err', error);
 		}
-		window.addEventListener('resize', this.resize());
+		this.resize();
+		window.addEventListener('resize', () => {
+			this.resize();
+		});
 		//#region
 		// 监听下拉框事件
 		// this.$bus.$on('drop_down_show', ({ list, left, top, id }) => {
@@ -128,17 +137,14 @@ new Vue({
 		// });
 		//#endregion
 		// 监听跳转页面事件
-		this.$bus.$on('turn_to_page', (page_id) => {
-			this.page_id = page_id;
-			// 根据当前页id 得到是第几个页面
-			let i = 0;
-			for (let val of this.component_list) {
-				if (val.id === page_id) {
-					this.page_index = i;
-					break;
-				}
-				i++;
-			}
+		this.$bus.$on('turn_to_page', (panel_id) => {
+			// 根绝跳转目标面板id 获取源数据中对应面板数据
+			this.panel = this.查询面板对象(panel_id, (this.路径 = []));
+			this.面板数据初始化();
+			this.$nextTick(() => {
+				this.获取面板数据();
+				this.订阅设备消息();
+			});
 		});
 		// 监听设备状态弹窗
 		this.$bus.$on('device_status', ({ list, show, style, name, is_normal }) => {
@@ -153,6 +159,14 @@ new Vue({
 			if (type === 'open') {
 				this.online_check.show = true;
 				this.online_check.list = data;
+
+				// 临时
+				let i = 0;
+				for (let val of data) {
+					setTimeout(() => {
+						val.result = '巡检结果正常';
+					}, 300 * ++i * (Math.random() + 1));
+				}
 			} else if (type === 'update') {
 				// 巡检按钮组件只需要遍历自身存的列表 找到对应消息 更新结果
 				for (let val of this.online_check.list) {
@@ -237,7 +251,7 @@ new Vue({
 				// 每收到一条连线发来的消息 就自增
 				this.line_count++;
 				// 所有 有信息 的连线都是false则隐藏弹窗
-				if (this.line_count === this.component_list[this.page_index].line_info_total) {
+				if (this.line_count === this.panel.line_info_total) {
 					this.line.show = false;
 				}
 			}
@@ -247,7 +261,7 @@ new Vue({
 		// 视窗大小变化
 		resize() {
 			// 组件列表初始化好后才能执行
-			if (!this.component_list.length) {
+			if (!this.panel) {
 				return;
 			}
 			let dom = document.documentElement;
@@ -261,9 +275,8 @@ new Vue({
 			} else if (c_w > 1920) {
 				dom.style.fontSize = `16px`;
 			}
-			for (let val of this.component_list) {
-				val.radio = Math.round((c_w / val.mb.w) * 100) / 100;
-			}
+			// 每个面板比例不同
+			this.radio = Math.round((c_w / this.panel.mb.w) * 100) / 100;
 		},
 		// 获取组件布局
 		async get_components() {
@@ -272,47 +285,15 @@ new Vue({
 				this.$message('未配置产品可视化界面');
 				return;
 			}
-			let dom = document.documentElement;
-			let c_w = dom.clientWidth;
-			// 设备id去重
-			this.list = [];
-			if (res.data.data.allBindDeviceIds) {
-				for (let val1 of res.data.data.allBindDeviceIds) {
-					let find = false;
-					for (let val2 of this.list) {
-						if (val2 === val1) {
-							find = true;
-							break;
-						}
-					}
-					if (!find) {
-						this.list.push(val1);
-					}
-				}
-			}
-			for (let val of res.data.data.panelParam) {
-				// 每个面板比例不同
-				// 连线组件组要将画布拉伸到跟页面大小一样 所以radio要代理
-				val.radio = Math.round((c_w / val.mb.w) * 100) / 100;
-				// 每个页面都有自己的连线需要统计
-				val.line_info_total = 0;
-				for (let val2 of val.data) {
-					// 判断组件列表中 连线组件是否有接口信息 有则计数
-					if (val2.type === '连线' && val2.rawData?.data?.edgeConfig?.length) {
-						val.line_info_total++;
-					}
-				}
-			}
-			this.component_list = res.data.data.panelParam;
-			this.page_id = this.component_list[0].id;
-			// 刚进页面在第一页
-			this.page_index = 0;
+			// 存储源数据
+			this.源数据 = res.data.data.panelParam;
+			// 取第一个面板数据为初始值
+			this.panel = this.源数据[0];
+			// 初始加载时的路径
+			this.路径 = [this.panel];
+			this.面板数据初始化();
 			this.$nextTick(async () => {
-				await this.count_device_list();
-				// 开启设备实时数据上报
-				for (let val of this.list) {
-					this.start_report(val);
-				}
+				await this.获取面板数据();
 				if (localStorage.hushanwebuserinfo) {
 					let obj = JSON.parse(localStorage.hushanwebuserinfo);
 					let ws_name = obj.mqUser;
@@ -327,6 +308,26 @@ new Vue({
 				}
 			});
 		},
+		面板数据初始化() {
+			// 设备id去重
+			this.panel.deviceIds = [...new Set(this.panel.allBindDeviceIds || [])];
+			// 统计连线数量
+			this.panel.line_info_total = 0;
+			for (let val of this.panel.data) {
+				// 判断组件列表中 连线组件是否有接口信息 有则计数
+				if (val.type === '连线' && val.rawData?.data?.edgeConfig?.length) {
+					this.panel.line_info_total++;
+				}
+			}
+			this.radio = Math.round((document.documentElement.clientWidth / this.panel.mb.w) * 100) / 100;
+		},
+		async 获取面板数据() {
+			await this.count_device_list();
+			// 开启设备实时数据上报
+			for (let val of this.panel.deviceIds) {
+				this.start_report(val);
+			}
+		},
 		// 获取数值
 		async get_data(device_id) {
 			let res = await this.request('get', `${get_data_url}/${device_id}`, this.token);
@@ -335,7 +336,7 @@ new Vue({
 			}
 			// 将整个数据对象发给每个组件 让其自己解析路径 获取对应的值
 			// status 1在线 2离线 除了在线 其他都算离线
-			let device_status = res.data.data.status === 1 ? 5 : 6;
+			let device_status = res.data.data.status === 1;
 			this.inject_data = {
 				data: res.data.data.properties,
 				device_id: res.data.data.deviceId,
@@ -359,22 +360,7 @@ new Vue({
 		},
 		// stomp连接成功的回调
 		on_message() {
-			// 订阅多个设备消息
-			for (let val of this.list) {
-				this.stomp_link.subscribe(
-					`/exchange/device-report/device-report.${val}`,
-					(res) => {
-						let data = JSON.parse(res.body);
-						this.inject_data = {
-							data: data.contents[0].attributes,
-							device_id: val,
-							device_status: data.messageBizType,
-							message: data,
-						};
-					},
-					{ 'auto-delete': true }
-				);
-			}
+			this.订阅设备消息();
 			this.stomp_link.subscribe(
 				`/exchange/web-socket/tenant.user.${this.user_id}.#`,
 				(res) => {
@@ -401,71 +387,46 @@ new Vue({
 				{ 'auto-delete': true }
 			);
 		},
-		// stomp连接失败的回调
-		on_error(error) {
-			// this.$message.error(error.headers.message);
+		订阅设备消息() {
+			// 每跳转一个面板 订阅当前面板设备
+			for (let val of this.panel.deviceIds) {
+				this.stomp_link.subscribe(
+					`/exchange/device-report/device-report.${val}`,
+					(res) => {
+						// 上报的是当前面板设备 才继续往下执行
+						if (this.panel.deviceIds.includes(val)) {
+							let data = JSON.parse(res.body);
+							let t = {
+								data: data.contents[0].attributes,
+								device_id: val,
+								message: data,
+							};
+							// 只有特定消息类型才更新设备状态
+							switch (data.messageBizType) {
+								case 5:
+									t['device_status'] = true;
+									break;
+								case 6:
+									t['device_status'] = false;
+									break;
+							}
+							this.inject_data = t;
+						}
+					},
+					{ 'auto-delete': true }
+				);
+			}
 		},
+		// stomp连接失败的回调
+		on_error(error) {},
 		// 面板整体尺寸调节
-		panel_size(page) {
-			//#region
-			// let dom = document.documentElement;
-			// let c_w = dom.clientWidth;
-			// let c_h = dom.clientHeight;
-			// let width, height, flag;
-			// let mb_scale = this.total_w / this.total_h; // 计算宽高比 当一边100%时 计算另一边像素单位长度
-			// let c_scale = c_w / c_h;
-			// 计算面板和视窗的比例 面板比例大于视窗比例 则说明宽满铺 否则高满铺
-			// if (mb_scale > c_scale) {
-			// flag = 1;
-			// width = c_w + 'px';
-			// height = c_w / mb_scale + 'px';
-			// 	this.radio = Math.floor((c_w / this.total_w) * 100 + 0.5) / 100;
-			// 	dom2.justifyContent = 'none';
-			// 	dom2.alignItems = 'center';
-			// } else if (mb_scale < c_scale) {
-			// flag = 0;
-			// height = c_h + 'px';
-			// width = c_h * mb_scale + 'px';
-			// 	this.radio = Math.floor((c_h / this.total_h) * 100 + 0.5) / 100;
-			// 	dom2.justifyContent = 'center';
-			// 	dom2.alignItems = 'none';
-			// } else {
-			// flag = 2;
-			// width = c_w + 'px';
-			// height = c_h + 'px';
-			// 	this.radio = Math.floor((c_w / this.total_w) * 100 + 0.5) / 100;
-			// 	dom2.alignItems = 'none';
-			// 	dom2.justifyContent = 'none';
-			// }
-			// let dom2 = document.querySelector('body').style;
-			// switch (flag) {
-			// 	case 0:
-			// 		dom2.justifyContent = 'center';
-			// 		dom2.alignItems = 'none';
-			// 		break;
-			// 	case 1:
-			// 		dom2.justifyContent = 'none';
-			// 		dom2.alignItems = 'center';
-			// 		break;
-			// 	case 2:
-			// 		dom2.alignItems = 'none';
-			// 		dom2.justifyContent = 'none';
-			// 		break;
-			// }
-			// 无论是高还是宽满铺 面板原始尺寸缩放到视窗大小 宽高缩放比例都是相同的 缩小是视窗小于面板
-			// this.radio = Math.floor((c_w / this.total_w) * 100 + 0.5) / 100;
-			// return { background: this.bg, width: this.total_w + 'px', height: this.total_h + 'px', transform: `scale(${radio})` };
-			//#endregion
-			let height = page.mb.h * page.radio;
+		panel_size() {
+			let height = this.panel.mb.h * this.radio;
 			let bg = {
 				height: height + 'px',
 			};
-			if (page.mb.ys) {
-				bg.backgroundColor = page.mb.ys;
-			}
-			if (page.mb.tp) {
-				bg.backgroundImage = `url(${page.mb.tp})`;
-			}
+			this.panel.mb.ys && (bg.backgroundColor = this.panel.mb.ys);
+			this.panel.mb.tp && (bg.backgroundImage = `url(${this.panel.mb.tp})`);
 			return bg;
 		},
 		// 关闭需要关闭的弹窗
@@ -474,34 +435,9 @@ new Vue({
 		},
 		// 统计所有组件总共涉及的设备id
 		async count_device_list() {
-			// this.list = []; //存储不同设备的id
-			// for (let val of this.component_list) {
-			// 	for (let val2 of val.data) {
-			// 		if (Array.isArray(val2.attr)) {
-			// 			for (let val3 of val2.attr) {
-			// 				if (!this.list.length) {
-			// 					// 没设备时直接添加
-			// 					this.list.push(val3.deviceId);
-			// 				} else {
-			// 					// 只有不相同的设备id才入栈
-			// 					let find = false;
-			// 					for (let val4 of this.list) {
-			// 						if (val4 === val3.deviceId) {
-			// 							find = true;
-			// 							break;
-			// 						}
-			// 					}
-			// 					if (!find) {
-			// 						this.list.push(val3.deviceId);
-			// 					}
-			// 				}
-			// 			}
-			// 		}
-			// 	}
-			// }
 			// 异步请求 请求回来的数据进行广播
 			let result = [];
-			for (let val of this.list) {
+			for (let val of this.panel.deviceIds) {
 				result.push(this.get_data(val));
 			}
 			// 全部请求回来后再进行后续 否则可能会覆盖推流数据
@@ -517,11 +453,10 @@ new Vue({
 		},
 		// 根据缓存数据渲染组件 无需连websocket 加载初始数据即可
 		render_components(data) {
-			let dom = document.documentElement;
-			let c_w = dom.clientWidth;
-			data.radio = Math.round((c_w / data.mb.w) * 100) / 100;
-			this.component_list = [data];
-			this.page_id = this.component_list[0].id;
+			// 存储源数据
+			this.源数据 = [data];
+			this.panel = data;
+			this.面板数据初始化();
 		},
 		// 下拉框选择
 		drop_select(obj) {
@@ -550,6 +485,35 @@ new Vue({
 		// 鼠标移出 清除事件
 		mouse_leave() {
 			clearTimeout(this.mouse_timer);
+		},
+		查询面板对象(panel_id, 路径, list = this.源数据) {
+			for (let val of list) {
+				if (val.id === panel_id) {
+					路径.unshift(val);
+					return val;
+				} else if (val.children?.length) {
+					let result = this.查询面板对象(panel_id, 路径, val.children);
+					if (result) {
+						路径.unshift(val);
+						return result;
+					}
+				}
+			}
+			return false;
+		},
+		路径回退(panel, index) {
+			// 重复点击当前面板路径 不进行操作
+			if (panel == this.panel) {
+				return;
+			}
+			// 删除回退位置后的路径
+			this.路径.splice(index + 1);
+			this.panel = panel;
+		},
+		背景色调() {
+			let bg = {};
+			this.panel && (bg.backgroundColor = this.panel.mb.ys);
+			return bg;
 		},
 	},
 });

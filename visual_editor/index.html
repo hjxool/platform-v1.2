@@ -21,8 +21,8 @@
           :device_id="device_id" :inject_data="inject_data"></custom-slider2>
         <custom-text v-if="item.type=='text'" :obj="item" :radio="page.radio" :token="token" :device_id="device_id"
           :inject_data="inject_data"></custom-text>
-        <custom-img v-if="item.type=='img'" :obj="item" :radio="page.radio" :current_page="page_id" :token="token"
-          :device_id="device_id"></custom-img>
+        <custom-img v-if="item.type=='img'||item.type=='container'" :obj="item" :radio="page.radio"
+          :current_page="page_id" :token="token" :device_id="device_id"></custom-img>
         <custom-button v-if="item.type=='button'" :obj="item" :radio="page.radio" :current_page="page_id" :token="token"
           :device_id="device_id"></custom-button>
         <custom-switch v-if="item.type=='switch'||item.type=='switch2'" :obj="item" :radio="page.radio" :token="token"

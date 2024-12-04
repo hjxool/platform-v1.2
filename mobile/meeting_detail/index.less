@@ -63,7 +63,7 @@
 	width: 100%;
 	height: 100%;
 	position: absolute;
-	overflow: hidden;
+	overflow: auto;
 	background: #edf0f3;
 }
 // 头部标题和返回
@@ -174,14 +174,22 @@
 }
 .person_title {
 	padding-left: 2rem;
+	> .button {
+		padding: 8px 1rem;
+		color: #fff;
+		font-size: 1.2rem;
+		background: rgba(74, 179, 242, 1);
+		border-radius: 6px;
+	}
 }
 .scroll_box {
-	padding: 2rem;
+	margin: 2rem;
 	display: grid;
 	grid-template-columns: repeat(2, 1fr);
 	grid-auto-rows: 10rem;
 	align-items: center;
-	overflow: auto;
+	// overflow: auto;
+	// min-height: 20rem;
 	> .box {
 		width: 95%;
 		height: 90%;
@@ -194,8 +202,14 @@
 			justify-self: end;
 		}
 		> .title {
-			padding: 1rem 2rem;
+			padding: 1rem;
 			background: #d9e4ec;
+			justify-content: space-between;
+			> .button {
+				font-size: 1.4rem;
+				color: #1989fa;
+				margin-left: 4px;
+			}
 		}
 		> .status {
 			// padding: 1rem 0;

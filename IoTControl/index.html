@@ -55,27 +55,34 @@
       <iframe v-if="html.page_select=='2'" :src="html.gplot_url" frameborder="0" scrolling="no"
         style="flex-grow:1;"></iframe>
       <!-- 设备卡片页面 -->
-      <div class="page1" v-show="html.page_select=='3'">
-        <el-card class="cards" shadow="hover" v-for="item in device.list">
-          <div class="box1">
-            <span class="text1 text_ellipsis">{{item.deviceName}}</span>
-            <div class="box2 flex_shrink">
-              <div v-if="item.statusValue==0" class="icon0"></div>
-              <span v-if="item.statusValue==0" class="text4">未注册</span>
-              <div v-if="item.statusValue==1" class="icon1"></div>
-              <span v-if="item.statusValue==1" class="text2">在线</span>
-              <div v-if="item.statusValue==2" class="icon2"></div>
-              <span v-if="item.statusValue==2" class="text3">离线</span>
-            </div>
+      <div v-show="html.page_select=='3'" style="flex-grow: 1;overflow: auto;">
+        <div v-for="[name, list] in device.list" style="margin-top: 10px;">
+          <div>产品：{{name}}</div>
+
+          <div class="page1">
+            <el-card class="cards" shadow="hover" v-for="item in list">
+              <div class="box1">
+                <span class="text1 text_ellipsis">{{item.deviceName}}</span>
+                <div class="box2 flex_shrink">
+                  <div v-if="item.statusValue==0" class="icon0"></div>
+                  <span v-if="item.statusValue==0" class="text4">未注册</span>
+                  <div v-if="item.statusValue==1" class="icon1"></div>
+                  <span v-if="item.statusValue==1" class="text2">在线</span>
+                  <div v-if="item.statusValue==2" class="icon2"></div>
+                  <span v-if="item.statusValue==2" class="text3">离线</span>
+                </div>
+              </div>
+              <div class="box1">
+                <div class="box2">
+                  <!-- <i class="el-icon-edit icon3 button"></i> -->
+                  <span class="icon3 text_ellipsis">所属产品类型:{{item.productTypeValue}}</span>
+                </div>
+                <img v-show="config.control_show" @click="turn_to_device(item)" src="./img/icon1.png"
+                  class="icon4 button">
+              </div>
+            </el-card>
           </div>
-          <div class="box1">
-            <div class="box2">
-              <!-- <i class="el-icon-edit icon3 button"></i> -->
-              <span class="icon3 text_ellipsis">所属产品类型:{{item.productTypeValue}}</span>
-            </div>
-            <img v-show="config.control_show" @click="turn_to_device(item)" src="./img/icon1.png" class="icon4 button">
-          </div>
-        </el-card>
+        </div>
         <el-empty v-show="device.list_empty" description="会议室下无设备" style="width: 100%;height: 100%;"></el-empty>
       </div>
     </div>

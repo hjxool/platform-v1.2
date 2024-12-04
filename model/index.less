@@ -156,13 +156,16 @@
 		display: flex;
 		padding-right: 6px;
 		> .border {
-			flex-grow: 1;
 			border: 1px solid;
 			border-radius: 10px;
 			padding: 10px;
 			overflow: auto;
+			width: calc(50% - 10px);
 			& + .border {
 				margin-left: 20px;
+			}
+			&::-webkit-scrollbar {
+				display: none;
 			}
 		}
 	}

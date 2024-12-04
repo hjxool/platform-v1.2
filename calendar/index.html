@@ -7,6 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title></title>
   <link rel="stylesheet" href="../module/element-ui.css">
+  <link rel="stylesheet" href="//at.alicdn.com/t/c/font_4540968_1s5rflrmexh.css">
   <link rel="stylesheet" href="../module/common_style.css">
   <link rel="stylesheet" href="./index.css">
 </head>
@@ -17,7 +18,13 @@
     <div class="left">
       <!-- 日期及选项切换 -->
       <div class="header">
-        <i class="el-icon-info" title="会议日历显示已审核通过的所有申请及参与的会议"></i>
+        <div class="row_layout">
+          <i class="el-icon-info" title="会议日历显示已审核通过的所有申请及参与的会议"></i>
+
+          <el-button v-show="html.time_option!=1" @click="切换样式()" style="margin-left: 20px;" type="primary"
+            size="mini">切换样式</el-button>
+        </div>
+
         <div class="box1">
           <div class="icon1 center button" @click="pre_date">
             <i class="el-icon-arrow-left icon2"></i>
@@ -26,7 +33,7 @@
           <!-- <el-date-picker v-show="html.time_option==0" style="width: 110px;" v-model="html.date"
               @change="time_display(0)" type="date"></el-date-picker> -->
           <!-- 选择周 -->
-          <el-date-picker v-show="html.time_option==0" v-model="html.week_date" class="calendar" style="width: 260px;"
+          <el-date-picker v-show="html.time_option!=1" v-model="html.week_date" class="calendar" style="width: 260px;"
             :format="week_format()" type="week" @change="time_display(html.time_option)"></el-date-picker>
           <!-- 选择月 -->
           <el-date-picker v-show="html.time_option==1" v-model="html.month_date" class="calendar" style="width: 120px;"
@@ -36,7 +43,7 @@
           </div>
         </div>
         <div v-for="item,index in html.time_display" @click="time_display(index)"
-          :class="['box2','center','button',html.time_option==index?'box_light':'box_dark']">{{item}}</div>
+          :class="['box2','center','button',周月按钮样式(index)?'box_light':'box_dark']">{{item}}</div>
       </div>
       <!-- 不同时间选项 不同页面 -->
       <!-- 周 -->
@@ -67,6 +74,93 @@
                 <span class="text">{{item.end}}</span>
               </div>
               <div class="center text_ellipsis">{{item.theme}}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 周样式2 需修改-->
+      <div v-show="html.time_option==2" class="body4">
+        <div class="row" style="position: sticky;top: 0;">
+          <div class="title" style="justify-content: flex-end;top: 0;">
+            <span>具体时间</span>
+          </div>
+
+          <div class="title" v-for="item in week_meeting2">
+            <span>{{item.日期}}</span>
+            <span>{{item.星期}}</span>
+          </div>
+        </div>
+
+        <div class="row" style="flex-grow: 1;">
+          <div class="time center">上午</div>
+
+          <div class="box" v-for="item in week_meeting2">
+            <div class="card" v-for="meeting in item.上午">
+              <div class="row_layout">
+                <i class="iconfont icon-didiandingwei"></i>
+                <div class="row">{{meeting.roomName}}</div>
+              </div>
+              <div class="row_layout">
+                <i class="iconfont icon-huiyizhuti"></i>
+                <div class="row">{{meeting.theme}}</div>
+              </div>
+              <div class="row_layout">
+                <i class="iconfont icon-shijian"></i>
+                <div class="row">{{meeting.start}} ~ {{meeting.end}}</div>
+              </div>
+              <div v-show="meeting.展开" class="row_layout">
+                <i class="iconfont icon-bumen"></i>
+                <div class="row">{{meeting.participantsOtherDepts}}</div>
+              </div>
+              <div v-show="meeting.展开" class="row_layout">
+                <i class="iconfont icon-lingdao"></i>
+                <div class="row">{{meeting.participantsLeaders}}</div>
+              </div>
+              <div class="row_layout" style="justify-content: flex-end;">
+                <i v-show="config.编辑会议&&meeting.status===0" class="icon el-icon-edit" @click="显示编辑会议(meeting)"
+                  title="编辑"></i>
+                <i class="icon iconfont icon-xiangqing1" @click="turn_to_page('meetingDetail',meeting.id)"
+                  title="会议详情"></i>
+              </div>
+              <i v-show="meeting.展开" class="icon el-icon-arrow-up" @click="meeting.展开=false"></i>
+              <i v-show="!meeting.展开" class="icon el-icon-arrow-down" @click="meeting.展开=true"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="row" style="flex-grow: 1;">
+          <div class="time center">下午</div>
+
+          <div class="box" v-for="item in week_meeting2">
+            <div class="card" v-for="meeting in item.下午">
+              <div class="row_layout">
+                <i class="iconfont icon-didiandingwei"></i>
+                <div class="row">{{meeting.roomName}}</div>
+              </div>
+              <div class="row_layout">
+                <i class="iconfont icon-huiyizhuti"></i>
+                <div class="row">{{meeting.theme}}</div>
+              </div>
+              <div class="row_layout">
+                <i class="iconfont icon-shijian"></i>
+                <div class="row">{{meeting.start}} ~ {{meeting.end}}</div>
+              </div>
+              <div v-show="meeting.展开" class="row_layout">
+                <i class="iconfont icon-bumen"></i>
+                <div class="row">{{meeting.participantsOtherDepts}}</div>
+              </div>
+              <div v-show="meeting.展开" class="row_layout">
+                <i class="iconfont icon-lingdao"></i>
+                <div class="row">{{meeting.participantsLeaders}}</div>
+              </div>
+              <div class="row_layout" style="justify-content: flex-end;">
+                <i v-show="config.编辑会议&&meeting.status===0" class="icon el-icon-edit" @click="显示编辑会议(meeting)"
+                  title="编辑"></i>
+                <i class="icon iconfont icon-xiangqing1" @click="turn_to_page('meetingDetail',meeting.id)"
+                  title="会议详情"></i>
+              </div>
+              <i v-show="meeting.展开" class="icon el-icon-arrow-up" @click="meeting.展开=false"></i>
+              <i v-show="!meeting.展开" class="icon el-icon-arrow-down" @click="meeting.展开=true"></i>
             </div>
           </div>
         </div>
@@ -140,6 +234,48 @@
             <el-button v-show="config.detail_show" class="right2_2_2" @click="turn_to_page('meetingDetail',item.id)"
               type="text">详情 ></el-button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 弹窗 -->
+    <div v-if="编辑会议.show" class="popover">
+      <div class="edit_meeting">
+        <div class="head row_layout">
+          <span class="text">编辑会议</span>
+          <el-button @click="编辑会议.show=false" type="danger" size="small" icon="el-icon-close" circle></el-button>
+        </div>
+        <div class="body">
+          <div class="row_layout">
+            <span class="margin">时间：</span>
+
+            <el-date-picker class="margin" v-model="编辑会议.日期" type="date" :picker-options="date_options()"
+              style="width: 140px;">
+            </el-date-picker>
+
+            <el-time-select class="margin" v-model="编辑会议.开始时间" style="width: 100px;"
+              :picker-options="{step: '00:30',maxTime:编辑会议.结束时间,start:'00:00',end:'23:30'}" placeholder="选择起始时间">
+            </el-time-select>
+
+            <span class="margin">&#10140</span>
+
+            <el-time-select class="margin" v-model="编辑会议.结束时间" style="width: 100px;"
+              :picker-options="{step: '00:30',minTime: 编辑会议.开始时间,start:'00:00',end:'23:30'}" placeholder="选择结束时间">
+            </el-time-select>
+          </div>
+
+          <div class="row_layout">
+            <span class="margin">会议室：</span>
+
+            <el-select v-model="编辑会议.会议室id">
+              <el-option v-for="t in 编辑会议.会议室列表" :key="t.id" :label="t.name" :value="t.id">
+              </el-option>
+            </el-select>
+          </div>
+        </div>
+        <div class="footer">
+          <el-button @click="编辑会议.show=false" size="small">取消</el-button>
+          <el-button @click="确认编辑()" type="primary" size="small">确认</el-button>
         </div>
       </div>
     </div>

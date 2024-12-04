@@ -150,12 +150,18 @@ new Vue({
 			await this.request('post', `${device_list}/${this.place_id}`, this.token, {}, async (res) => {
 				this.html.page_loading = false;
 				this.html.detail_display = true;
-				if (Object.entries(res.data).length == 0 || res.data.data == null) {
+				if (Object.entries(res.data).length == 0 || res.data.data == null || !res.data.data.length) {
 					this.$message('无设备信息');
 					this.device.list_empty = true;
 					return;
 				}
-				this.device.list = res.data.data;
+				let map = new Map();
+				for (let val of res.data.data) {
+					let t = map.get(val.productName) || [];
+					t.push(val);
+					map.set(val.productName, t);
+				}
+				this.device.list = map;
 				this.device.list_empty = false;
 			});
 			this.html.control_url = '';
